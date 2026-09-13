@@ -5,6 +5,18 @@ Dated ledger of what shipped, newest first — one entry per milestone.
 Entries before 2026-08-13 were reconstructed from the phase notes when this
 ledger was created; dates come from the phase git tags.
 
+## 2026-09-13 — Registration keeps insufficient alert evidence at DEBUG [0796]
+
+Producer and consumer registration now log insufficient evidence at DEBUG,
+with the evaluator's reason in detail. Evaluation errors and alert findings
+remain WARN. The diagnostic page explains absent startup measurements and
+the fresh evidence required for worker-liveness findings. Runtime levels are
+unchanged; the accepted cause-based policy and review findings are in Next.
+Both regression tests failed against the original warning and passed after
+the fix. Verified by the root build, targeted producer/consumer race tests,
+go fmt, site build, targeted Prettier/remark/Vale checks, and git diff --check.
+The site build reported sandbox/PGlite bundling warnings.
+
 ## 2026-09-13 — Documentation code blocks support copying [0795]
 
 Expressive Code renders Markdown and MDX fences with copy controls during

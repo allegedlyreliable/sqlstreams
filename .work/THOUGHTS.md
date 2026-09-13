@@ -33,8 +33,6 @@ received welcome email request for user-123
 
 # Docs
 
-Need quickstart repo for easy cloning (might need to think through how we keep it in sync with changes as the evolve over time)
-
 favicon for light mode doesn't fit well
 
 Should add a nerd 'But what about!' note or section in doc for when obvious point or counter argument pops up to address it

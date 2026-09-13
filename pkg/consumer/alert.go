@@ -2,7 +2,6 @@ package consumer
 
 import (
 	"context"
-	"errors"
 
 	"github.com/allegedlyreliable/sqlstreams/pkg/alert"
 	"github.com/allegedlyreliable/sqlstreams/pkg/common"
@@ -33,7 +32,7 @@ func (c *Consumer) logAlerts(ctx context.Context, current *stream.Stream, logger
 			continue
 		}
 		if result.State == alert.AlertEvaluationStateInsufficientEvidence {
-			logger.WarnContext(ctx, "could not run register-time alert pass", "stream", current.Name, "error", errors.New("alert evidence is insufficient"))
+			logger.DebugContext(ctx, "register-time alert evaluation has insufficient evidence", "stream", current.Name, "detail", result.Reason)
 			continue
 		}
 		if result.State != alert.AlertEvaluationStateActive && result.State != alert.AlertEvaluationStatePending {

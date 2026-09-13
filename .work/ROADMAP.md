@@ -28,6 +28,19 @@ the item is removed.
 
 ## Next
 
+- **Runtime alert evidence diagnostics** [0796] -- classify by cause and
+  expected operation before changing runtime levels: DEBUG for expected
+  absence, the existing collector-progress alert for sustained collection
+  failure, and WARN for unusable evidence with the alert, owner, and reason.
+  - Reason is display-only; never branch on its text. The shared history
+    evaluator currently collapses invalid sample causes, and its bounded
+    input cannot distinguish never-collected from expired evidence.
+  - Stream checks currently count insufficient evidence as failed evaluations;
+    collector progress warns for both invalid completion and absent manager
+    coverage. Preserve visibility of unusable data even when collection
+    completes. Settle the classification in the existing evaluation result,
+    with no additional collection path or grace-period state.
+
 - **PostgreSQL 15–18 compatibility matrix** -- complete further testing on
   PostgreSQL 15 and 16, then publish the supported-version matrix with the
   tested minor versions, verification evidence, and scope of the guarantee.
