@@ -49,7 +49,7 @@ I'd love to use Kafka for my [billion dollar, AI powered TODO app](https://githu
 
 **SQLStreams is a pure SQL library that uses Postgres as its broker.**
 
-- It's actually a log, not a queue 🤓, and it does [~68k messages/s](https://sqlstreams.io/benchmarks/) on my laptop 😎.
+- It's a message log, AND a retry queue 🤓, and it does [~68k messages/s](https://sqlstreams.io/benchmarks/) on my laptop 😎.
 - You get consumer groups, replay, retention and compaction without running a traditional broker.
 - Retries are automatic. Dead letters are `WHERE status = 'dead'`. There’s no admin UI. Just write some SQL.
 - Every error has a code, and `sqlstreams explain <code>` will hand you the fix because I don't like thinking either.

@@ -2,9 +2,13 @@
 
 # Docs
 
-Should add a nerd 'But what about!' note or section in doc for when obvious point or counter argument pops up to address it
+keyword highlighting and or linking (stream, produce, consume, dead)
 
-Need a slop level alert module to declare what level of slop each document is (variation on thread aside)
+thought bubbles (hover over text and I interject my random thoughts)
+
+Announcments need to be curated
+
+Should add a nerd 'But what about!' note or section in doc for when obvious point or counter argument pops up to address it
 
 roadmap later item for review code for interesting design decisions to write articles on (big or small things)
 - diagnostic code system

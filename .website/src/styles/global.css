@@ -417,6 +417,13 @@
 	}
 }
 
+@layer compositions {
+	.indented-passage {
+		max-width: 600px;
+		padding-inline-start: var(--space-22);
+	}
+}
+
 @layer base {
 	body {
 		background-color: var(--color-page);
@@ -475,6 +482,10 @@
 		color: var(--color-text);
 	}
 
+	.thread-body.indented-passage {
+		border-inline-start: 1px solid var(--border-section);
+	}
+
 	.thread-body :where(p, ul, ol) {
 		margin: 0;
 		max-width: 680px;
@@ -487,6 +498,14 @@
 	.thread-body :where(img) {
 		max-width: 100%;
 		height: auto;
+	}
+
+	.thread-body :where(hr) {
+		width: 100%;
+		max-width: 680px;
+		margin: 0;
+		border: 0;
+		border-top: 1px solid var(--border-row);
 	}
 
 	.thread-body :where(h2) {
