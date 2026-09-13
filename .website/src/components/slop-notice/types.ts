@@ -15,7 +15,7 @@ export type SlopCopy = {
 export const slopCopy: Record<SlopNoticeLevel, SlopCopy> = {
 	low: {
 		blocks: 1,
-		body: "An LLM wrote this. I have thorougly reviewed this. The claims are mine. Typos are also mine.",
+		body: "An LLHuMan wrote this. I have thorougly reviewed this. The good parts are mine. The mistakes are not mine.",
 	},
 	medium: {
 		blocks: 2,

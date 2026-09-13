@@ -1,66 +1,26 @@
 ---
-title: Sustained throughput benchmark
+title: Benchmark
 description: Sustained producing and consuming rates, workload settings, and reproducible benchmark evidence.
-slop: high
+slop: low
 ---
+
+import ThreadAside from '../../components/thread-aside/thread-aside.svelte';
+
+## General Info
 
 SQLStreams sustained approximately **68,000 messages/s produced and consumed**
 with 1,000-byte JSON messages on an M4 MacBook Air running native PostgreSQL
 18.6. 
 
-Unfortunately we live in a cruel world and these results are only 'okay' and not 'nice'.
+<ThreadAside label="NOTE" title="So close">
+Unfortunately we live in a cruel world and these results are only *okay* and not *nice*.
+</ThreadAside>
 
-## Results
+## General Methodology
 
-Each row is one consecutive 30-minute run on September 11, 2026, using the same
-frozen binary and configuration. The database was recreated between runs;
-PostgreSQL was not restarted. Each run's rate is the lower of producing and
-consuming rates, and the headline is the median of those three rates.
-
-| Run | Produced/s | Consumed/s | Backlog slope, messages/s | Logged maintenance failures | Verdict |
-| --- | ---: | ---: | ---: | ---: | --- |
-| [1][run-1] | 74,130 | 74,129 | +5.50 | 2 | Pass |
-| [2][run-2] | 68,185 | 68,188 | −0.61 | 0 | Pass |
-| [3][run-3] | 66,141 | 66,152 | −2.34 | 0 | Pass |
-
-All three runs passed the backlog check and finished with equal produced and
-handled counters: **398,139,000 messages** across the full runs, including
-warmup. Rejected produces, unknown outcomes, and handler errors were zero.
-The backlog check allows a fitted slope up to 10 messages/s for unpaced runs;
-it does not require every instantaneous backlog sample to be zero.
-
-Run 1 logged two janitor partition-drop lock timeouts and retried. Runs 2 and
-3 logged none. Maintenance retries are reported separately from application
-errors; a passing verdict does not mean maintenance never retried. Log
-suppression can hide additional occurrences, so these are recorded counts.
-
-![Three runs show matched producing and consuming rates, temporary backlog spikes, and recurring PostgreSQL storage cleanup across their 25-minute holds.](/benchmarks/throughput-2026-09-11.svg)
-
-Rates are one-minute averages from counter snapshots. Backlog and storage
-show the maximum observed in each minute. Backlog includes allocated messages
-and work still in flight. PostgreSQL storage includes data and WAL; the
-combined local benchmark footprint, including earlier retained artifacts,
-peaked at **84.62 GB** against the 100 GB cap. All three run databases were
-dropped afterward.
-
-## Workload and evidence
-
-The `orders` stream has one `processor` consumer group. Handlers return success
-without application work. Producers use explicit batches of 250 messages with
-four concurrent callers. Retention, idempotency-key cleanup, autovacuum, and
-scheduled vacuum remain enabled throughout the runs.
-
-The [evidence directory][evidence] contains the [machine-readable results][summary],
-[source snapshot][source], [build manifest][manifest], and all three linked run
-archives. Each run archive retains its declaration, environment, effective
-settings, raw counters, backlog and storage samples, logs, and original verdict.
-No run was replaced or excluded. The host monitor observed no integration/test
-container activity or Go build/test processes during the measurements.
-
-CPU headroom is informational for maximum-throughput runs. Crossing its 80%
-threshold does not fail that scenario; all three runs recorded zero crossings.
-Backlog and application-error checks remain required. Older verdicts retain
-the rules under which they were produced.
+The benchmarks drive producers unpaced and measure how quickly consumers keep up.
+Each scenario ran three measured repetitions from one build; the workload,
+configuration, and reproduction steps are recorded separately below.
 
 Per-message recording is disabled to avoid its JSON and disk-write overhead.
 Aggregate counters measure rates and totals; they do not prove that every
@@ -68,142 +28,397 @@ individual message was handled exactly once. Detailed latency is unavailable
 in these runs. The quiet scenario retains full recording for its identity
 checks ([0687](/decisions/0687/)).
 
-## Multi-stream ceiling
+Keep integration tests, other database workloads, and builds out of the measured
+window. The settings are tuned for this host; reproduction on another machine
+measures that machine's capacity. No additional handler work is included.
 
-Streams do not contend with each other in PostgreSQL. What contends is the
-two consumer groups on one stream. That is the result of driving one
-deployment shape unpaced over 1, 4, and 16 streams on September 12, 2026:
-two consumer groups on every stream with a delivery-log row per delivery,
-explicit batches of 250 from four callers per stream, a 64-connection pool
-per process, and aggregate counters instead of per-message records. Each
-stream count ran a 30-second warmup and a two-minute unpaced hold three
-times from one build; the table is the median of the three holds with the
-full range, and every run passed.
+See the [default settings](#default-config) shared by both scenarios.
 
-| Streams | Produced/s | Consumed/s, all groups | Backlog slope, messages/s | PostgreSQL CPU, cores | WAL per message |
-| ---: | ---: | ---: | ---: | ---: | ---: |
-| 1 | 43,027 (41,023–49,078) | 37,861 (36,320–42,908) | +23,482 | 3.7 (3.6–4.0) | 2.2 KB |
-| 4 | 42,641 (42,135–46,632) | 77,892 (77,837–83,330) | +2,015 | 6.1 (5.8–6.3) | 2.0 KB |
-| 16 | 45,558 (42,574–45,994) | 83,185 (80,534–85,344) | +300 | 5.7 (5.7–5.8) | 2.1 KB |
+<ThreadAside label="NOTE" title="You calling me a liar">
+Because benchmarks have somewhat of a history of being *contentious* I have tried my best to give as much
+info as possible such that they are reproducable. If you try to benchmark yourself and get drastically different
+results please let me know in whatever way you want.
+</ThreadAside>
 
-Production sits near 43,000/s at every stream count and its wall is the
-producer container's two-CPU cap, which the headroom check crossed 11 to 27
-times per hold on 4 and 16 streams and never on 1. Consumption is what fans
-out: on one stream each group manages about 19,000/s and the backlog grows
-by 23,000 messages every second; on four streams each group nearly doubles
-and on sixteen the backlog is flat. WAL per message and checkpoints (five to
-seven per run) stay the same from 1 stream to 16, so the database does the
-same work per message however the streams are cut.
+## Single Stream Scenario
 
-These ran under Docker Compose, unlike the native setup above: PostgreSQL 18.4
-capped at 8 CPUs and 8 GiB, producer and consumer containers capped at 2 CPUs
-each, on the same M4 host, library commit `52cfcb2c` with unrelated CLI work
-uncommitted in the tree. The runs are back to back, and each repetition
-produced up to ten percent less than the one before it; the ranges carry that.
-The rates are two-minute burst ceilings. A sustained number needs the
-25-minute shape above, and no two-minute run spans a checkpoint timeout on
-its own.
+The idea is to get the maximum **sustainable** producer / consumer throughput for a single stream.
 
-One number from these runs is guidance. The library's
-default pool is ten connections, and a paced run with sixteen batch workers
-per stream on that default queued at about 4,500 produces per second however
-many streams it used ([0767](/decisions/0767/)). `PostgresConnectionConfig.MaxConns`
-is the setting that moves it.
+To do that a single `orders` stream is created. An arbitrary number of producers and consumers
+can be used to find the global maximum. The one caveat being only a single consumer group.
 
-The [multi-stream ledgers][multistream-evidence] hold every run's verdict,
-including an exploratory first run per stream count that the medians exclude.
-Run directories with logs, counters, and effective settings are not tracked.
-The current runner reproduces a stream count with
-`just bench multistream-unpaced-4 1 5m 3` from a checkout with Docker
-running; `just bench-report multistream-unpaced-4` prints the medians.
+To make sure we measure the maximum **sustainable** throughput we have artifically low retention
+and cleanup task polling. This in theory should only make the results worse and I'm okay with that.
 
-## Configuration
+### Methodology
 
-All processes run on the same MacBook Air: Apple M4, ten CPU cores, 24 GiB
-of memory, and an internal 512 GB Apple AP0512Z SSD. PostgreSQL 18.6 runs
-natively on macOS; producers and consumers connect over loopback TCP.
+The sustained max throughput benchmark consists of three consecutive 30-minute runs.
+They each used the same frozen binary and configuration. The database was recreated
+between runs however the PostgresSQL instance itself was not restarted or recreated.
 
-| Setting | Value |
-| --- | --- |
-| Producer processes / concurrent callers | 1 / 4 |
-| Explicit batch size / batch concurrency | 250 / 4 |
-| Connection pool maximum | 8 per application process |
-| Consumer processes / handler concurrency | 1 / 4 |
-| Consumer claim batch / queue capacity | 16,000 / 64,000 messages |
-| Consumer claim polling | 100 ms |
-| Payload | 1,000-byte JSON, identity fields and repeated padding |
-| Message and idempotency-key retention | 120 seconds |
-| Partition size | 1,000,000 messages |
-| Janitor polling / delete batch | 1 second / 10,000 rows |
-| Partial-sweep grace / cleanup timeout | 30 seconds / 30 seconds |
-| Scheduled vacuum polling / timeout | 120 seconds / 60 seconds |
-| Application runtime | GOMAXPROCS=4, GOGC=400, GOMEMLIMIT=2GiB |
-| PostgreSQL shared buffers / work memory | 6 GiB / 32 MiB |
-| Maximum / minimum WAL size | 8 GiB / 2 GiB |
-| Checkpoint timeout / completion target | 5 minutes / 0.9 |
-| PostgreSQL maximum connections | 200 |
-| Instrumentation | pg_stat_statements, I/O timing, WAL I/O timing |
-| JIT | off |
+Each run retains its environment, effective
+settings, raw counters, backlog and storage samples, logs, and verdict.
+No run was replaced or excluded.
 
-`fsync`, `synchronous_commit`, `full_page_writes`, and autovacuum stay on.
-`GOMEMLIMIT` is a Go runtime target, not a process memory cap; PostgreSQL has
-no imposed CPU or total-memory quota. Successful deliveries do not create
-per-message delivery-log entries. Exception consumers are suspended, and no
-failures are injected.
+For more detailed information:
 
-These settings deliberately exercise retention every few minutes. They are
-not the library defaults or a recommendation to retain production messages
-for two minutes. Application work inside the handler, remote database access,
-additional consumer groups, and a different payload change the workload.
+- [Evidence directory][evidence] - Run archives and configuration.
+- [Machine-readable results][summary] - Measurements and verdicts in JSON.
+- [Source snapshot][source] - Exact source used for the benchmark.
+- [Build manifest][manifest] - Revision, hashes, timing, and rate selection.
 
-## Reproduce the published runs
+See the [single stream settings](#single-stream-config).
 
-The current runner uses `just bench <scenario>`, with `just bench-smoke` for
-a one-minute quiet run and `just bench-report <scenario>` for saved results.
-The commands below use the frozen source that produced these published
-results, including its original paths and binary names.
+### Results
 
-Use PostgreSQL 18.6 and Go 1.27. Download the source archive and
-[PostgreSQL configuration][postgres-config] into an evidence directory outside
-the checkout. In a separate checkout at base revision
-`ce33ff2cc834ad781cd68913a1acd86d6a8faafc`, extract the source archive before
-building. It includes the benchmark changes and local Go workspace; the
-manifest records its SHA-256 hash.
+| Run | Produced/s | Consumed/s | Backlog slope, messages/s | Logged maintenance failures | Verdict |
+| --- | ---: | ---: | ---: | ---: | --- |
+| [1][run-1] | 74,130 | 74,129 | +5.50 | 2 | Pass |
+| [2][run-2] | 68,185 | 68,188 | −0.61 | 0 | Pass |
+| [3][run-3] | 66,141 | 66,152 | −2.34 | 0 | Pass |
 
-From that checkout, run the following on macOS. It creates a dedicated native
-cluster, runs the same scenario three times, and stops the cluster afterward.
-The runner drops each run's database and retains the result files. Its storage
-guard stops a run at 100 GB of cluster-plus-result storage or below 40 GiB free.
-The publication session additionally counted earlier local benchmark artifacts
-against the same 100 GB cap.
+Run 1 logged two janitor partition-drop lock timeouts and retried. Runs 2 and
+3 logged none.
+
+![Three runs show matched producing and consuming rates, temporary backlog spikes, and recurring PostgreSQL storage cleanup across their 25-minute holds.](/benchmarks/throughput-2026-09-11.svg)
+
+Rates are one-minute averages from counter snapshots. Backlog and storage
+show the maximum observed in each minute. Backlog includes allocated messages
+and work still in flight. PostgreSQL storage includes data and WAL.
+
+### How to Reproduce
+
+Use Go 1.27, `just`, and native PostgreSQL 18 tools. Run from the repository root
+with a filled `.env` file present.
+
+The example below uses Homebrew's PostgreSQL installation on macOS and the
+[PostgreSQL configuration][postgres-config] retained with the published results.
+Use PostgreSQL 18.6 to match the published server version.
+
+Below is the reproduce script:
 
 ```sh
+(
 set -eu
-benchmark_evidence="/path/to/downloaded/evidence"
-tar -xzf "$benchmark_evidence/source.tar.gz"
 postgres_bin="$(brew --prefix postgresql@18)/bin"
 benchmark_root="$(mktemp -d /tmp/sqlstreams-benchmark.XXXXXX)"
 "$postgres_bin/initdb" -D "$benchmark_root/pgdata" -U scratch \
   --auth=trust --encoding=UTF8 --locale=C
-cat "$benchmark_evidence/postgresql.conf" \
+cat .bench/results/published/2026-09-11/postgresql.conf \
   >> "$benchmark_root/pgdata/postgresql.conf"
 "$postgres_bin/pg_ctl" -D "$benchmark_root/pgdata" \
   -l "$benchmark_root/postgres.log" start
 trap '"$postgres_bin/pg_ctl" -D "$benchmark_root/pgdata" stop -m fast' EXIT
 
-(cd .bench && go build -o "$benchmark_root/reliability" ./reliability)
+export POSTGRES_HOST=127.0.0.1 POSTGRES_PORT=55439
+export POSTGRES_USER=scratch POSTGRES_PASSWORD=''
 export GOMAXPROCS=4 GOGC=400 GOMEMLIMIT=2GiB
 for benchmark_run in 1 2 3; do
-  python3 .bench/reliability/native.py \
-    --binary "$benchmark_root/reliability" \
-    --postgres-bin "$postgres_bin" --port 55439 --user scratch \
-    --scenario max-throughput
+  export POSTGRES_DB="benchmark_$benchmark_run"
+  "$postgres_bin/createdb" -h "$POSTGRES_HOST" -p "$POSTGRES_PORT" \
+    -U "$POSTGRES_USER" "$POSTGRES_DB"
+  just bench max-throughput 1 5m 1 1 on native
+  "$postgres_bin/dropdb" -h "$POSTGRES_HOST" -p "$POSTGRES_PORT" \
+    -U "$POSTGRES_USER" "$POSTGRES_DB"
 done
+just bench-report max-throughput
+)
 ```
 
-Keep integration tests, other database workloads, and builds out of the measured
-window. The settings are tuned for this host; reproduction on another machine
-measures that machine's capacity. No additional handler work is included.
+This creates a dedicated native cluster, runs the current `max-throughput`
+scenario three times with a fresh database each time, and stops the cluster
+afterward. Native execution accepts one repetition per invocation, so the loop
+owns database creation and cleanup. The server stays running between runs.
+
+The arguments for `just bench max-throughput` are:
+
+| Argument | Name | Value |
+| --- | --- | --- |
+| `$1` | Time scale | `1` |
+| `$2` | Drain budget | `5m` |
+| `$3` | Repetitions | `1` |
+| `$4` | Consumer process replicas | `1` |
+| `$5` | Synchronous commit | `on` |
+| `$6` | Execution mode | `native` |
+
+## Multi Stream Scenario
+
+The idea is to see how producer / consumer throughput changes as we add more streams.
+
+To do that we run the same workload over 1, 4, and 16 streams. Each stream has
+an independent `fraud-scoring` and `analytics` consumer group, so every message
+is handled twice.
+
+These are short **burst** measurements. Unlike the single-stream scenario,
+messages do not expire and scheduled vacuum is suspended.
+
+### Methodology
+
+Each stream count ran three consecutive repetitions with a 30-second warmup
+and a two-minute measured hold. They each used the same frozen binary and
+configuration. Docker Compose recreated the database cluster between runs.
+
+For more detailed information:
+
+- [Run ledgers][multistream-evidence] - Measurements and verdicts.
+- [Scenario source][multistream-scenario] - Workload and settings at the recorded revision.
+- [Compose configuration][multistream-compose] - Postgres settings and container limits.
+
+See the [multi stream settings](#multi-stream-config).
+
+### Results
+
+| Streams | Produced/s | Consumed/s, all groups | Backlog slope, messages/s | PostgreSQL CPU, cores | WAL per message |
+| ---: | ---: | ---: | ---: | ---: | ---: |
+| 1 | 43,027 | 37,861 | +23,482 | 3.7 | 2.2 KB |
+| 4 | 42,641 | 77,892 | +2,015 | 6.1 | 2.0 KB |
+| 16 | 45,558 | 83,185 | +300 | 5.7 | 2.1 KB |
+
+Produced rates count messages written. Consumed rates count messages handled across
+both groups. Each message is handled twice, so keeping up requires a consumed rate
+roughly twice the produced rate.
+
+The runs were back to back, and each repetition produced up to ten percent
+less than the one before it. These two-minute
+holds do not establish sustainable throughput.
+
+### How to Reproduce
+
+Use Go 1.27, `just`, and Docker with Compose running. Run from the repository
+root with a filled `.env` file present.
+
+Below is the reproduce script:
+
+```sh
+(
+set -eu
+for benchmark_streams in 1 4 16; do
+  just bench "multistream-unpaced-$benchmark_streams" 1 5m 3 1 on compose
+  just bench-report "multistream-unpaced-$benchmark_streams"
+done
+)
+```
+
+This runs each stream count three times with a fresh Compose stack for each
+repetition, then prints the medians.
+
+The arguments for `just bench multistream-unpaced-4` are:
+
+| Argument | Name | Value |
+| --- | --- | --- |
+| `$1` | Time scale | `1` |
+| `$2` | Drain budget | `5m` |
+| `$3` | Repetitions | `3` |
+| `$4` | Consumer process replicas | `1` |
+| `$5` | Synchronous commit | `on` |
+| `$6` | Execution mode | `compose` |
+
+Each consumer process runs the scenario's two instances per group. The commands
+use the current checkout; the published runs used revision `52cfcb2c`.
+
+## Configuration
+
+### Default Config
+
+These are the benchmark settings shared by both scenarios, not the library defaults.
+Each scenario lists its additional settings below.
+
+#### Host Machine
+
+All processes run on the same MacBook Air.
+
+| Setting | Value |
+| --- | --- |
+| CPU | Apple M4, ten cores |
+| Memory | 24 GiB |
+| Storage | Internal 512 GB Apple AP0512Z SSD |
+| Operating system | macOS |
+
+#### Postgres
+
+| Setting | Value |
+| --- | --- |
+| PostgreSQL maximum connections | 200 |
+| fsync | on |
+| synchronous_commit | on |
+| full_page_writes | on |
+| Autovacuum | on |
+
+<ThreadAside label="CAUTION" title="Did I do that?">
+It's a bit annoying that I need to say `fsync` and `synchronous_commit` were **ON** for all tests.
+This should go without saying but history has proven otherwise.
+</ThreadAside>
+
+#### SQLStreams
+
+##### Producer
+
+| Setting | Value |
+| --- | --- |
+| Processes | 1 |
+| Concurrent callers per stream | 4 |
+| Explicit batch size | 250 |
+| Batch concurrency per stream | 4 |
+| Explicit batching | Enabled |
+| Automatic batching | Disabled |
+| Production rate | Unpaced |
+
+##### Consumer
+
+| Setting | Value |
+| --- | --- |
+| Handler concurrency | 4 |
+| Claim polling | 100 ms |
+| Handler timeout | 30 seconds |
+| Maximum retries | 3 (resolved default; exception consumers suspended) |
+
+Consumer handlers perform no application work; they update benchmark counters and return success.
+
+##### Stream
+
+| Setting | Value |
+| --- | --- |
+| Payload | 1,000-byte JSON, identity fields and repeated padding |
+| Partition size | 1,000,000 messages |
+
+#### Benchmark controls
+
+The [benchmark system](https://github.com/allegedlyreliable/sqlstreams/tree/main/.bench) additionally has a few configurations:
+
+| Setting | Value | Description |
+| --- | --- | --- |
+| HandlerFailRate | `0` | No injected handler failures. |
+| DisableExceptionConsumers | `true` | Suspends exception consumers by setting worker targets to zero. |
+| DisableMessageRecording | `true` | Keeps aggregate counters instead of per-message records. |
+
+### Single Stream Config
+
+The single-stream scenario uses the [default settings](#default-config) with the following configuration.
+
+#### Postgres
+
+PostgreSQL 18.6 runs natively on macOS.
+
+| Setting | Value |
+| --- | --- |
+| PostgreSQL shared buffers | 6 GiB |
+| PostgreSQL work memory | 32 MiB |
+| Maximum WAL size | 8 GiB |
+| Minimum WAL size | 2 GiB |
+| Checkpoint timeout | 5 minutes |
+| Checkpoint completion target | 0.9 |
+| Instrumentation | pg_stat_statements, I/O timing, WAL I/O timing |
+| JIT | off |
+
+PostgreSQL has no imposed CPU or total-memory quota.
+
+#### SQLStreams
+
+##### Consumer
+
+| Setting | Value |
+| --- | --- |
+| Processes | 1 |
+| Claim batch | 16,000 messages |
+| Queue capacity | 64,000 messages |
+
+##### Stream
+
+| Setting | Value |
+| --- | --- |
+| Message and idempotency-key retention | 120 seconds |
+| DeliveryLogMode | `failures` (successful deliveries are not logged) |
+
+##### Manager
+
+| Setting | Value |
+| --- | --- |
+| Janitor polling | 1 second |
+| Janitor delete batch | 10,000 rows |
+| Partial-sweep grace | 30 seconds |
+| Cleanup timeout | 30 seconds |
+| Scheduled vacuum polling | 120 seconds |
+| Scheduled vacuum timeout | 60 seconds |
+| Scheduled vacuum | Enabled |
+| Cursor advancer polling | 1 second |
+
+##### Runtime
+
+| Setting | Value |
+| --- | --- |
+| Connection pool maximum | 8 per application process |
+| GOMAXPROCS | 4 |
+| GOGC | 400 |
+| GOMEMLIMIT | 2 GiB |
+
+#### Benchmark controls
+
+| Setting | Value | Description |
+| --- | --- | --- |
+| Warmup | 5 minutes | Initial load excluded from the reported rate. |
+| Measured hold | 25 minutes | Sustained load used to calculate the reported rate. |
+
+### Multi Stream Config
+
+The multi-stream scenario uses the [default settings](#default-config) with the following configuration.
+
+#### Postgres
+
+PostgreSQL 18.4 runs under Docker Compose on the same MacBook Air.
+
+| Setting | Value |
+| --- | --- |
+| CPU cap | 8 CPUs |
+| Memory cap | 8 GiB |
+| PostgreSQL shared buffers | 2,560 MiB |
+| Maximum WAL size | 4 GiB |
+| Minimum WAL size | 80 MiB |
+| Checkpoint timeout | 5 minutes |
+| Checkpoint completion target | 0.9 |
+| Instrumentation | pg_stat_statements, I/O timing |
+
+#### SQLStreams
+
+##### Consumer
+
+| Setting | Value |
+| --- | --- |
+| Processes | 1 |
+| Instances per group | 2 |
+| Consumer groups per stream | 2 (`fraud-scoring`, `analytics`) |
+| Claim batch | 2,000 messages |
+| Queue capacity | 8,000 messages |
+
+##### Stream
+
+| Setting | Value |
+| --- | --- |
+| Stream count | 1, 4, or 16 |
+| Message retention | No expiry |
+| Idempotency-key retention | 24 hours |
+| DeliveryLogMode | `all` (every processing attempt is logged) |
+
+##### Manager
+
+| Setting | Value |
+| --- | --- |
+| Scheduled vacuum | Suspended |
+
+##### Runtime
+
+| Setting | Value |
+| --- | --- |
+| Producer container CPU cap | 2 CPUs |
+| Consumer container CPU cap | 2 CPUs |
+| Connection pool maximum | 64 per application process |
+| Go runtime | Container defaults |
+
+#### Benchmark controls
+
+| Setting | Value | Description |
+| --- | --- | --- |
+| Warmup | 30 seconds | Initial load excluded from the reported rate. |
+| Measured hold | 2 minutes | Unpaced load used to calculate the burst ceiling. |
 
 [evidence]: https://github.com/allegedlyreliable/sqlstreams/tree/main/.bench/results/published/2026-09-11
 [multistream-evidence]: https://github.com/allegedlyreliable/sqlstreams/tree/main/.bench/results
@@ -214,3 +429,6 @@ measures that machine's capacity. No additional handler work is included.
 [run-1]: https://github.com/allegedlyreliable/sqlstreams/raw/refs/heads/main/.bench/results/published/2026-09-11/run-1-evidence.tar.gz
 [run-2]: https://github.com/allegedlyreliable/sqlstreams/raw/refs/heads/main/.bench/results/published/2026-09-11/run-2-evidence.tar.gz
 [run-3]: https://github.com/allegedlyreliable/sqlstreams/raw/refs/heads/main/.bench/results/published/2026-09-11/run-3-evidence.tar.gz
+
+[multistream-scenario]: https://github.com/allegedlyreliable/sqlstreams/blob/52cfcb2c/.bench/scenarios/multistream_unpaced_scenario.go
+[multistream-compose]: https://github.com/allegedlyreliable/sqlstreams/blob/52cfcb2c/.bench/compose.yaml

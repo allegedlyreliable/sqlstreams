@@ -563,7 +563,8 @@
 	.thread-body :where(table) {
 		display: block;
 		overflow-x: auto;
-		max-width: 680px;
+		width: fit-content;
+		max-width: min(100%, 680px);
 		border: 1px solid var(--border-section);
 		border-collapse: collapse;
 		font-size: 12.5px;
