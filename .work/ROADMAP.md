@@ -16,18 +16,6 @@ the item is removed.
 
 ## Now
 
-- **manual review of cli**
-
-- **manual review of docs**
-
-- **Search-engine submission** -- after the doc-site sitemap is deployed,
-  verify the canonical site property in Google Search Console and Bing
-  Webmaster Tools, submit the sitemap in each service (or import the verified
-  Google property into Bing), and record the exact operator steps and initial
-  indexing result so a future domain move or deployment can repeat them.
-
-## Next
-
 - **Runtime alert evidence diagnostics** [0796] -- classify by cause and
   expected operation before changing runtime levels: DEBUG for expected
   absence, the existing collector-progress alert for sustained collection
@@ -40,6 +28,20 @@ the item is removed.
     coverage. Preserve visibility of unusable data even when collection
     completes. Settle the classification in the existing evaluation result,
     with no additional collection path or grace-period state.
+  - The alerts reference carries the proposal: one EvidenceInvalid flag,
+    semantic rejection reasons preserved, and shared logging in Record.
+
+- **manual review of cli**
+
+- **manual review of docs**
+
+- **Search-engine submission** -- after the doc-site sitemap is deployed,
+  verify the canonical site property in Google Search Console and Bing
+  Webmaster Tools, submit the sitemap in each service (or import the verified
+  Google property into Bing), and record the exact operator steps and initial
+  indexing result so a future domain move or deployment can repeat them.
+
+## Next
 
 - **PostgreSQL 15–18 compatibility matrix** -- complete further testing on
   PostgreSQL 15 and 16, then publish the supported-version matrix with the
