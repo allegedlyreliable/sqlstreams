@@ -64,11 +64,17 @@ func (c *PartitionCountController) evaluateMeasurement(owner *common.Owner, thre
 	if measurement.Name != metric.MetricStreamPartitions.Name ||
 		measurement.Kind != metric.MetricKindGauge ||
 		measurement.Unit != metric.MetricUnit(metric.MetricStreamPartitions.Unit) {
-		return alert.NewAlertEvaluationSnapshot(alert.AlertEvaluationStateInsufficientEvidence, nil, nil)
+		return alert.NewAlertEvaluationSnapshot(alert.AlertEvaluationStateInsufficientEvidence, nil, &alert.AlertEvaluationSnapshotConfig{
+			EvidenceInvalid: true,
+			Reason:          "partition measurement must be the stream partitions gauge with the declared unit",
+		})
 	}
 	value := measurement.Value
 	if math.IsNaN(value) || value < 0 || value >= math.MaxInt64 || math.Trunc(value) != value {
-		return alert.NewAlertEvaluationSnapshot(alert.AlertEvaluationStateInsufficientEvidence, nil, nil)
+		return alert.NewAlertEvaluationSnapshot(alert.AlertEvaluationStateInsufficientEvidence, nil, &alert.AlertEvaluationSnapshotConfig{
+			EvidenceInvalid: true,
+			Reason:          "partition count must be a non-negative integer within int64 range",
+		})
 	}
 
 	// Counts below the threshold are healthy.

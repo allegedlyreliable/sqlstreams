@@ -10,3 +10,9 @@ import (
 var EventAlertConditionHolds = diagnostic.NewDiagnosticEvent("SQL0063",
 	"alert condition holds",
 	"nothing was published; the scheduled check is what publishes and resolves an alert")
+
+// EventAlertEvidenceInvalid means a scheduled check cannot assess its owner
+// because retained evidence fails semantic validation.
+var EventAlertEvidenceInvalid = diagnostic.NewDiagnosticEvent("SQL0109",
+	"alert evidence does not meet measurement requirements",
+	"recorded alert unchanged")

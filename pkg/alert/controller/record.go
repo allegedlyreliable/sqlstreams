@@ -23,7 +23,22 @@ func (c *AlertController) Record(ctx context.Context, name string, owner *common
 	if err := result.Validate(); err != nil {
 		return "", err
 	}
-	if result.State == alert.AlertEvaluationStatePending || result.State == alert.AlertEvaluationStateInsufficientEvidence {
+	if result.State == alert.AlertEvaluationStateInsufficientEvidence {
+		if result.EvidenceInvalid {
+			c.Logger.WarnContext(ctx, alert.EventAlertEvidenceInvalid.Message(),
+				"code", alert.EventAlertEvidenceInvalid.GetCode(),
+				"alert", name, "owner", owner.Name, "owner_kind", owner.Kind(),
+				"system_id", owner.SystemId, "stream_id", owner.StreamId, "group_id", owner.ConsumerGroupId,
+				"detail", result.Reason)
+		} else {
+			c.Logger.DebugContext(ctx, "alert evidence is insufficient -- recorded alert unchanged",
+				"alert", name, "owner", owner.Name, "owner_kind", owner.Kind(),
+				"system_id", owner.SystemId, "stream_id", owner.StreamId, "group_id", owner.ConsumerGroupId,
+				"detail", result.Reason)
+		}
+		return alert.RecordOutcomeNothing, nil
+	}
+	if result.State == alert.AlertEvaluationStatePending {
 		return alert.RecordOutcomeNothing, nil
 	}
 

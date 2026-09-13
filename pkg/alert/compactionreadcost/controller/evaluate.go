@@ -61,16 +61,25 @@ func (c *CompactionReadCostController) evaluateMeasurement(owner *common.Owner, 
 	if measurement.Name != metric.MetricStreamPartitions.Name ||
 		measurement.Kind != metric.MetricKindGauge ||
 		measurement.Unit != metric.MetricUnit(metric.MetricStreamPartitions.Unit) {
-		return alert.NewAlertEvaluationSnapshot(alert.AlertEvaluationStateInsufficientEvidence, nil, nil)
+		return alert.NewAlertEvaluationSnapshot(alert.AlertEvaluationStateInsufficientEvidence, nil, &alert.AlertEvaluationSnapshotConfig{
+			EvidenceInvalid: true,
+			Reason:          "partition measurement must be the stream partitions gauge with the declared unit",
+		})
 	}
 	value := measurement.Value
 	if math.IsNaN(value) || value < 0 || value >= math.MaxInt64 || math.Trunc(value) != value {
-		return alert.NewAlertEvaluationSnapshot(alert.AlertEvaluationStateInsufficientEvidence, nil, nil)
+		return alert.NewAlertEvaluationSnapshot(alert.AlertEvaluationStateInsufficientEvidence, nil, &alert.AlertEvaluationSnapshotConfig{
+			EvidenceInvalid: true,
+			Reason:          "partition count must be a non-negative integer within int64 range",
+		})
 	}
 
 	// Read compaction applicability from the same observation.
 	if len(measurement.Metadata) == 0 {
-		return alert.NewAlertEvaluationSnapshot(alert.AlertEvaluationStateInsufficientEvidence, nil, nil)
+		return alert.NewAlertEvaluationSnapshot(alert.AlertEvaluationStateInsufficientEvidence, nil, &alert.AlertEvaluationSnapshotConfig{
+			EvidenceInvalid: true,
+			Reason:          "partition measurement must include compaction metadata",
+		})
 	}
 	var metadata metric.PartitionMeasurementMetadata
 	if err := json.Unmarshal(measurement.Metadata, &metadata); err != nil {
@@ -83,7 +92,10 @@ func (c *CompactionReadCostController) evaluateMeasurement(owner *common.Owner, 
 		return alert.NewAlertEvaluationSnapshot(alert.AlertEvaluationStateHealthy, nil, nil)
 	case "compacted":
 	default:
-		return alert.NewAlertEvaluationSnapshot(alert.AlertEvaluationStateInsufficientEvidence, nil, nil)
+		return alert.NewAlertEvaluationSnapshot(alert.AlertEvaluationStateInsufficientEvidence, nil, &alert.AlertEvaluationSnapshotConfig{
+			EvidenceInvalid: true,
+			Reason:          "compaction status must be compacted or uncompacted",
+		})
 	}
 	count := int64(value)
 	if count < threshold {

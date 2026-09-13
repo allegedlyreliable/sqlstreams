@@ -80,9 +80,6 @@ func (i *CollectorProgressInstance) evaluateSystem(ctx context.Context, payload 
 	if err != nil {
 		return err
 	}
-	if result.State == alert.AlertEvaluationStateInsufficientEvidence {
-		i.Logger.WarnContext(ctx, "collector progress evidence is insufficient -- recorded alert unchanged")
-	}
 	_, err = i.alerts.Record(ctx, alert.AlertMetricsCollectorProgress.Name, owner, result)
 	return err
 }

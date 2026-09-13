@@ -39,6 +39,9 @@ type AlertEvaluationSnapshot struct {
 	MaximumAge time.Duration `json:"maximum_age"`
 	// DisablePending reports whether the evaluation permits immediate activation.
 	DisablePending bool `json:"disable_pending"`
+	// EvidenceInvalid reports rejected evidence; true only for insufficient evidence.
+	// False does not establish health. Read State for the evaluation's outcome.
+	EvidenceInvalid bool `json:"evidence_invalid"`
 	// Reason explains insufficient evidence for display; empty otherwise. Branch on State, not this text.
 	Reason string `json:"reason"`
 }
@@ -62,6 +65,7 @@ func NewAlertEvaluationSnapshot(state AlertEvaluationState, finding *Alert, cfg 
 		MaximumGap:       cfg.MaximumGap,
 		MaximumAge:       cfg.MaximumAge,
 		DisablePending:   cfg.DisablePending,
+		EvidenceInvalid:  cfg.EvidenceInvalid,
 		Reason:           cfg.Reason,
 	}
 	if err := result.Validate(); err != nil {
@@ -70,8 +74,12 @@ func NewAlertEvaluationSnapshot(state AlertEvaluationState, finding *Alert, cfg 
 	return result, nil
 }
 
-// Validate checks that State and Finding describe a consistent condition.
+// Validate checks that State, Finding, and EvidenceInvalid describe a consistent condition.
 func (s *AlertEvaluationSnapshot) Validate() error {
+	if s.EvidenceInvalid && s.State != AlertEvaluationStateInsufficientEvidence {
+		return fmt.Errorf("State must be %q when EvidenceInvalid is true, got %q", AlertEvaluationStateInsufficientEvidence, s.State)
+	}
+
 	switch s.State {
 	case AlertEvaluationStateHealthy, AlertEvaluationStateInsufficientEvidence:
 		if s.Finding != nil {
@@ -101,7 +109,9 @@ type AlertEvaluationSnapshotConfig struct {
 	MaximumGap       time.Duration
 	MaximumAge       time.Duration
 	DisablePending   bool
-	Reason           string
+	// EvidenceInvalid marks semantic rejection; false does not establish health.
+	EvidenceInvalid bool
+	Reason          string
 }
 
 func (c *AlertEvaluationSnapshotConfig) WithDefaults() *AlertEvaluationSnapshotConfig {

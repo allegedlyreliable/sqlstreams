@@ -16,6 +16,7 @@ import (
 
 var (
 	EventAlertConditionHolds          = alert.EventAlertConditionHolds
+	EventAlertEvidenceInvalid         = alert.EventAlertEvidenceInvalid
 	EventConsumerStopped              = consume.EventConsumerStopped
 	EventExceptionDeadLettered        = consume.EventExceptionDeadLettered
 	EventGroupConfigNotRefreshed      = consume.EventGroupConfigNotRefreshed

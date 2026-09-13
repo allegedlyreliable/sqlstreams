@@ -69,14 +69,15 @@ func (c *CollectorProgressController) maximumAge(ctx context.Context, owner *com
 
 func (c *CollectorProgressController) evaluateHistory(owner *common.Owner, completion *common.StoredMessage[metric.Measurement], history *worker.WorkerInstanceHistory, maximumAge time.Duration, policy *alert.JobPayload) (*alert.AlertEvaluationSnapshot, error) {
 	current := history.EvaluatedAt
-	completedAt, usable := completionTimestamp(completion, current)
-	if !usable {
+	completedAt, err := completionTimestamp(completion, current)
+	if err != nil {
 		return alert.NewAlertEvaluationSnapshot(alert.AlertEvaluationStateInsufficientEvidence, nil, &alert.AlertEvaluationSnapshotConfig{
 			EvaluatedAt:     current,
 			PendingDuration: policy.PendingDuration,
 			MaximumAge:      maximumAge,
 			DisablePending:  policy.DisablePending,
-			Reason:          "collector completion timestamp is unusable or after evaluation time",
+			EvidenceInvalid: true,
+			Reason:          err.Error(),
 		})
 	}
 	if !completedAt.IsZero() && current.Sub(completedAt) < maximumAge {
@@ -145,25 +146,29 @@ func (c *CollectorProgressController) evaluateHistory(owner *common.Owner, compl
 // ***************
 
 // Missing completion is usable absence; malformed or future evidence is not.
-func completionTimestamp(completion *common.StoredMessage[metric.Measurement], current time.Time) (time.Time, bool) {
+func completionTimestamp(completion *common.StoredMessage[metric.Measurement], current time.Time) (time.Time, error) {
 	if completion == nil {
-		return time.Time{}, true
+		return time.Time{}, nil
 	}
 	measurement := completion.Message
 	if measurement.Name != metric.MetricCollectorCompletedTimestamp.Name ||
 		measurement.Kind != metric.MetricKindGauge ||
 		measurement.Unit != metric.MetricUnit(metric.MetricCollectorCompletedTimestamp.Unit) {
-		return time.Time{}, false
+		return time.Time{}, fmt.Errorf("completion must contain the completed timestamp gauge with unit %q, got name %q, kind %q, unit %q",
+			metric.MetricCollectorCompletedTimestamp.Unit, measurement.Name, measurement.Kind, measurement.Unit)
 	}
 	value := measurement.Value
 	if math.IsNaN(value) || value <= 0 || value >= math.MaxInt64 || math.Trunc(value) != value {
-		return time.Time{}, false
+		return time.Time{}, fmt.Errorf("completion timestamp must be a positive integer within int64 range, got %v", value)
 	}
 	completedAt := time.Unix(int64(value), 0)
-	if completedAt.After(current) || completion.CreatedAt.After(current) {
-		return time.Time{}, false
+	if completedAt.After(current) {
+		return time.Time{}, fmt.Errorf("completion timestamp must not be after evaluation time %v, got %v", current, completedAt)
 	}
-	return completedAt, true
+	if completion.CreatedAt.After(current) {
+		return time.Time{}, fmt.Errorf("completion storage time must not be after evaluation time %v, got %v", current, completion.CreatedAt)
+	}
+	return completedAt, nil
 }
 
 // Instances are ordered by creation time descending; touching leases preserve coverage.

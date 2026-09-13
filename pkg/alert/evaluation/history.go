@@ -34,9 +34,11 @@ func EvaluateHistory(samples []*common.StoredMessage[alert.AlertEvaluationSnapsh
 	}
 	newest := samples[0]
 	var reason string
+	var evidenceInvalid bool
 	switch {
 	case newest.CreatedAt.After(current):
 		reason = "measurement storage time is after evaluation time"
+		evidenceInvalid = true
 	case current.Sub(newest.CreatedAt) > policy.MaximumGap:
 		reason = "newest measurement exceeds MaximumGap"
 	default:
@@ -44,7 +46,11 @@ func EvaluateHistory(samples []*common.StoredMessage[alert.AlertEvaluationSnapsh
 			return nil, err
 		}
 		if newest.Message.State == alert.AlertEvaluationStateInsufficientEvidence {
-			reason = "newest measurement cannot establish the alert condition"
+			evidenceInvalid = newest.Message.EvidenceInvalid
+			reason = newest.Message.Reason
+			if reason == "" {
+				reason = "newest measurement cannot establish the alert condition"
+			}
 		}
 	}
 	if reason != "" {
@@ -55,6 +61,7 @@ func EvaluateHistory(samples []*common.StoredMessage[alert.AlertEvaluationSnapsh
 			MaximumGap:      policy.MaximumGap,
 			DisablePending:  policy.DisablePending,
 			Reason:          reason,
+			EvidenceInvalid: evidenceInvalid,
 		})
 	}
 

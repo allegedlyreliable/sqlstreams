@@ -53,30 +53,48 @@ func (c *WorkerLivenessController) evaluateMeasurement(owner *common.Owner, meas
 	if measurement.Name != metric.MetricStreamUnclaimedWorkers.Name ||
 		measurement.Kind != metric.MetricKindGauge ||
 		measurement.Unit != metric.MetricUnit(metric.MetricStreamUnclaimedWorkers.Unit) {
-		return alert.NewAlertEvaluationSnapshot(alert.AlertEvaluationStateInsufficientEvidence, nil, nil)
+		return alert.NewAlertEvaluationSnapshot(alert.AlertEvaluationStateInsufficientEvidence, nil, &alert.AlertEvaluationSnapshotConfig{
+			EvidenceInvalid: true,
+			Reason:          "worker measurement must be the stream unclaimed workers gauge with the declared unit",
+		})
 	}
 	value := measurement.Value
-	if math.IsNaN(value) || value < 0 || math.Trunc(value) != value {
-		return alert.NewAlertEvaluationSnapshot(alert.AlertEvaluationStateInsufficientEvidence, nil, nil)
+	if math.IsNaN(value) || math.IsInf(value, 0) || value < 0 || math.Trunc(value) != value {
+		return alert.NewAlertEvaluationSnapshot(alert.AlertEvaluationStateInsufficientEvidence, nil, &alert.AlertEvaluationSnapshotConfig{
+			EvidenceInvalid: true,
+			Reason:          "unclaimed worker count must be a finite non-negative integer",
+		})
 	}
 
 	// Check that worker details account for the observed count.
 	if len(measurement.Metadata) == 0 {
-		return alert.NewAlertEvaluationSnapshot(alert.AlertEvaluationStateInsufficientEvidence, nil, nil)
+		return alert.NewAlertEvaluationSnapshot(alert.AlertEvaluationStateInsufficientEvidence, nil, &alert.AlertEvaluationSnapshotConfig{
+			EvidenceInvalid: true,
+			Reason:          "worker measurement must include worker metadata",
+		})
 	}
 	var metadata metric.WorkerMeasurementMetadata
 	if err := json.Unmarshal(measurement.Metadata, &metadata); err != nil {
 		return nil, err
 	}
 	if metadata.Workers == nil || float64(len(metadata.Workers)) != value {
-		return alert.NewAlertEvaluationSnapshot(alert.AlertEvaluationStateInsufficientEvidence, nil, nil)
+		return alert.NewAlertEvaluationSnapshot(alert.AlertEvaluationStateInsufficientEvidence, nil, &alert.AlertEvaluationSnapshotConfig{
+			EvidenceInvalid: true,
+			Reason:          "worker details must account for the unclaimed worker count",
+		})
 	}
 	for _, worker := range metadata.Workers {
 		if worker == nil || worker.Name == "" || worker.Owner == nil {
-			return alert.NewAlertEvaluationSnapshot(alert.AlertEvaluationStateInsufficientEvidence, nil, nil)
+			return alert.NewAlertEvaluationSnapshot(alert.AlertEvaluationStateInsufficientEvidence, nil, &alert.AlertEvaluationSnapshotConfig{
+				EvidenceInvalid: true,
+				Reason:          "each worker detail must include a name and owner",
+			})
 		}
 		if worker.Owner.StreamId != owner.StreamId || worker.TargetInstances == 0 {
-			return alert.NewAlertEvaluationSnapshot(alert.AlertEvaluationStateInsufficientEvidence, nil, nil)
+			return alert.NewAlertEvaluationSnapshot(alert.AlertEvaluationStateInsufficientEvidence, nil, &alert.AlertEvaluationSnapshotConfig{
+				EvidenceInvalid: true,
+				Reason:          "each worker detail must belong to the evaluated stream and have a nonzero target",
+			})
 		}
 	}
 
