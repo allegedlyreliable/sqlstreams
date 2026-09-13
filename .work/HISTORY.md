@@ -5,6 +5,40 @@ Dated ledger of what shipped, newest first — one entry per milestone.
 Entries before 2026-08-13 were reconstructed from the phase notes when this
 ledger was created; dates come from the phase git tags.
 
+## 2026-09-13 — Runtime alerts distinguish invalid evidence from unavailable evidence [0797]
+
+AlertEvaluationSnapshot carries EvidenceInvalid and preserves the specific
+semantic rejection reason through history evaluation. The shared Record path
+logs unavailable evidence at DEBUG and invalid evidence as SQL0109 at WARN,
+with alert and owner identity. Collector progress no longer warns separately
+for missing manager coverage. Recorded alerts, failed-stream counts,
+registration DEBUG, read/decode errors, and collector activation rules retain
+their existing behavior. The alerts reference and SQL0109 page document the
+classification and suppression limits; the client exposes the new event.
+
+Verified by the root build, targeted race tests across the alert packages,
+producer, consumer, and client, and targeted convention checks for the API
+closure and diagnostic declarations. New unit tests cover all four evaluators,
+reason propagation, stale-data precedence, pending-span breaks, retained decode
+errors, and Record's log levels and identities without persistence. Existing
+Go tests were unchanged. The site build and targeted Prettier, remark, and Vale
+checks passed; the site still emits sandbox/PGlite bundling warnings.
+
+## 2026-09-13 — Threads declare a slop level [0798]
+
+Every doc-site thread through the thread route now carries a `slop`
+frontmatter level, and ThreadLayout renders a slop-notice box at the top
+of the post: a thread-aside variant with a tinted chip, a three-block
+pixel meter, and fixed per-level copy. Forty-five threads start at
+`high`; the quickstart is `none` (hand-checked, no box); the diagnostics
+reference and the SQL-code threads carry no field. Verified by Prettier,
+ESLint, stylelint, astro check, svelte-check, remark, Vitest, and the site
+build; the build output was inspected for the notice's presence and
+absence per page. Vale was not installed locally and did not run. One
+Vitest failure (the embedded-SQL drift check against the consume
+datastore) and one stylelint error (board-banner.css) pre-date this
+change.
+
 ## 2026-09-13 — Registration keeps insufficient alert evidence at DEBUG [0796]
 
 Producer and consumer registration now log insufficient evidence at DEBUG,

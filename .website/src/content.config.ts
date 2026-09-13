@@ -1,5 +1,6 @@
 import { defineCollection, z } from 'astro:content';
 import { glob } from 'astro/loaders';
+import { slopLevels } from './components/slop-notice/types';
 
 export const collections = {
 	docs: defineCollection({
@@ -36,6 +37,12 @@ export const collections = {
 				.string()
 				.optional()
 				.describe('the declared fix, verbatim; absent when the code cannot know one'),
+			slop: z
+				.enum(slopLevels)
+				.optional()
+				.describe(
+					'how far the author reviewed the LLM-drafted body; none is a hand-checked thread and renders no notice; absent only on the diagnostics reference and the code threads',
+				),
 		}),
 	}),
 	decisions: defineCollection({

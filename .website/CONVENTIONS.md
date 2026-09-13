@@ -286,6 +286,13 @@ preprocessor, no utility framework, no third-party token pack.
   path readers copy and is not a real API. Pages that still carry one
   (schema-versions, new-group-start, replay) are swept when touched.
 - An MDX aside inside a list item closes at the item's indent.
+- Every thread through the thread route declares `slop` in its
+  frontmatter, the author's review depth of the LLM-drafted body:
+  `high` (unreviewed, the value a new thread starts at), `medium`
+  (structure checked, samples run), `low` (read line by line), `none`
+  (hand-checked, renders no notice). The level's copy is fixed in the
+  slop-notice component; a page never writes its own. The diagnostics
+  reference and the code threads carry no field.
 - Contextual internal links sit where the reader needs them. When another
   thread owns a prerequisite, the detailed mechanism, or a relevant
   contrast, link its first useful mention with anchor text that names what

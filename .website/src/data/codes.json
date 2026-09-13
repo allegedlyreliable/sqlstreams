@@ -158,6 +158,15 @@
             "schema",
             "group_id"
           ]
+        },
+        {
+          "label": "the group's cursor row on this stream, which every claim reads",
+          "sql": "SELECT\n\tid,\n\tconsumer_group_id,\n\tclaimed,\n\tcommitted,\n\tsettled_head\nFROM {schema}.consumer_group_cursor_{stream_id}\nWHERE consumer_group_id = {group_id};",
+          "placeholders": [
+            "schema",
+            "stream_id",
+            "group_id"
+          ]
         }
       ]
     },
@@ -1317,6 +1326,11 @@
       "code": "SQL0108",
       "kind": "event",
       "message": "could not claim messages -- the next claim waits one poll rate"
+    },
+    "SQL0109": {
+      "code": "SQL0109",
+      "kind": "event",
+      "message": "alert evidence does not meet measurement requirements -- recorded alert unchanged"
     }
   }
 }

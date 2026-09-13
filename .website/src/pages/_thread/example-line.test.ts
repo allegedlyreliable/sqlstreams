@@ -74,7 +74,9 @@ describe('the composed shapes', () => {
 			[],
 		);
 
-		expect(line).toBe('stream name is required -- pass the stream name to RegisterStream [SQL0001]');
+		expect(line).toBe(
+			'stream name is required -- pass the stream name to RegisterStream [SQL0001]',
+		);
 	});
 
 	it('throws for a name with no example value', () => {

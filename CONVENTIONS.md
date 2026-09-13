@@ -972,7 +972,7 @@ placeholder not in this table is a bug. (checked)
 | `alert` | a built-in alert's name (Alert.Name) |
 | `metric_names` | original metric names omitted by an export collection |
 | `alert_message` | the alert's own message clause -- never `message`, which is the log record's own field |
-| `detail` | the alert's detail clause or metric-family rejection reason |
+| `detail` | the alert's detail clause or the reason evidence or a metric family was rejected |
 | `hint` | the alert's hint clause |
 | `severity` | the alert's severity |
 | `message` | a buffered record's own message, inside a `preceding` group attribute |

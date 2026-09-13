@@ -1,5 +1,5 @@
 ---
-status: accepted
+status: superseded
 date: 2026-09-07
 phase: "pre-v1"
 ---
@@ -13,6 +13,9 @@ Collector progress must use the existing scheduled alert and recording paths
 without requiring another observation series or user-maintained pending state.
 
 ## Decision
+
+Superseded by [0797] for insufficient-evidence logging only. The coverage,
+pending, and activation rules below remain in force.
 
 - Read the latest collector completion and manager snapshots intersecting the
   pending window, as of database time. Order snapshots by original creation

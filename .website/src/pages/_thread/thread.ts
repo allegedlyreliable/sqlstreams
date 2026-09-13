@@ -26,6 +26,7 @@ export function threadData(thread: Thread, threads: Thread[]): ThreadData {
 		reportHref: `${repositoryUrl}/issues/new?title=${encodeURIComponent(`docs: ${thread.title}`)}`,
 		previous: toThreadLink(previousThread),
 		next: toThreadLink(nextThread),
+		slop: thread.entry.collection === 'docs' ? (thread.entry.data.slop ?? null) : null,
 	};
 }
 

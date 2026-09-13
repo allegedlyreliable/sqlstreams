@@ -2,8 +2,6 @@
 
 # Docs
 
-favicon for light mode doesn't fit well
-
 Should add a nerd 'But what about!' note or section in doc for when obvious point or counter argument pops up to address it
 
 Need a slop level alert module to declare what level of slop each document is (variation on thread aside)

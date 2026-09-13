@@ -162,6 +162,15 @@
 		--color-refused-ground: var(--refused-red-pale);
 		--color-refused-text: var(--refused-red);
 		--border-refused: var(--refused-red-border);
+
+		/* the slop notice's three review depths -- how far the author read an
+		   LLM-drafted thread before publishing it */
+		--color-slop-low-ground: var(--solved-green-pale);
+		--color-slop-low-text: var(--solved-green);
+		--color-slop-medium-ground: var(--amber-pale);
+		--color-slop-medium-text: var(--amber-dark);
+		--color-slop-high-ground: var(--refused-red-pale);
+		--color-slop-high-text: var(--refused-red);
 		/* a diagnose query's braced placeholder -- the value the reader
 		   substitutes from their own log line before the query runs */
 		--color-sql-placeholder-ground: var(--amber-pale);
@@ -387,6 +396,12 @@
 		--color-refused-ground: var(--refused-coral-ground);
 		--color-refused-text: var(--refused-coral);
 		--border-refused: var(--refused-coral-border);
+		--color-slop-low-ground: var(--solved-moss-ground);
+		--color-slop-low-text: var(--solved-moss);
+		--color-slop-medium-ground: var(--amber-umber);
+		--color-slop-medium-text: var(--amber-light);
+		--color-slop-high-ground: var(--refused-coral-ground);
+		--color-slop-high-text: var(--refused-coral);
 		--color-sql-placeholder-ground: var(--amber-umber);
 		--color-sql-placeholder-text: var(--amber-light);
 		--color-sql-value-ground: var(--solved-moss-ground);

@@ -16,21 +16,6 @@ the item is removed.
 
 ## Now
 
-- **Runtime alert evidence diagnostics** [0796] -- classify by cause and
-  expected operation before changing runtime levels: DEBUG for expected
-  absence, the existing collector-progress alert for sustained collection
-  failure, and WARN for unusable evidence with the alert, owner, and reason.
-  - Reason is display-only; never branch on its text. The shared history
-    evaluator currently collapses invalid sample causes, and its bounded
-    input cannot distinguish never-collected from expired evidence.
-  - Stream checks currently count insufficient evidence as failed evaluations;
-    collector progress warns for both invalid completion and absent manager
-    coverage. Preserve visibility of unusable data even when collection
-    completes. Settle the classification in the existing evaluation result,
-    with no additional collection path or grace-period state.
-  - The alerts reference carries the proposal: one EvidenceInvalid flag,
-    semantic rejection reasons preserved, and shared logging in Record.
-
 - **manual review of cli**
 
 - **manual review of docs**

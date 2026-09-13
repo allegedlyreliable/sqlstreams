@@ -1,4 +1,5 @@
 import type { ThreadLink } from '../../components/prev-next/types';
+import type { SlopLevel } from '../../components/slop-notice/types';
 import type { Board } from '../_board/boards';
 
 export type ThreadData = {
@@ -9,6 +10,7 @@ export type ThreadData = {
 	reportHref: string;
 	previous: ThreadLink | null;
 	next: ThreadLink | null;
+	slop: SlopLevel | null;
 };
 
 export type CodeThreadData = {

@@ -455,7 +455,7 @@ in `.work/DECISION_MAP.md` routes a question to its records.
 - 0700 2026-09-07 accepted (pre-v1) — Worker instance history proves lease coverage
 - 0701 2026-09-07 superseded (pre-v1) — Worker instance log writes and retention
 - 0702 2026-09-07 accepted (pre-v1) — Instance log timestamps follow existing names
-- 0703 2026-09-07 accepted (pre-v1) — Collector progress uses manager lease history
+- 0703 2026-09-07 superseded (pre-v1) — Collector progress uses manager lease history
 - 0704 2026-09-07 accepted (pre-v1) — Alert snapshots expose existing evaluation
 - 0705 2026-09-07 accepted (pre-v1) — OTel readers collect from the producer
 - 0706 2026-09-07 superseded (pre-v1) — Portable export validation and read health
@@ -594,3 +594,5 @@ in `.work/DECISION_MAP.md` routes a question to its records.
 - 0794 2026-09-12 accepted (pre-v1) — Release maintenance, deprecation, and private security reports
 - 0795 2026-09-13 accepted (pre-v1) — Expressive Code renders Markdown code blocks
 - 0796 2026-09-13 accepted (pre-v1) — Registration alert evidence is debug diagnostics
+- 0797 2026-09-13 accepted (pre-v1) — Runtime alerts classify invalid evidence
+- 0798 2026-09-13 accepted (pre-v1) — Threads declare a slop level

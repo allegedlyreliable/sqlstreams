@@ -1,5 +1,6 @@
 ---
 title: Error codes
+slop: high
 ---
 
 Every SQLStreams error carries a stable `SQL` code. The code renders at the

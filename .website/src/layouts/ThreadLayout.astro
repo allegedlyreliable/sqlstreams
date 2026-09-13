@@ -6,8 +6,10 @@ import ThreadPost from '../components/thread-post/thread-post.svelte';
 import CopyButton from '../components/copy-button/copy-button.svelte';
 import PrevNext from '../components/prev-next/prev-next.svelte';
 import JumpTo from '../components/jump-to/jump-to.svelte';
+import SlopNotice from '../components/slop-notice/slop-notice.svelte';
 import { jumpTargets } from '../pages/_board/boards';
 import type { ThreadLink } from '../components/prev-next/types';
+import type { SlopLevel } from '../components/slop-notice/types';
 
 type Props = {
 	title: string;
@@ -20,6 +22,7 @@ type Props = {
 	postCount: number;
 	previous: ThreadLink | null;
 	next: ThreadLink | null;
+	slop: SlopLevel | null;
 };
 
 const {
@@ -33,6 +36,7 @@ const {
 	postCount,
 	previous,
 	next,
+	slop,
 } = Astro.props;
 
 const trail = [
@@ -68,6 +72,7 @@ const threadUrl = new URL(Astro.url.pathname, Astro.site).href;
 		>
 			<CopyButton client:idle slot="actions" label="Copy link" text={threadUrl} />
 			<div class="thread-body">
+				{slop !== null && slop !== 'none' && <SlopNotice level={slop} />}
 				<slot />
 			</div>
 		</ThreadPost>

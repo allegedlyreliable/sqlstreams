@@ -1,6 +1,7 @@
 ---
 title: Alerts
 description: The alert handles on the system, a stream, and a consumer group — Definitions, Latest, History, built-in selectors, and Alert(name).
+slop: high
 ---
 
 `.Alerts()` on the [system](/reference/system/), a
@@ -94,6 +95,60 @@ what retention holds. Declare `Start: sqlstreams.Head()` to hear only alerts
 raised after it registered, and read `Latest` once at startup for what is
 already active.
 
+## Runtime evidence diagnostics
+
+Scheduled checks warn when a retained measurement is invalid. Missing
+or stale measurements log at DEBUG; sustained collection failure
+continues to use the existing `metrics_collector_progress` alert.
+
+`AlertEvaluationSnapshot` carries `EvidenceInvalid`, a boolean serialized
+as `evidence_invalid`. It is true only when `State` is
+`insufficient_evidence` and the selected evidence fails validation. A false
+value means no invalid evidence was established, not that the resource
+is healthy. `State` remains the health assessment; `Reason` explains
+the specific cause for display. Callers never need to parse that text.
+
+| Evidence at the check | State | EvidenceInvalid | Scheduled-check log |
+| --- | --- | --- | --- |
+| No measurement in the retained evaluation window | `insufficient_evidence` | `false` | DEBUG with the reason |
+| Newest measurement exceeds `MaximumGap` | `insufficient_evidence` | `false` | DEBUG with the reason |
+| No fresh collector completion and no current manager lease coverage | `insufficient_evidence` | `false` | DEBUG with the reason |
+| Selected measurement has the wrong identity, kind, unit, value, or required metadata | `insufficient_evidence` | `true` | WARN with the validation reason |
+| Selected evidence has a timestamp after evaluation time | `insufficient_evidence` | `true` | WARN with the validation reason |
+| Collection is overdue or absent during continuous manager coverage | `pending` or `active`, under the existing policy | `false` | Existing alert-activation WARN once active |
+
+The [SQL0109 warning](/errors/SQL0109/) reads
+`alert evidence does not meet measurement requirements -- recorded alert unchanged`.
+Its attributes include the diagnostic code, alert name, owner name and kind, owner ids, and
+the validation reason in `detail`. Reasons name the failed requirement,
+such as `partition count must be a non-negative integer within int64 range`,
+without dumping the stored measurement or its metadata. The existing logger's repeat suppression
+applies; warnings do not form a complete list of affected streams.
+Use the failed-stream counts and each alert's `Snapshot` to investigate them.
+
+For example, suppose `signup.welcome-email` is stream 42 in system 1, and
+consumer group `welcome-email` is waiting for messages. Before the first
+collected measurement, its partition-count check logs DEBUG with
+`no retained measurement`. If its newest fresh measurement instead holds a
+partition count of `-1`, the same check logs WARN with
+`alert=partition_count`, `owner=signup.welcome-email`, `stream_id=42`, and the
+validation reason. Any recorded partition-count alert stays unchanged;
+the warning describes a failure to assess the stream, not a high count.
+
+The newest sample determines the current evidence classification.
+Older invalid samples still break the consecutive unhealthy span.
+A sample outside the freshness limit is treated as stale, even if its
+value is invalid. An empty bounded history cannot distinguish a new stream
+from one whose measurements have expired; it does not claim to do so.
+
+Missing metadata on a decoded measurement counts as invalid evidence.
+Read failures and decode errors keep their existing returned-error
+behavior. They are not converted into insufficient-evidence results.
+All insufficient stream evaluations still increment the existing
+failed-stream count and leave recorded alerts unchanged. Registration
+keeps insufficient results at DEBUG, and `Snapshot` returns the
+classification without logging or recording an alert.
+
 ## Gotchas
 
 - The three stream alerts require two minutes of consecutive unhealthy
@@ -107,7 +162,8 @@ already active.
   earns no duration; a single sample never activates by waiting.
 - Collector progress requires two minutes of overdue or absent completion
   during continuous manager lease coverage. A coverage gap restarts pending;
-  insufficient evidence leaves the recorded alert unchanged and logs a warning.
+  insufficient evidence leaves the recorded alert unchanged. Missing coverage
+  logs at DEBUG; invalid completion evidence logs at WARN.
   Coverage is read from `worker_instance_log`, so a released or crashed
   manager counts until its last recorded expiry ([0700](/decisions/0700/)).
 - An alert's key is its owner's id, so the read resolves the name first.

@@ -1,6 +1,7 @@
 ---
 title: Ordered Delivery per Key
 description: Configure a consumer group to process each key in id order, including retries, and inspect messages waiting behind a failure.
+slop: high
 ---
 
 Set `ConsumerConfig.ConcurrencyOverride` to `sqlstreams.ConcurrencyOrdered`
