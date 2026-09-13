@@ -3176,9 +3176,6 @@ guides and ~35 labs/playgrounds swept. Full fresh-DB lab suite 44/44.
   eslint, stylelint (declaration-strict-value), astro check at strictest,
   svelte-check, remark-lint, Vale carrying the ## Vocabulary registry,
   vitest. Storybook covers every component.
-- Vulkan Cloud removed site-wide in the same round (its page, its
-  component, and the why-vulkan section it fed); no redirects, the site
-  had no users.
 - Verified: 80 pages built with 72 indexed, the full verify chain green,
   vitest 9/9, Storybook build, and four CDP browser suites (console first
   run, board navigation, search, copy/whats-new).

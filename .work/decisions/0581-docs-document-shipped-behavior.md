@@ -14,7 +14,7 @@ never existed: `vulkan.Queue`, `Subscribe`, functional options, a shared
 verbs. It also carried performance numbers with no benchmark behind them
 (tens of thousands msg/s, a "~50k graduation"), a pitch that each topic's
 consumers choose cursor-vs-lifecycle semantics (`ConsumerType`, whose
-public surface was deleted 2026-08-19), and a Vulkan Cloud product page.
+public surface was deleted 2026-08-19).
 
 Documentation drives implementation here: for public-surface work the
 page IS the proposal, written and reviewed before the code. A page that
@@ -36,11 +36,9 @@ Every non-error page documents the real API, with four standing rules:
   code, titles and slugs included: `guides/transactional-enqueue` →
   `transactional-produce`, `concepts/streams` → `concepts/fan-out`.
 
-Two things are retired permanently, not merely rewritten: the
+Retired permanently, not merely rewritten: the
 cursor-vs-lifecycle choice pitch (the delivery path is on hold and
-`ConsumerType` is deleted — never re-introduce it in docs or marketing),
-and Vulkan Cloud, removed site-wide 2026-08-23 with no redirect upkeep
-because the site had no users.
+`ConsumerType` is deleted — never re-introduce it in docs or marketing).
 
 ## Consequences
 
