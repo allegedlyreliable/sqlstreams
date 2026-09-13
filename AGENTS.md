@@ -18,7 +18,7 @@ covers session workflow only; the two are a set.
   code or design in the reply and STOP. Edit nothing until an explicit
   "go" / "write it"; a later message continuing the discussion is not
   approval.
-- .docs/THOUGHTS.md is the user's own writing -- read it, never edit it.
+- .work/THOUGHTS.md is the user's own writing -- read it, never edit it.
 
 ## Responses
 
@@ -126,29 +126,29 @@ decision record -> ships -> HISTORY.md entry; its TODO.md and ROADMAP.md
 lines are removed.
 
 The record-keeping surface is fixed -- never create doc files outside it.
-Working docs live under .docs/; only the rule files (CONVENTIONS.md, this
+Working docs live under .work/; only the rule files (CONVENTIONS.md, this
 file) and README/CLAUDE.md stay at root:
 
-- .docs/TODO.md -- sliding window of in-flight work ONLY.
-- .docs/ROADMAP.md -- future work: Now / Next / Later / Parking lot. Reorder
+- .work/TODO.md -- sliding window of in-flight work ONLY.
+- .work/ROADMAP.md -- future work: Now / Next / Later / Parking lot. Reorder
   by moving items; an item accumulates design notes as sub-bullets in place.
   New ideas land in Later or the parking lot, never in TODO.md.
-- .docs/HISTORY.md -- dated done-ledger, newest first, one entry per shipped
+- .work/HISTORY.md -- dated done-ledger, newest first, one entry per shipped
   milestone, citing decision records as [NNNN].
-- .docs/DECISION_MAP.md -- concept keywords -> record numbers, imported by
+- .work/DECISION_MAP.md -- concept keywords -> record numbers, imported by
   the root CLAUDE.md so it loads every session. A new record adds its
   number to the line it belongs to. The rule files carry no [NNNN]
   citations; the map is the one index from a rule to its why.
-- .docs/DECISIONS.md -- the status ledger: one line per record holding
+- .work/DECISIONS.md -- the status ledger: one line per record holding
   number, date, status, and the record's own H1 title verbatim -- never a
   summary. Grep it or the bodies for a term, open only what's needed.
-  Record bodies live in .docs/decisions/ (NNNN-<slug>.md, front matter
+  Record bodies live in .work/decisions/ (NNNN-<slug>.md, front matter
   status/date/phase, Context/Decision/Consequences, under 60 lines).
   Records are append-only and written in the SAME session a design settles;
   changing a decision means a new record plus flipping the old one's status
   to superseded, linked both ways. A new record takes the next number after
   the current max.
-- .docs/THOUGHTS.md -- the user's scratch: ideas not yet promoted to the
+- .work/THOUGHTS.md -- the user's scratch: ideas not yet promoted to the
   ROADMAP. Never edited by agents.
 - CONVENTIONS.md (code rules), .website/CONVENTIONS.md (frontend code
   rules) and .website/VOICE.md (site prose voice) -- both loaded via

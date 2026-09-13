@@ -15,7 +15,7 @@ from.
 
 ## Decision
 
-The six roots are `.dist/`, `.bin/`, `.docs/`, `.tools/`, `.website/`, and
+The six roots are `.dist/`, `.bin/`, `.work/`, `.tools/`, `.website/`, and
 `.bench/`. The benchmark module path is `github.com/agentstax/vulkan/.bench`.
 The workspace, CI, recipes, Docker contexts, code imports, and current
 documentation use the hidden path.

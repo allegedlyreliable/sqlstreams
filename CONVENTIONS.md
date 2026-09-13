@@ -7,7 +7,7 @@ how it persists, how it reports, how it is tested, and what sits
 outside the library. A
 rule ending in `(checked)` is enforced by a test in `.tools/conventions`
 (`just verify`); every other rule is enforced by review. The why behind
-a rule lives in `.docs/decisions/`, indexed by `.docs/DECISION_MAP.md`;
+a rule lives in `.work/decisions/`, indexed by `.work/DECISION_MAP.md`;
 this file states only the rule.
 
 # Part 1 -- Where code lives

@@ -15,9 +15,9 @@ user starts from.
 
 ## Decision
 
-The five roots are `.dist/`, `.bin/`, `.docs/`, `.tools/`, and `.website/`.
+The five roots are `.dist/`, `.bin/`, `.work/`, `.tools/`, and `.website/`.
 GoReleaser writes to `.dist/`. Locally built executables and generated schema
-documentation live in `.bin/`. Records and working documents live in `.docs/`.
+documentation live in `.bin/`. Records and working documents live in `.work/`.
 Repository-only tooling lives in `.tools/`, whose module paths are
 `github.com/agentstax/vulkan/.tools` and
 `github.com/agentstax/vulkan/.tools/compat`. The doc site lives in `.website/`.

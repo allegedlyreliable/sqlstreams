@@ -10,7 +10,7 @@ Future work, in order of intent. Not a promise — items reorder freely.
   it. Ideas move here rather than being deleted.
 
 An item starts as a one-liner and accumulates design notes as sub-bullets.
-When a design settles, it gets a decision record in `.docs/decisions/` and the
+When a design settles, it gets a decision record in `.work/decisions/` and the
 item slims to a pointer. When work ships, its summary moves to HISTORY.md and
 the item is removed.
 
@@ -265,7 +265,7 @@ documentation; the latter want a surface that has stopped moving.
 
 - **Publish selected roadmap items as GitHub issues** — near public launch,
   use an agent to turn externally useful Later items into reviewed GitHub
-  issues, inviting reactions and discussion. `.docs/ROADMAP.md` remains the
+  issues, inviting reactions and discussion. `.work/ROADMAP.md` remains the
   ordered source of truth; issues are public discussion and interest signals,
   not commitments. Settle selection criteria, labels, issue status when work
   ships or is dropped, and how issue discussion feeds back into the roadmap.
@@ -281,7 +281,7 @@ documentation; the latter want a surface that has stopped moving.
   implementation) and write each up as a follow-along: the issue as filed,
   the triage reply, the Proposed page diff, the record, the PRs, in order,
   with what a reviewer pushed back on. Lives on the doc site beside the
-  contributing guide, not in .docs/. Depends on the issues item above having
+  contributing guide, not in .work/. Depends on the issues item above having
   produced at least one contributed change to point at.
 
 - **BindingHandle verbs beyond Get** — the handle shipped [0645]; these

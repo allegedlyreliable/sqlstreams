@@ -2,8 +2,8 @@
 
 One line per record: number, date, status, and the record's own H1 title
 verbatim -- never a summary. Grep here first, then open only the records
-you need. Bodies live in `.docs/decisions/NNNN-<slug>.md`. The concept map
-in `.docs/DECISION_MAP.md` routes a question to its records.
+you need. Bodies live in `.work/decisions/NNNN-<slug>.md`. The concept map
+in `.work/DECISION_MAP.md` routes a question to its records.
 
 - Numbers were allocated in per-phase blocks at extraction time, so gaps are
   normal and numeric order is only approximate chronology — sort by the date

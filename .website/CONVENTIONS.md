@@ -247,7 +247,7 @@ preprocessor, no utility framework, no third-party token pack.
   component earns a place on the list by rendering something prose
   cannot state -- live query results, a computed grid -- never by
   presenting prose more nicely.
-- The decision records (`../.docs/decisions`, the `decisions`
+- The decision records (`../.work/decisions`, the `decisions`
   collection) are append-only history and render as-is: their own
   frontmatter shape, the body H1 as the thread title, the vocabulary
   of the day the decision settled. The site adapts to them and never

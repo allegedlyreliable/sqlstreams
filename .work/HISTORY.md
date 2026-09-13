@@ -1,7 +1,7 @@
 # History
 
 Dated ledger of what shipped, newest first — one entry per milestone.
-`[NNNN]` cites the decision record `.docs/decisions/NNNN-*.md` holding the why.
+`[NNNN]` cites the decision record `.work/decisions/NNNN-*.md` holding the why.
 Entries before 2026-08-13 were reconstructed from the phase notes when this
 ledger was created; dates come from the phase git tags.
 

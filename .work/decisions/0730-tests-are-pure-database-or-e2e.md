@@ -12,7 +12,7 @@ Superseded by [0736](0736-integration-tests-live-in-a-nested-tests-module-over-t
 
 The suite had grown three shapes with no rule behind them: 322 hand-rolled
 `go test` functions, 60 `.e2e/` programs each declaring its own `must` /
-`die` / `assert`, and `.docs/TEST.md`, 270 lines of Setup/Action/Assert
+`die` / `assert`, and `.work/TEST.md`, 270 lines of Setup/Action/Assert
 prose from a scratch harness. Tests touching Postgres hid behind four
 different env var names and none ran in CI. [0328] deferred the datastore
 interfaces' fate with "testing is the only remaining justification for the
@@ -50,7 +50,7 @@ library, or leak checker in any module.
 ## Consequences
 
 CONVENTIONS gains Part 5, How code is tested; the E2E section moves into
-it. `.docs/TEST.md` transcribes into database tests in `pkg/producer` and
+it. `.work/TEST.md` transcribes into database tests in `pkg/producer` and
 `pkg/consumer` (single-process lifecycle cases) and pure tests in
 `pkg/common` (SQLSTATE classification), with the signal and killed-server
 cases staying e2e; the file is deleted when the last entry lands. Every

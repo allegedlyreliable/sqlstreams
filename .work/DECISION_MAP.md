@@ -2,8 +2,8 @@
 
 Keywords -> decision records. Each line: the terms a question would use,
 then the records that settled it (`NNNN-NNNN` is a range and may hold a
-stray). Bodies live at `.docs/decisions/NNNN-<slug>.md`; status and title
-are in `.docs/DECISIONS.md`. A new record adds its number to its line.
+stray). Bodies live at `.work/decisions/NNNN-<slug>.md`; status and title
+are in `.work/DECISIONS.md`. A new record adds its number to its line.
 
 - claim, lease, cursor, claimed/committed, reclaim, snapshot fence, FOR UPDATE SKIP LOCKED: 0001-0005 0041-0047 0061-0067 0101-0107 0141-0145 0161-0166 0387-0396 0616 0685 0710 0714 0715 0733
 - retry, backoff, dead-letter, exception path, work timeout, panic, abandoned goroutine: 0042-0043 0181-0192 0281-0294 0399-0400 0614-0615 0670 0781 0792 0793

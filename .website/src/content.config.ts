@@ -41,7 +41,7 @@ export const collections = {
 	decisions: defineCollection({
 		loader: glob({
 			pattern: '*.md',
-			base: '../.docs/decisions',
+			base: '../.work/decisions',
 			// the record number is the id; the file name's slug serves the repo
 			generateId: ({ entry }) => entry.slice(0, 4),
 		}),

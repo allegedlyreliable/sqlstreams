@@ -23,7 +23,7 @@ export function siteThreads(docs: DocsEntry[], decisions: DecisionEntry[]): Thre
 // the repo-rooted path GitHub links need; the records live outside .website/
 export function repositoryFilePath(thread: Thread): string {
 	if (thread.entry.collection === 'decisions') {
-		return `.docs/decisions/${fileName(thread.filePath)}`;
+		return `.work/decisions/${fileName(thread.filePath)}`;
 	}
 	return `.website/${thread.filePath}`;
 }

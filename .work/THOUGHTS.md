@@ -4,6 +4,8 @@
 
 Should add a nerd 'But what about!' note or section in doc for when obvious point or counter argument pops up to address it
 
+Need a slop level alert module to declare what level of slop each document is
+
 roadmap later item for review code for interesting design decisions to write articles on (big or small things)
 - diagnostic code system
 - suppression logger

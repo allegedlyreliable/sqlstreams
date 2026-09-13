@@ -14,8 +14,8 @@ repository support surfaces rather than packages a library user starts from.
 
 ## Decision
 
-The four roots are `.dist/`, `.docs/`, `.tools/`, and `.website/`. GoReleaser
-writes to `.dist/`. Records and working documents live in `.docs/`.
+The four roots are `.dist/`, `.work/`, `.tools/`, and `.website/`. GoReleaser
+writes to `.dist/`. Records and working documents live in `.work/`.
 Repository-only tooling lives in `.tools/`, whose module paths are
 `github.com/agentstax/vulkan/.tools` and
 `github.com/agentstax/vulkan/.tools/compat`. The doc site lives in `.website/`.

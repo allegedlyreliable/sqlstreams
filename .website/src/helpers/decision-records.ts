@@ -2,7 +2,7 @@ import { readdirSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 
 // the build runs from .website/, so the decision records sit one level up
-export const decisionRecordsDirectory = '../.docs/decisions';
+export const decisionRecordsDirectory = '../.work/decisions';
 
 // the slice of mdast the two transforms below touch
 export type MarkdownNode = {
