@@ -5,16 +5,17 @@ description: Set up a Go example, produce a message, and consume it from your Po
 
 import ThreadAside from '../../components/thread-aside/thread-aside.svelte';
 
-Produce and consume one welcome-email message using two Go programs and
-an existing Postgres database. The consumer prints the request; it does
-not send an email.
+This quickstart will walk you through how to get everything setup to run
+a basic producer and consumer using SQLStreams.
 
-## 1. Prepare the example
+If you just want the end result, clone [this](TODO create github repo example).
 
-You need Go 1.27+ and a local Postgres database. These examples use
-`app_db` on `localhost:5432`, with role `app_user`. The role must be able
-to create schemas and tables in that database. Substitute your own
-connection details in both programs if they differ.
+## 0. Prerequisites
+
+- Go 1.27+
+- Docker Compose for running Postgres
+
+## 1. Prepare the workspace
 
 Create a directory and install the library:
 
@@ -24,19 +25,51 @@ cd sqlstreams-quickstart
 go mod init example.com/sqlstreams-quickstart
 go get github.com/allegedlyreliable/sqlstreams@v0.1.1
 mkdir -p cmd/produce cmd/consume
-export PGPASSWORD='your-local-database-password'
 ```
 
-Run the commands below from this directory, in the same terminal so both
-programs receive `PGPASSWORD`. The first stream registration creates
-SQLStreams's shared tables and the stream's tables in the `sqlstreams` schema.
-There is no separate migration command for this example.
+Next lets create our docker compose file for running Postgres.
+
+```sh
+touch compose.yaml
+```
+
+```yaml
+# compose.yaml
+name: quickstart
+
+services:
+  db:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_USER: username
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: quickstart
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U username -d quickstart"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pgdata:
+```
+
+Spin it up
+
+```sh
+docker compose up -d
+```
 
 ## 2. Produce a message
 
 Save this as `cmd/produce/main.go`:
 
 ```go
+// cmd/produce/main.go
 package main
 
 import (
@@ -50,7 +83,7 @@ type WelcomeEmail struct {
 	UserId string `json:"user_id"`
 }
 
-func (WelcomeEmail) SchemaVersion() int { return 1 }
+func (WelcomeEmail) SchemaVersion() int { return 1 } // increment on breaking changes
 
 func main() {
 	if err := run(); err != nil {
@@ -63,7 +96,7 @@ func run() error {
 	ctx, stop := sqlstreams.LifecycleContext(nil)
 	defer stop()
 
-	pool, err := sqlstreams.NewPostgresPool(ctx, "app_user", os.Getenv("PGPASSWORD"), "localhost", "app_db", nil)
+	pool, err := sqlstreams.NewPostgresPool(ctx, "username", "password", "localhost", "quickstart", nil)
 	if err != nil {
 		return err
 	}
@@ -93,25 +126,31 @@ func run() error {
 }
 ```
 
+<ThreadAside label="NOTE" title="Import Issues">
+If you are getting an import error for SQLStreams you
+may need to run `go mod tidy`.
+</ThreadAside>
+
 Run it:
 
 ```sh
 go run ./cmd/produce
 ```
 
-The output includes `produced message id=1` on a fresh stream; the id may
-be higher if the stream already contains messages. Each run produces
-another message.
+The output should look something like this:
 
-`WelcomeEmail` is stored as JSONB. Its `SchemaVersion` method identifies
-the payload version, which the consumer type must also declare.
-[Schema Versions](/guides/schema-versions/) explains how versions share a stream.
+```text
+produced message id=1
+```
+
+You can run this as many times as you'd like and the message id will increment with each run.
 
 ## 3. Consume the message
 
 Save this as `cmd/consume/main.go`:
 
 ```go
+// cmd/consume/main.go
 package main
 
 import (
@@ -127,7 +166,7 @@ type WelcomeEmail struct {
 	UserId string `json:"user_id"`
 }
 
-func (WelcomeEmail) SchemaVersion() int { return 1 }
+func (WelcomeEmail) SchemaVersion() int { return 1 } // increment on breaking changes
 
 func main() {
 	if err := run(); err != nil {
@@ -140,7 +179,7 @@ func run() error {
 	ctx, stop := sqlstreams.LifecycleContext(nil)
 	defer stop()
 
-	pool, err := sqlstreams.NewPostgresPool(ctx, "app_user", os.Getenv("PGPASSWORD"), "localhost", "app_db", nil)
+	pool, err := sqlstreams.NewPostgresPool(ctx, "username", "password", "localhost", "quickstart", nil)
 	if err != nil {
 		return err
 	}
@@ -181,40 +220,20 @@ Run it:
 go run ./cmd/consume
 ```
 
-The output includes:
+The output should look something like this:
 
 ```text
 received welcome email request for user-123
 ```
 
-Startup also writes logs to stderr. On a fresh installation,
-`alert evidence is insufficient` means an alert check has too little
-metric history to evaluate yet; it does not mean the message failed. It
-stops once the collector has recorded a couple of minutes of samples.
-
-The process keeps waiting for messages. Press Ctrl-C to stop it:
-`LifecycleContext` turns SIGINT and SIGTERM into cancellation, and
-`Consume` drains its in-flight handlers before returning.
-
-The new `email-sender` group reads retained history by default, including
-the message produced before it started. Restarting the same group resumes
-its existing cursor. If a previous run already consumed the message,
-stop the consumer, run the producer again, then restart the consumer.
-
-Returning `nil` succeeds; an ordinary error schedules a retry.
-[Handler Outcomes](/concepts/handler-outcomes/) covers terminal errors and
-requested delays. A real email handler must tolerate duplicate delivery
-and pass its context to blocking calls: crashes and timeouts can cause
-at-least-once redelivery. See [Consumer Timeouts](/guides/consumer-timeouts/)
-and [Side Effects & Retries](/guides/side-effects-and-retries/).
-
-<ThreadAside label="NOTE" title="Keep upkeep running">
-`Consume` runs the system manager beside the session by default. It
-advances committed cursors and carries the deployment's maintenance.
-A deployment that only produces must also run a
-[standalone manager](/reference/manager/).
-
+<ThreadAside label="NOTE" title="Blocking Consumer">
+The consumer is blocking and will keep waiting for messages. 
+Press Ctrl-C to stop it.
 </ThreadAside>
+
+And thats it. You can have a seperate terminal session run the 
+producer and watch the consumer `consume` the `produced` messages in
+real time.
 
 ## 4. Continue with your application
 

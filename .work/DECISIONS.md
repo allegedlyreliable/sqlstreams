@@ -592,3 +592,4 @@ in `.work/DECISION_MAP.md` routes a question to its records.
 - 0792 2026-09-12 accepted (pre-v1) — A consumer claim loop warns on a transient fault and ends on a permanent one
 - 0793 2026-09-12 accepted (pre-v1) — A datastore write opts into ambiguous-outcome retries by verb
 - 0794 2026-09-12 accepted (pre-v1) — Release maintenance, deprecation, and private security reports
+- 0795 2026-09-13 accepted (pre-v1) — Expressive Code renders Markdown code blocks

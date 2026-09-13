@@ -5,6 +5,7 @@ import { unified } from '@astrojs/markdown-remark';
 import mdx from '@astrojs/mdx';
 import sitemap from '@astrojs/sitemap';
 import svelte from '@astrojs/svelte';
+import expressiveCode from 'astro-expressive-code';
 import { remarkDecisionRecords } from './src/helpers/decision-records.ts';
 import { isSearchEngineIndexable } from './src/search-engine-index.ts';
 import { siteUrl } from './src/site.ts';
@@ -41,17 +42,12 @@ export default defineConfig({
 	},
 	markdown: {
 		processor: unified({ remarkPlugins: [remarkDecisionRecords] }),
-		shikiConfig: {
-			// The board's code dialect: keywords in the console's SQL-keyword
-			// colour, strings one quiet red, everything else ink -- each theme's
-			// values mirror the global.css tokens of the board style it is named
-			// for. Both ship on every fence; defaultColor off means neither is
-			// baked in as an inline colour -- Shiki writes --shiki-light and
-			// --shiki-dark per token and the base layer picks the side, so a
-			// reader switching styles switches the code with the page.
-			themes: {
-				light: {
-					name: 'sqlstreams-board',
+	},
+	integrations: [
+		expressiveCode({
+			themes: [
+				{
+					name: 'classic',
 					type: 'light',
 					// console-sql-pale, ink
 					colors: {
@@ -68,8 +64,8 @@ export default defineConfig({
 						{ scope: ['comment'], settings: { foreground: '#7c8b98', fontStyle: 'italic' } },
 					],
 				},
-				dark: {
-					name: 'sqlstreams-board-night',
+				{
+					name: 'night',
 					type: 'dark',
 					// console-sql-pitch, ink-silver
 					colors: {
@@ -86,11 +82,27 @@ export default defineConfig({
 						{ scope: ['comment'], settings: { foreground: '#6b7178', fontStyle: 'italic' } },
 					],
 				},
+			],
+			themeCssSelector: (theme) => `[data-board-style='${theme.name}']`,
+			useDarkModeMediaQuery: false,
+			minSyntaxHighlightingColorContrast: 0,
+			defaultProps: { frame: 'none' },
+			frames: {
+				extractFileNameFromCode: false,
+				removeCommentsWhenCopyingTerminalFrames: false,
 			},
-			defaultColor: false,
-		},
-	},
-	integrations: [
+			styleOverrides: {
+				borderColor: 'var(--border-row)',
+				borderRadius: '0',
+				borderWidth: 'var(--space-1)',
+				codeFontFamily: 'var(--font-database)',
+				codeFontSize: 'var(--font-size-code)',
+				codePaddingBlock: 'var(--space-13)',
+				codePaddingInline: 'var(--space-16)',
+				uiFontFamily: 'var(--font-chrome)',
+				frames: { shadowColor: 'transparent' },
+			},
+		}),
 		svelte(),
 		mdx(),
 		sitemap({

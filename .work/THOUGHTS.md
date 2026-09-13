@@ -1,6 +1,41 @@
 # Public API
 
+Need to get rid of this WARN in producer for better quickstart experience
+```text
+time=2026-09-13T09:12:03.073-04:00 level=WARN msg="could not run register-time alert pass" schema=sqlstreams stream=signup.welcome-email error="alert evidence is insufficient"
+```
+
+Same thing for consumer
+brandonlouiscate@Brandons-MacBook-Air sqlstreams-quickstart % go run ./cmd/consume
+time=2026-09-13T09:16:13.572-04:00 level=WARN msg="could not run register-time alert pass" schema=sqlstreams stream=signup.welcome-email error="alert evidence is insufficient"
+time=2026-09-13T09:16:13.631-04:00 level=WARN msg="could not run register-time alert pass" schema=sqlstreams stream=__system.metrics error="alert evidence is insufficient"
+time=2026-09-13T09:16:13.634-04:00 level=WARN msg="could not run register-time alert pass" schema=sqlstreams stream=__system.metrics error="alert evidence is insufficient"
+time=2026-09-13T09:16:13.653-04:00 level=WARN msg="could not run register-time alert pass" schema=sqlstreams stream=__system.schedules error="alert evidence is insufficient"
+time=2026-09-13T09:16:13.660-04:00 level=WARN msg="could not run register-time alert pass" schema=sqlstreams stream=__system.metrics error="alert evidence is insufficient"
+time=2026-09-13T09:16:13.664-04:00 level=WARN msg="could not run register-time alert pass" schema=sqlstreams stream=__system.schedules error="alert evidence is insufficient"
+time=2026-09-13T09:16:13.667-04:00 level=WARN msg="could not run register-time alert pass" schema=sqlstreams stream=__system.alerts error="alert evidence is insufficient"
+time=2026-09-13T09:16:13.669-04:00 level=WARN msg="could not run register-time alert pass" schema=sqlstreams stream=__system.schedules error="alert evidence is insufficient"
+time=2026-09-13T09:16:13.670-04:00 level=WARN msg="could not run register-time alert pass" schema=sqlstreams stream=__system.alerts error="alert evidence is insufficient"
+time=2026-09-13T09:16:13.671-04:00 level=WARN msg="could not run register-time alert pass" schema=sqlstreams stream=__system.metrics error="alert evidence is insufficient"
+time=2026-09-13T09:16:13.673-04:00 level=WARN msg="could not run register-time alert pass" schema=sqlstreams stream=__system.schedules error="alert evidence is insufficient"
+time=2026-09-13T09:16:13.674-04:00 level=WARN msg="could not run register-time alert pass" schema=sqlstreams stream=__system.alerts error="alert evidence is insufficient"
+time=2026-09-13T09:16:13.674-04:00 level=WARN msg="could not run register-time alert pass" schema=sqlstreams stream=__system.metrics error="alert evidence is insufficient"
+time=2026-09-13T09:16:13.677-04:00 level=WARN msg="could not run register-time alert pass" schema=sqlstreams stream=__system.schedules error="alert evidence is insufficient"
+time=2026-09-13T09:16:13.677-04:00 level=WARN msg="could not run register-time alert pass" schema=sqlstreams stream=__system.metrics error="alert evidence is insufficient"
+time=2026-09-13T09:16:13.680-04:00 level=WARN msg="could not run register-time alert pass" schema=sqlstreams stream=__system.schedules error="alert evidence is insufficient"
+time=2026-09-13T09:16:13.681-04:00 level=WARN msg="could not run register-time alert pass" schema=sqlstreams stream=__system.schedules error="alert evidence is insufficient"
+time=2026-09-13T09:16:13.686-04:00 level=WARN msg="could not run register-time alert pass" schema=sqlstreams stream=__system.alerts error="alert evidence is insufficient"
+time=2026-09-13T09:16:13.690-04:00 level=WARN msg="could not run register-time alert pass" schema=sqlstreams stream=__system.schedules error="alert evidence is insufficient"
+time=2026-09-13T09:16:13.699-04:00 level=WARN msg="could not run register-time alert pass" schema=sqlstreams stream=__system.metrics error="alert evidence is insufficient"
+time=2026-09-13T09:16:13.703-04:00 level=WARN msg="could not run register-time alert pass" schema=sqlstreams stream=__system.metrics error="alert evidence is insufficient"
+received welcome email request for user-123
+received welcome email request for user-123
+
 # Docs
+
+Need quickstart repo for easy cloning (might need to think through how we keep it in sync with changes as the evolve over time)
+
+favicon for light mode doesn't fit well
 
 Should add a nerd 'But what about!' note or section in doc for when obvious point or counter argument pops up to address it
 

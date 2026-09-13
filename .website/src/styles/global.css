@@ -243,6 +243,7 @@
 		--font-band: 'Trebuchet MS', Verdana, sans-serif;
 		--font-content: 'IBM Plex Sans', 'Helvetica Neue', Arial, sans-serif;
 		--font-database: 'IBM Plex Mono', 'Courier New', monospace;
+		--font-size-code: 12.5px;
 	}
 
 	/* The night board -- the second board style, in the dark-board convention
@@ -518,24 +519,9 @@
 		font-family: var(--font-database);
 	}
 
-	/* Shiki highlights at build time, so a fence would otherwise carry ONE
-	   style's colors inline and ignore the board style. Both themes ship as
-	   custom properties instead (astro.config.mjs, defaultColor off) and the
-	   fence picks its side here -- the one place a board style is read
-	   outside the tokens layer, because the values are the build's, not
-	   ours. */
-	.thread-body :where(pre.astro-code),
-	.thread-body :where(pre.astro-code span) {
-		color: var(--shiki-light);
-		font-style: var(--shiki-light-font-style, inherit);
-		font-weight: var(--shiki-light-font-weight, inherit);
-	}
-
-	:root[data-board-style='night'] .thread-body :where(pre.astro-code),
-	:root[data-board-style='night'] .thread-body :where(pre.astro-code span) {
-		color: var(--shiki-dark);
-		font-style: var(--shiki-dark-font-style, inherit);
-		font-weight: var(--shiki-dark-font-weight, inherit);
+	.thread-body :where(.expressive-code) {
+		max-width: 680px;
+		min-width: 0;
 	}
 
 	/* block display so a table wider than the post body scrolls in its

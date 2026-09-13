@@ -5,6 +5,16 @@ Dated ledger of what shipped, newest first — one entry per milestone.
 Entries before 2026-08-13 were reconstructed from the phase notes when this
 ledger was created; dates come from the phase git tags.
 
+## 2026-09-13 — Documentation code blocks support copying [0795]
+
+Expressive Code renders Markdown and MDX fences with copy controls during
+site builds. The integration keeps the board palettes, fonts, plain frames,
+and comments in copied examples. It replaces the custom code-block island;
+link and diagnostic-query copy buttons keep their existing component.
+Verified by the site build, Astro type checks, targeted formatting and lint,
+and Chromium, Firefox, and WebKit checks for copying, feedback, theme
+switching, mobile rendering, and navigation.
+
 ## 2026-09-12 — Release maintenance and private security reporting documented [0794]
 
 The upgrade guide and contributor rules maintain the latest stable release

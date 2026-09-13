@@ -17,6 +17,9 @@ beside one:
 
 - Astro: static output, content collections, ClientRouter view
   transitions. No Starlight.
+- Expressive Code owns Markdown/MDX code fences: highlighting, frames,
+  and copying. Configure it before MDX in astro.config.mjs; preserve
+  comments when copying and use the board's theme selector.
 - Svelte 5 is the ONE island framework; .astro files are page
   scaffolding and layouts only -- anything worth a Storybook story is
   a Svelte component.
@@ -194,8 +197,9 @@ preprocessor, no utility framework, no third-party token pack.
 
 - One global stylesheet opens with
   `@layer reset, tokens, base, compositions, utilities;` and is the
-  only global CSS. Scoped component styles stay unlayered, so they
-  always win over the layers.
+  only handwritten global CSS. Expressive Code generates its own code-block
+  styles, configured through its style overrides. Scoped component styles
+  stay unlayered, so they always win over the layers.
 - Tokens are two tiers, one way: primitives (the raw design sheet)
   feed semantic names; components consume semantic tokens ONLY.
   Token names spell out per the root naming rules.
@@ -224,10 +228,9 @@ preprocessor, no utility framework, no third-party token pack.
 - A board style is a tokens-layer redefinition -- its own primitive
   sheet, then a re-point of the semantic names -- selected by
   `data-board-style` on the root element; a component never branches on
-  it. The ONE crossing is the code fence: Shiki colours it at build
-  time, so both styles ship as `--shiki-light`/`--shiki-dark` custom
-  properties and the base layer picks the side. All motion sits behind
-  `prefers-reduced-motion`.
+  it. The ONE crossing is the code fence: Expressive Code highlights both
+  palettes at build time and selects them through `data-board-style`.
+  All motion sits behind `prefers-reduced-motion`.
 - A page-level shove is a scroll, never a transform: a transform on the
   page becomes the containing block for every `position: fixed` child
   and flings a fixed bar to the document bottom. `animationend`
