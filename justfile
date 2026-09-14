@@ -12,7 +12,7 @@ verify:
     cd .bench && go build $(go list -e ./... | grep -v /results/) && go vet $(go list -e ./... | grep -v /results/) && go test -race -count=1 $(go list -e ./... | grep -v /results/)
     cd .tools && go test -race -count=1 ./...
 
-# Run the integration tests in .tests/integration/ -- needs Docker, or SQLSTREAMS_TEST_DATABASE_URL naming a disposable server.
+# Run the integration tests in .tests/integration/ -- needs Docker, or SQLSTREAMS_TEST_DATABASE_URL naming a disposable server (then add -p 1).
 test-integration:
     cd .tests && go test -race -count=1 ./integration/...
 

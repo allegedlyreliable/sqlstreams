@@ -2,7 +2,10 @@ package postgres
 
 // Package postgres is the integration tests' one Docker seam: a Postgres
 // container per test binary, a schema per test. SQLSTREAMS_TEST_DATABASE_URL,
-// when set, names a server to use instead of starting a container.
+// when set, names a server to use instead of starting a container;
+// SQLSTREAMS_TEST_POSTGRES_IMAGE picks the container's image. A shared
+// server needs `-p 1`: the claim's snapshot fence declines while any
+// other package's transaction is in flight.
 
 import (
 	"context"
@@ -17,7 +20,7 @@ import (
 	tcpostgres "github.com/testcontainers/testcontainers-go/modules/postgres"
 )
 
-const image = "postgres:18"
+const defaultImage = "postgres:18"
 
 var (
 	serverOnce sync.Once
@@ -36,7 +39,8 @@ func Start(t testing.TB) *datastore.PostgresDatastore {
 	}
 	t.Cleanup(pool.Close)
 
-	schema := fmt.Sprintf("test_%d", schemas.Add(1))
+	// The pid keeps the packages of one `go test ./...` run apart on a shared server.
+	schema := fmt.Sprintf("test_%d_%d", os.Getpid(), schemas.Add(1))
 	if _, err := pool.Exec(t.Context(), "CREATE SCHEMA "+schema); err != nil {
 		t.Fatal(err)
 	}
@@ -61,6 +65,10 @@ func server(t testing.TB) string {
 		if url := os.Getenv("SQLSTREAMS_TEST_DATABASE_URL"); url != "" {
 			serverURL = url
 			return
+		}
+		image := os.Getenv("SQLSTREAMS_TEST_POSTGRES_IMAGE")
+		if image == "" {
+			image = defaultImage
 		}
 		ctx := context.Background()
 		container, err := tcpostgres.Run(ctx, image,
