@@ -5,6 +5,28 @@ Dated ledger of what shipped, newest first — one entry per milestone.
 Entries before 2026-08-13 were reconstructed from the phase notes when this
 ledger was created; dates come from the phase git tags.
 
+## 2026-09-14 — Release checkpoint verified (unpublished) [0789]
+
+Source 4da16369 passes just verify, including Docker integration tests.
+The compatibility driver is pinned to published v0.1.2, tidied, and passes
+standalone build and vet with GOWORK=off. On a fresh development database,
+just system-register and all four just signal-e2e cases pass. The killed
+producer leaves no transaction, lock, or message; SIGTERM drains the producer
+and idle consumer; a second SIGTERM forces the hung handler to exit 143.
+
+GOFLAGS=-race just compat-lab round-trip passes against current-build tables:
+compat.lab (stream 5), compat.lab.group (consumer group 6), payloads and
+message ids 1–5. The published client consumed all five distinct payloads
+and destroyed the stream. Both scopes remain schema v1 with empty migration
+registries; no upgrade DDL was needed. The migration table records this
+unpublished checkpoint separately from earlier release results.
+
+Release changes since v0.1.2 include permanent claim errors reaching the
+consumer, exception-consumer retry fixes, explicit datastore retry semantics,
+named consumer-not-found errors, clearer alert evidence diagnostics, and
+documentation updates. RELEASE.md now holds the basic release checklist.
+No release tag or deployment was made.
+
 ## 2026-09-13 — Each board owns its page [0802]
 
 Seven dedicated Astro pages replace the dynamic board route. Board definitions

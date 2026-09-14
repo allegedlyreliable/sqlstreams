@@ -146,9 +146,16 @@ does not promise compatibility across pre-v1 releases.
 | v0.1.0 | v1 | v1 | v0.1.0-rc.1 | Round-trip passed on 2026-09-12 at source 65efd3a1; library and schema unchanged from the RC. |
 | v0.1.1 | v1 | v1 | v0.1.0-rc.1 | Credential-template fix only; retains the v0.1.0 checkpoint result with unchanged library and schema. |
 | v0.1.2 | v1 | v1 | v0.1.0-rc.1 | Chocolatey packaging change only; retains the same checkpoint result with unchanged library and schema. |
+| Upcoming (Proposed) | v1 | v1 | v0.1.2 | Round-trip passed on 2026-09-14 against source 4da16369 with the race detector enabled. |
 
-The checkpoint used a fresh database prepared by the current build and the
+The v0.1.0 checkpoint used a fresh database prepared by that build and the
 published RC client with workspace replacement disabled. That client produced
 and consumed five distinct payloads through `compat.lab`, then destroyed the
 stream. The fresh-database signal suite also passed. Both migration registries
 are empty, so this pair needs no upgrade DDL.
+
+The upcoming checkpoint used a fresh database prepared by source 4da16369
+and the published v0.1.2 client with workspace replacement disabled. It
+produced and consumed five distinct payloads through `compat.lab`, then
+destroyed the stream. All four fresh-database signal cases passed. Both
+scopes remain at v1; no upgrade DDL was needed.
