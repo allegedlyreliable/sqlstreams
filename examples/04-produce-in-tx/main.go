@@ -10,7 +10,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/allegedlyreliable/sqlstreams/client"
+	sqlstreams "github.com/allegedlyreliable/sqlstreams/client"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 

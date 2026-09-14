@@ -17,7 +17,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/allegedlyreliable/sqlstreams/client"
+	sqlstreams "github.com/allegedlyreliable/sqlstreams/client"
 )
 
 type VideoUploadedV1 struct {

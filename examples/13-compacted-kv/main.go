@@ -11,7 +11,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/allegedlyreliable/sqlstreams/client"
+	sqlstreams "github.com/allegedlyreliable/sqlstreams/client"
 )
 
 type VideoProcessingStateV1 struct {

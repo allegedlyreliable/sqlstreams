@@ -5,6 +5,13 @@ Dated ledger of what shipped, newest first — one entry per milestone.
 Entries before 2026-08-13 were reconstructed from the phase notes when this
 ledger was created; dates come from the phase git tags.
 
+## 2026-09-14 — Explicit client import alias in public samples [0806]
+
+All 13 runnable examples, the README, and the quickstart and handler-outcomes
+doc snippets use the explicit sqlstreams import alias, as does the consumer's
+shutdown error help. CONVENTIONS.md carries the rule for future examples and
+documentation.
+
 ## 2026-09-14 — v0.1.5 published with Chocolatey submission [0789] [0791] [0804]
 
 Root v0.1.5 names fa9d3c15. CI 34844356688 passes just verify. A fresh
@@ -20,9 +27,13 @@ upgrade from 0.1.4 report version 0.1.5. Windows Chocolatey installation,
 checksum, version output, uninstall, and submission pass. Package metadata
 reports Submitted/Pending, IsApproved=false; public-feed verification waits
 for approval. OTel v0.1.5 is published at b529043e after CI 34846835381
-passed. CLI root/OTel pins now use v0.1.5 and pass standalone build and race
-tests; CLI publication awaits the maintainer's push. Every release requires
-matching module versions, even without code changes [0805].
+passed. CLI v0.1.5 is published at b3e5caca after CI 34847443141 passed;
+its root/OTel pins use v0.1.5 and pass standalone build and race tests.
+The documented go install command succeeds outside the workspace and reports
+sqlstreams version v0.1.5; binary metadata confirms root, OTel, and CLI all
+use v0.1.5. Current install references are updated; compatibility retains its
+prior-client pin. Every release requires matching module versions, even
+without code changes [0805].
 
 Post-release preparation: examples, .tests, .bench, and .tools pin v0.1.5
 and pass standalone builds and race tests, including Docker integration tests.

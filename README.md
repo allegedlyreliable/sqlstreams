@@ -67,7 +67,7 @@ go get github.com/allegedlyreliable/sqlstreams@v0.1.5
 Import the client from the same module:
 
 ```go
-import "github.com/allegedlyreliable/sqlstreams/client"
+import sqlstreams "github.com/allegedlyreliable/sqlstreams/client"
 ```
 
 A message is a struct with a schema version.

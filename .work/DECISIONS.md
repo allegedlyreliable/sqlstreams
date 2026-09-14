@@ -603,3 +603,4 @@ in `.work/DECISION_MAP.md` routes a question to its records.
 - 0803 2026-09-14 superseded (pre-v1) — Chocolatey retries skip release publication
 - 0804 2026-09-14 accepted (pre-v1) — Chocolatey recovery uses a new release
 - 0805 2026-09-14 accepted (pre-v1) — Release module versions stay in sync
+- 0806 2026-09-14 accepted (pre-v1) — Public examples explicitly alias the client import

@@ -1241,6 +1241,8 @@ trees: `integration/` for integration tests and `e2e/` for e2e programs.
 
 Rules for the doc site (.website/) and all user-facing prose.
 
+- Public-facing examples and documentation explicitly alias the client
+  import: `sqlstreams "github.com/allegedlyreliable/sqlstreams/client"`.
 - Docs describe the real API only: every code sample compiles against the
   shipped library. A capability that does not exist yet is marked as
   proposed, never shown as current; the process that gets it there (the

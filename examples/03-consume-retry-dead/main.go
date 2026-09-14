@@ -16,7 +16,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/allegedlyreliable/sqlstreams/client"
+	sqlstreams "github.com/allegedlyreliable/sqlstreams/client"
 )
 
 var (

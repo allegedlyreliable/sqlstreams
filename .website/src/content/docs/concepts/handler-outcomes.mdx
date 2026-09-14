@@ -24,7 +24,7 @@ third and fourth are the two things a retry-only handler cannot say:
 The `charge-cards` group on `payments.requested` (stream id `1`):
 
 ```go
-import "github.com/allegedlyreliable/sqlstreams/client"
+import sqlstreams "github.com/allegedlyreliable/sqlstreams/client"
 
 err := payments.Consume(ctx, func(ctx context.Context, payment *PaymentRequested) error {
 	result, err := gateway.Charge(ctx, payment)
