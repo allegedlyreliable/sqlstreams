@@ -17,7 +17,6 @@
 		"verify": "prettier --check . && eslint . && stylelint \"src/**/*.css\" && astro check && svelte-check --threshold error && remark src/content/docs --ext md,mdx --quiet --frail && vale --minAlertLevel=error src/content/docs && vitest run src && playwright test"
 	},
 	"dependencies": {
-		"@astrojs/markdown-remark": "^7.3.1",
 		"@astrojs/mdx": "^7.0.7",
 		"@astrojs/sitemap": "^3.7.4",
 		"@astrojs/svelte": "^9.0.1",

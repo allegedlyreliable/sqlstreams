@@ -16,6 +16,18 @@ the item is removed.
 
 ## Now
 
+- **Documentation structure review** -- Four boards with explicit
+  purposes, original Quickstart and Why SQLStreams homepage stickies, group
+  discovery through article maps, and a complete Consumer example. Other legacy source files
+  remain, with their routes and search entries excluded.
+  Review the local website before extending coverage. Next migrations should
+  map producing/transactions, ordering/routing, retention/replay, operations,
+  and diagnostics across the same purposes; do not restore whole old boards.
+  Active review checkpoints are in TODO.md.
+
+- **PostgreSQL 15–18 compatibility matrix** [0812] -- picked up 2026-09-14
+  in small reviewable chunks; the chunk list is in TODO.md.
+
 - **manual review of cli**
 
 - **manual review of docs**
@@ -27,27 +39,6 @@ the item is removed.
   indexing result so a future domain move or deployment can repeat them.
 
 ## Next
-
-- **PostgreSQL 15–18 compatibility matrix** -- complete further testing on
-  PostgreSQL 15 and 16, then publish the supported-version matrix with the
-  tested minor versions, verification evidence, and scope of the guarantee.
-  - Initial investigation: 102 integration tests across nine packages passed
-    with the race detector on 15.19, 16.15, 17.11, and 18.6. These results cover
-    a frozen source snapshot, not subsequent retry changes.
-  - Verify the settled revision, extending 15/16 coverage through the existing
-    signal E2E and applicable compatibility recipes. Keep databases isolated;
-    the shared-server integration override requires serialized packages
-    (`-p 1`) to avoid schema collisions and transaction-snapshot interference.
-  - Establish repeatable verification for 15–18 before publishing the matrix;
-    CI currently exercises only 18. Distinguish server-version compatibility
-    from PostgreSQL major upgrades and application schema-upgrade guarantees.
-
-- **Chocolatey approval and public-feed validation** [0791] [0804] -- v0.1.5
-  submitted successfully in [run 34844608693](https://github.com/allegedlyreliable/sqlstreams/actions/runs/34844608693);
-  status on 2026-09-14 is Submitted/Pending, IsApproved=false. After approval,
-  verify clean Windows public-feed installation, version output, and uninstall.
-  Then advertise Chocolatey installation in READMEs/docs and record the proof.
-  Version 0.1.2 is approved; v0.1.4 submission was abandoned.
 
 ## Later
 

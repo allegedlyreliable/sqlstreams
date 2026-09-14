@@ -1,9 +1,11 @@
+import type { GroupMapData } from '../../components/group-map/types';
 import type { ThreadLink } from '../../components/prev-next/types';
 import type { SlopLevel } from '../../components/slop-notice/types';
-import type { Board } from '../_board/model';
 
 export type ThreadData = {
-	board: Board;
+	board: ThreadLink | null;
+	group: ThreadLink | null;
+	groupMap: GroupMapData | null;
 	postedDate: string;
 	postCount: number;
 	editHref: string;

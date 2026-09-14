@@ -607,3 +607,4 @@ in `.work/DECISION_MAP.md` routes a question to its records.
 - 0807 2026-09-14 accepted (pre-v1) — Uninstalled tables are probed with to_regclass, never caught as 42P01
 - 0808 2026-09-14 accepted (pre-v1) — The producer's register-time pass drops worker_liveness
 - 0809 2026-09-14 accepted (pre-v1) — CLI database URL uses SQLSTREAMS_DATABASE_URL
+- 0812 2026-09-14 accepted (pre-v1) — Supported PostgreSQL majors follow the community support window

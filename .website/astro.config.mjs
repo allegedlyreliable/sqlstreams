@@ -1,12 +1,10 @@
 // @ts-check
 import { URL } from 'node:url';
 import { defineConfig } from 'astro/config';
-import { unified } from '@astrojs/markdown-remark';
 import mdx from '@astrojs/mdx';
 import sitemap from '@astrojs/sitemap';
 import svelte from '@astrojs/svelte';
 import expressiveCode from 'astro-expressive-code';
-import { remarkDecisionRecords } from './src/helpers/decision-records.ts';
 import { isSearchEngineIndexable } from './src/search-engine-index.ts';
 import { siteUrl } from './src/site.ts';
 
@@ -32,7 +30,6 @@ const keywordScopes = [
 export default defineConfig({
 	site: siteUrl,
 	redirects: {
-		'/decisions/': '/boards/decisions/',
 		'/errors/': '/boards/troubleshooting/',
 		'/reference/': '/boards/reference/',
 	},
@@ -44,9 +41,6 @@ export default defineConfig({
 		},
 		// PGlite locates its wasm assets itself; pre-bundling breaks the paths
 		optimizeDeps: { exclude: ['@electric-sql/pglite'] },
-	},
-	markdown: {
-		processor: unified({ remarkPlugins: [remarkDecisionRecords] }),
 	},
 	integrations: [
 		expressiveCode({

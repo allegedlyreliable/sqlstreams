@@ -3,7 +3,6 @@
 
 	type Props = {
 		index: number;
-		decisionDate: string | null;
 		metadata: string | null;
 		title: string;
 		href: string;
@@ -12,8 +11,7 @@
 		onVisit: () => void;
 	};
 
-	let { index, title, href, updated, lastUpdatedDate, decisionDate, metadata, onVisit }: Props =
-		$props();
+	let { index, title, href, updated, lastUpdatedDate, metadata, onVisit }: Props = $props();
 </script>
 
 <div class="thread-row" data-stripe={index % 2 === 0 ? 'a' : 'b'}>
@@ -21,7 +19,7 @@
 	<a class="thread-row-title" {href} onclick={onVisit}>{title}</a>
 	<span class="thread-row-status">{metadata ?? ''}</span>
 	<span class="thread-row-date">
-		{#if decisionDate !== null}decided {decisionDate}{:else}updated {lastUpdatedDate}{/if}
+		updated {lastUpdatedDate}
 	</span>
 </div>
 

@@ -121,9 +121,10 @@ At a release checkpoint, after the full fresh-DB suite:
 ## Docs & record-keeping
 
 Lifecycle of a piece of work: idea -> ROADMAP (Later/parking lot) ->
-promoted to Now -> expanded in TODO.md when picked up -> design settles ->
-decision record -> ships -> HISTORY.md entry; its TODO.md and ROADMAP.md
-lines are removed.
+promoted to Now -> expanded in TODO.md when picked up -> implementation and
+review -> task closes when committed -> one consolidated decision record and
+HISTORY.md entry; its TODO.md and ROADMAP.md lines are removed. Agents still
+never commit. Keep intermediate decisions in the existing task notes.
 
 The record-keeping surface is fixed -- never create doc files outside it.
 Working docs live under .work/; only the rule files (CONVENTIONS.md, this
@@ -144,9 +145,10 @@ file) and README/CLAUDE.md stay at root:
   summary. Grep it or the bodies for a term, open only what's needed.
   Record bodies live in .work/decisions/ (NNNN-<slug>.md, front matter
   status/date/phase, Context/Decision/Consequences, under 60 lines).
-  Records are append-only and written in the SAME session a design settles;
-  changing a decision means a new record plus flipping the old one's status
-  to superseded, linked both ways. A new record takes the next number after
+  Write one consolidated record at task close-out when the work is committed,
+  not for each small change or review iteration. Do not write premature
+  HISTORY entries. Final records are append-only; a later task changing a
+  decision adds a record and supersedes the old one, linked both ways. A new record takes the next number after
   the current max.
 - .work/THOUGHTS.md -- the user's scratch: ideas not yet promoted to the
   ROADMAP. Never edited by agents.

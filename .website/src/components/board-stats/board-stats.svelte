@@ -4,10 +4,9 @@
 	type Props = {
 		docCount: number;
 		codeCount: number;
-		decisionRecordCount: number;
 	};
 
-	let { docCount, codeCount, decisionRecordCount }: Props = $props();
+	let { docCount, codeCount }: Props = $props();
 </script>
 
 <div class="board-stats">
@@ -15,12 +14,11 @@
 		<span class="stats-line">
 			<a href="/whats-new/">{docCount} documents</a>
 		</span>
-		<span class="stats-line">
-			<a href="/boards/troubleshooting/">{codeCount} diagnostic codes</a>
-		</span>
-		<span class="stats-line">
-			<a href="/boards/decisions/">{decisionRecordCount} decision records</a>
-		</span>
+		{#if codeCount > 0}
+			<span class="stats-line">
+				<a href="/boards/troubleshooting/">{codeCount} diagnostic codes</a>
+			</span>
+		{/if}
 	</div>
 	<div class="legend">
 		<span class="legend-row">

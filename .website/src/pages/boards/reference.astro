@@ -2,16 +2,18 @@
 import { getCollection } from 'astro:content';
 import BoardLayout from '../../layouts/BoardLayout.astro';
 import Breadcrumb from '../../components/breadcrumb/breadcrumb.svelte';
-import BoardSection from '../../components/board-section/board-section.svelte';
-import ThreadRows from '../../components/thread-rows/thread-rows.svelte';
+import BoardGroup from '../../components/board-group/board-group.svelte';
+import { groupRows } from '../_board/groups';
 import JumpTo from '../../components/jump-to/jump-to.svelte';
 import { jumpTargets } from '../_board/navigation';
 import { siteThreads } from '../_board/threads';
 import { board } from './_reference/board';
-import { threadRows } from '../_board/rows';
+import { referenceRows } from './_reference/rows';
+import BoardIntro from './_components/board-intro.svelte';
 
 const docs = await getCollection('docs');
-const rows = threadRows(board, siteThreads(docs, []));
+const threads = siteThreads(docs);
+const groups = groupRows(referenceRows(threads), threads);
 ---
 
 <BoardLayout title={board.title} description={board.description} navCurrent={board.title}>
@@ -21,8 +23,13 @@ const rows = threadRows(board, siteThreads(docs, []));
 			{ label: board.title, href: null },
 		]}
 	/>
-	<BoardSection title={board.title} columnLabels={{ threadCount: null, lastPost: 'Updated' }}>
-		<ThreadRows client:idle rows={rows} />
-	</BoardSection>
+	<BoardIntro title="About this board">
+		<p>Look up APIs, configuration, commands, metrics, logs, and alerts.</p>
+	</BoardIntro>
+	{
+		groups.map((group) => (
+			<BoardGroup client:idle id={group.id} title={group.title} sections={group.sections} />
+		))
+	}
 	<JumpTo client:idle targets={jumpTargets} />
 </BoardLayout>

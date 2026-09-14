@@ -2,22 +2,17 @@
 import type { InferGetStaticPropsType, GetStaticPaths } from 'astro';
 import { getCollection, render } from 'astro:content';
 import ThreadLayout from '../layouts/ThreadLayout.astro';
-import { boards, boardHref } from './_board/navigation';
-import { isDecisionRecordThread, isErrorThread } from './_board/identifiers';
-import { boardThreads } from './_board/rows';
+import { isErrorThread } from './_board/identifiers';
 import { siteThreads } from './_board/threads';
 import { threadData } from './_thread/thread';
 
 export const getStaticPaths = (async () => {
 	const docs = await getCollection('docs');
-	const decisions = await getCollection('decisions');
-	const threads = siteThreads(docs, decisions);
+	const threads = siteThreads(docs);
 
-	// every board thread except the error threads and the decision records
-	// -- those render through errors/[code].astro and decisions/[number].astro
-	return boards
-		.flatMap((board) => boardThreads(board, threads))
-		.filter((thread) => !isErrorThread(thread.id) && !isDecisionRecordThread(thread.id))
+	// error threads render through errors/[code].astro
+	return threads
+		.filter((thread) => !isErrorThread(thread.id))
 		.map((thread) => ({ params: { id: thread.id }, props: { thread } }));
 }) satisfies GetStaticPaths;
 
@@ -25,8 +20,7 @@ type Props = InferGetStaticPropsType<typeof getStaticPaths>;
 
 const { thread } = Astro.props;
 const docs = await getCollection('docs');
-const decisions = await getCollection('decisions');
-const threads = siteThreads(docs, decisions);
+const threads = siteThreads(docs);
 const { Content } = await render(thread.entry);
 const data = threadData(thread, threads);
 ---
@@ -34,8 +28,9 @@ const data = threadData(thread, threads);
 <ThreadLayout
 	title={thread.title}
 	description={thread.description}
-	boardTitle={data.board.title}
-	boardHref={boardHref(data.board)}
+	board={data.board}
+	group={data.group}
+	groupMap={data.groupMap}
 	editHref={data.editHref}
 	postedDate={data.postedDate}
 	reportHref={data.reportHref}

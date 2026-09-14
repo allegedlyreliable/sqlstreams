@@ -1,0 +1,31 @@
+.map-section {
+	min-width: 0;
+}
+summary {
+	padding: var(--space-6) 0;
+	font-weight: 700;
+	font-size: 12px;
+	color: var(--color-text);
+	cursor: pointer;
+}
+ul {
+	list-style: none;
+	margin: 0 0 0 var(--space-8);
+	padding: 0 0 0 var(--space-16);
+	border-left: 1px solid var(--border-row);
+}
+a {
+	display: block;
+	padding: var(--space-4) var(--space-8);
+	font-size: 12px;
+	line-height: 1.5;
+	overflow-wrap: anywhere;
+}
+a:hover {
+	background: var(--color-row-enter);
+}
+a[aria-current='page'] {
+	background: var(--color-sticky-row);
+	border-inline-start: var(--space-3) solid var(--color-pin);
+	font-weight: 700;
+}

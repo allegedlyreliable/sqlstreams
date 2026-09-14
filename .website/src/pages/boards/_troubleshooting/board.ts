@@ -1,9 +1,9 @@
 import type { Board } from '../../_board/model';
-import { isErrorThread } from '../../_board/identifiers';
 
 export const board: Board = {
+	grouped: false,
 	title: 'Troubleshooting',
 	slug: 'troubleshooting',
-	description: 'errors, log events, metrics, and alerts — one thread per SQL code',
-	threads: (ids) => ids.filter(isErrorThread).sort(),
+	description: 'Start with a symptom or code, identify its cause, and recover.',
+	threads: () => ['troubleshooting/queued-message-cannot-start'],
 };

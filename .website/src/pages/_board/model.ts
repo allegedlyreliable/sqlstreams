@@ -1,4 +1,5 @@
 export type Board = {
+	grouped: boolean;
 	title: string;
 	slug: string;
 	description: string;
@@ -17,7 +18,6 @@ export type BoardRowData = {
 };
 
 export type ThreadRowData = {
-	decisionDate: string | null;
 	metadata: string | null;
 	title: string;
 	href: string;
@@ -33,5 +33,4 @@ export type StickyRowData = {
 export type SiteStats = {
 	docCount: number;
 	codeCount: number;
-	decisionRecordCount: number;
 };

@@ -249,18 +249,33 @@ preprocessor, no utility framework, no third-party token pack.
   component earns a place on the list by rendering something prose
   cannot state -- live query results, a computed grid -- never by
   presenting prose more nicely.
-- The decision records (`../.work/decisions`, the `decisions`
-  collection) are append-only history and render as-is: their own
-  frontmatter shape, the body H1 as the thread title, the vocabulary
-  of the day the decision settled. The site adapts to them and never
-  edits one; vale and remark-lint do not run over them.
+- Decision records are internal repository documentation. The docsite does
+  not load, render, link to, count, or index them.
 - Each page does ONE job -- tutorial, how-to, reference, or
   explanation; a guide that starts explaining links to the concept
-  page instead of drifting. Boards are that split and each holds one
-  kind of thread [0679]: Getting Started (orientation), Concepts
-  (explanation), Guides (how-to), Reference (API lookup),
-  Troubleshooting (code lookup), Compare, Decision records. A thread
-  joins the board of its kind; one that fits two boards is two threads.
+  page instead of drifting. Four boards organize those purposes: Concepts (explanation), Guides
+  (how-to), Reference
+  (contract lookup), and Troubleshooting (diagnosis and recovery). Article dropdown trees connect related pages across boards without
+  repeating their content. Articles have one owning board except the two homepage
+  stickies, which link directly to the Board Index; contextual links can reach it
+  from other boards. A diagnostic code keeps one canonical page, reachable
+  from both reference and troubleshooting.
+- Concepts, Guides, and Reference group their articles beneath group
+  headings. Consumer is the current example. Reference's six subsections sit
+  inside Consumer; Concepts and Guides list their articles directly under it.
+  Article breadcrumbs include the group after the board, linking to that
+  group's anchor on the board. Standalone stickies and Troubleshooting keep
+  their existing trails. No standalone group route is created.
+- The Consumer map connects related articles across the four boards. The
+  article frontmatter owns group membership (`group: consumer`). Board
+  groups, dropdown trees, and breadcrumbs derive it from the content collection;
+  no separate group membership list is maintained. Groups use lowercase
+  hyphen-separated identifiers; articles on grouped boards require one. There is no standalone group page or full-map link. A native disclosure row directly beneath the page title
+  starts collapsed at every width. Its map highlights the current page and
+  opens that board group. The dropdown is a vertical tree of board names
+  and indented article links at every width. Expanding it pushes the article down and never
+  reduces the reading width. The row is excluded from the article search body. No global Groups tab or fifth
+  board is introduced. Contextual prose links still carry their own meaning.
 - Page size has mechanical triggers, not taste [0679]: a guide or
   concept thread splits past six H2s or roughly 1,500 words; a section
   under three sentences folds into its neighbor; a reference thread may
@@ -269,17 +284,56 @@ preprocessor, no utility framework, no third-party token pack.
   by kind, and changelog prose ("X has been removed") is deleted, never
   kept -- the decision records hold history. A moved or split thread
   leaves an astro.config `redirects` entry at its old URL.
-- A Reference thread is one handle or instance, or one shared value
-  type, and reads the same way everywhere: the opening says what the
-  value is and how you get one, with the one example; then `## Verbs`
-  as a table (verb, returns, notes naming the Err* variables it
-  returns); `## Config` with an H3 per struct as a table (field,
-  default, what it decides), defaults spelled from the declaration's
-  `Default:` line; a subject-named section only for a mechanism the
-  thread owns; `## Gotchas` last. A section with nothing to say is
-  omitted, never written empty. A change to a verb's contract or a
-  field's default updates its row in the same change -- the sibling of
-  the error-page rule.
+- Reference has six sections: Go API, Configuration, CLI, Metrics, Logs,
+  and Alerts. Article dropdown trees provide another route to those pages.
+  The route's section mapping owns membership and order; it does not move
+  a linked guide or code page out of its owning board.
+- A reference entry answers one independently useful lookup. Neither a
+  handle nor a symbol forces a page boundary. Keep closely related variants
+  together when readers need to compare them. Open with the answer and the
+  exact name. State applicable inputs, outputs, absence, errors, side effects,
+  cancellation, and concurrency beside the operation they qualify.
+- Configuration owns settings' types, defaults, zero/nil meanings, validity,
+  precedence, scope, and effective timing. Derived defaults name their
+  dependencies and when they resolve. Go API owns calling contracts and
+  returned values; CLI owns syntax, flags, output, and exits. Metrics owns
+  measurement definitions, calculations, units, attributes, and freshness.
+  Logs owns emission conditions, levels, fields, and suppression. Alerts owns
+  triggering conditions, thresholds, severity, evaluation, and resolution.
+  Troubleshooting owns investigation and recovery. Link to shared definitions instead of maintaining a second table. Task-specific
+  command inputs can stay with their operation.
+- Use descriptive titles and exact symbols in headings or labeled entries.
+  Important settings and operations have directly linkable anchors. Examples
+  clarify contracts; procedures link to guides. No required Verbs/Config/
+  Gotchas skeleton; omit inapplicable sections and place limitations locally.
+  A changed contract updates its definition in the same change.
+- During the documentation structure review, only the new Consumer subset
+  appears on the site alongside the user's original Quickstart and Why
+  SQLStreams articles. Other existing article sources remain
+  on disk but have no generated article routes or search entries. Board
+  membership and the homepage sticky list control visibility, navigation, and counts through
+  siteThreads; article dropdown trees consume that same visible collection.
+  Do not redirect hidden articles into the preview or list the archive.
+  This review exception replaces the moved-page redirect rule until migration.
+- The homepage opens with one Start Here section: Quickstart and Why SQLStreams
+  stickies, then the sandbox. They are standalone pages, not a Getting Started
+  board. These stickies use the original quickstart.mdx
+  and why-sqlstreams.mdx without rewriting their prose. Navigation metadata
+  may be added to frontmatter. Their existing
+  links into hidden articles remain as written during the preview. The board listing follows. Keep board-purpose
+  explanations on their boards and group discovery in the article dropdown trees;
+  do not add a separate introductory panel above the stickies.
+- Every board introduction is one sentence stating its purpose. Omit
+  cross-board placement rules and repeated navigation from the intro.
+  The homepage stickies own product orientation and a first success. Concepts
+  owns mechanisms and causal examples; Guides owns task steps, practical
+  choices, and result checks; Reference owns exact contracts; Troubleshooting
+  owns symptoms, evidence, cause, recovery, and verification. A code's one
+  canonical page can belong to Reference (measurement definition) or
+  Troubleshooting (diagnosis); cross-links do not create a second copy.
+- The same example group crosses every board. Keep its names, ids, and
+  assumptions consistent. Article dropdown trees link to canonical pages grouped by board;
+  they do not become another reference manual. Never link into hidden articles to complete an example.
 - Code samples show real error handling -- `if err != nil { return err }`
   or `_` for an unused value -- never a `must()` helper: it hides the
   path readers copy and is not a real API. Pages that still carry one

@@ -12,6 +12,11 @@ export const collections = {
 			generateId: ({ entry }) => entry.replace(/\.(md|mdx)$/, ''),
 		}),
 		schema: z.object({
+			group: z
+				.string()
+				.regex(/^[a-z]+(?:-[a-z]+)*$/)
+				.optional()
+				.describe('the documentation group used by boards, related pages, and breadcrumbs'),
 			title: z.string().describe('the thread title; the H1 the page renders under'),
 			description: z
 				.string()
@@ -43,23 +48,6 @@ export const collections = {
 				.describe(
 					'how far the author reviewed the LLM-drafted body; none is a hand-checked thread and renders no notice; absent only on the diagnostics reference and the code threads',
 				),
-		}),
-	}),
-	decisions: defineCollection({
-		loader: glob({
-			pattern: '*.md',
-			base: '../.work/decisions',
-			// the record number is the id; the file name's slug serves the repo
-			generateId: ({ entry }) => entry.slice(0, 4),
-		}),
-		schema: z.object({
-			status: z
-				.enum(['accepted', 'rejected', 'superseded'])
-				.describe('whether the decision stands, was rejected, or was replaced by a later record'),
-			date: z.coerce.date().describe('the day the decision settled'),
-			phase: z.coerce
-				.string()
-				.describe('the build phase the record was written in ("14a", "pre-v1")'),
 		}),
 	}),
 };

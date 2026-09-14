@@ -1,5 +1,7 @@
 ---
 import BoardLayout from './BoardLayout.astro';
+import GroupMap from '../components/group-map/group-map.svelte';
+import type { GroupMapData } from '../components/group-map/types';
 import Breadcrumb from '../components/breadcrumb/breadcrumb.svelte';
 import ThreadTitleBand from '../components/thread-title-band/thread-title-band.svelte';
 import ThreadPost from '../components/thread-post/thread-post.svelte';
@@ -14,8 +16,9 @@ import type { SlopLevel } from '../components/slop-notice/types';
 type Props = {
 	title: string;
 	description: string;
-	boardTitle: string;
-	boardHref: string;
+	board: ThreadLink | null;
+	group: ThreadLink | null;
+	groupMap: GroupMapData | null;
 	editHref: string;
 	postedDate: string;
 	reportHref: string;
@@ -28,8 +31,9 @@ type Props = {
 const {
 	title,
 	description,
-	boardTitle,
-	boardHref,
+	board,
+	group,
+	groupMap,
 	editHref,
 	postedDate,
 	reportHref,
@@ -39,15 +43,12 @@ const {
 	slop,
 } = Astro.props;
 
-const trail = [
-	{ label: 'Board Index', href: '/' },
-	{ label: boardTitle, href: boardHref },
-	{ label: title, href: null },
-];
 const returnTrail = [
 	{ label: 'Board Index', href: '/' },
-	{ label: boardTitle, href: boardHref },
+	...(board === null ? [] : [{ label: board.title, href: board.href }]),
+	...(group === null ? [] : [{ label: group.title, href: group.href }]),
 ];
+const trail = [...returnTrail, { label: title, href: null }];
 const threadUrl = new URL(Astro.url.pathname, Astro.site).href;
 ---
 
@@ -60,9 +61,12 @@ const threadUrl = new URL(Astro.url.pathname, Astro.site).href;
 			{next !== null && <a href={next.href}>View next thread</a>}
 		</div>
 	</div>
-	<!-- Pagefind indexes only elements marked data-pagefind-body -->
+	<!-- Pagefind indexes the article and excludes the expandable navigation. -->
 	<div class="search-region" data-pagefind-body>
-		<ThreadTitleBand title={title} code={null} solved={false} editHref={editHref} />
+		<div>
+			<ThreadTitleBand title={title} code={null} solved={false} editHref={editHref} />
+			{groupMap !== null && <GroupMap map={groupMap} currentHref={Astro.url.pathname} />}
+		</div>
 		<ThreadPost
 			author="brandon"
 			role="Site Admin"
@@ -114,6 +118,7 @@ const threadUrl = new URL(Astro.url.pathname, Astro.site).href;
 
 	/* mirrors the page-content gap so the wrapper is invisible in the flow */
 	.search-region {
+		min-width: 0;
 		display: flex;
 		flex-direction: column;
 		gap: var(--space-20);

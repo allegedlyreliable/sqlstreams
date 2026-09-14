@@ -9,15 +9,3 @@ export function threadCode(id: string): string {
 	}
 	return code;
 }
-
-export function isDecisionRecordThread(id: string): boolean {
-	return id.startsWith('decisions/');
-}
-
-export function recordNumber(id: string): string {
-	const number = id.split('/')[1];
-	if (number === undefined) {
-		throw new Error(`thread "${id}" carries no record number segment`);
-	}
-	return number;
-}

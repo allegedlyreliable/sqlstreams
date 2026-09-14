@@ -1,24 +1,21 @@
 ---
+import SandboxPost from './_components/sandbox-post/sandbox-post.svelte';
+import { sandboxShell, sandboxStream } from './_board/sandbox';
 import { getCollection } from 'astro:content';
 import BoardLayout from '../layouts/BoardLayout.astro';
 import Breadcrumb from '../components/breadcrumb/breadcrumb.svelte';
 import BoardSection from '../components/board-section/board-section.svelte';
 import BoardRows from '../components/board-rows/board-rows.svelte';
 import StickyRows from '../components/sticky-rows/sticky-rows.svelte';
-import SandboxPost from './_components/sandbox-post/sandbox-post.svelte';
-import AnnouncementRow from '../components/announcement-row/announcement-row.svelte';
 import BoardStats from '../components/board-stats/board-stats.svelte';
 import JumpTo from '../components/jump-to/jump-to.svelte';
 import { jumpTargets } from './_board/navigation';
 import { boardRows, stickyRows } from './_board/rows';
-import { announcements } from './_board/announcements';
 import { siteStats } from './_board/stats';
 import { siteThreads } from './_board/threads';
-import { sandboxShell, sandboxStream } from './_board/sandbox';
 
 const docs = await getCollection('docs');
-const decisions = await getCollection('decisions');
-const threads = siteThreads(docs, decisions);
+const threads = siteThreads(docs);
 const rows = boardRows(threads);
 const stickies = stickyRows(threads);
 const stats = siteStats(threads);
@@ -43,22 +40,7 @@ const shell = await sandboxShell();
 	<BoardSection title="Board" columnLabels={{ threadCount: 'Threads', lastPost: 'Last post' }}>
 		<BoardRows client:idle rows={rows} />
 	</BoardSection>
-	<BoardSection title="Announcements" columnLabels={{ threadCount: null, lastPost: 'Posted' }}>
-		{
-			announcements.map((announcement, index) => (
-				<AnnouncementRow
-					index={index}
-					title={announcement.title}
-					href={announcement.href}
-					date={announcement.date}
-				/>
-			))
-		}
-	</BoardSection>
-	<BoardStats
-		docCount={stats.docCount}
-		codeCount={stats.codeCount}
-		decisionRecordCount={stats.decisionRecordCount}
-	/>
+
+	<BoardStats docCount={stats.docCount} codeCount={stats.codeCount} />
 	<JumpTo client:idle targets={jumpTargets} />
 </BoardLayout>

@@ -1,21 +1,12 @@
 import type { JumpTarget } from '../../components/jump-to/types';
 import type { Board } from './model';
-import { board as gettingStarted } from '../boards/_getting-started/board';
 import { board as concepts } from '../boards/_concepts/board';
 import { board as guides } from '../boards/_guides/board';
 import { board as reference } from '../boards/_reference/board';
 import { board as troubleshooting } from '../boards/_troubleshooting/board';
-import { board as decisions } from '../boards/_decisions/board';
 
 // Shared navigation and membership; each board page owns its presentation.
-export const boards: Board[] = [
-	gettingStarted,
-	concepts,
-	guides,
-  reference,
-	troubleshooting,
-	decisions,
-];
+export const boards: Board[] = [concepts, guides, reference, troubleshooting];
 
 export const stickyIds = ['quickstart', 'why-sqlstreams'];
 

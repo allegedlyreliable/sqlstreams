@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { boards, boardHref } from '../../pages/_board/navigation';
 	import { repositoryUrl } from '../../site';
 
 	type NavLink = {
@@ -15,8 +16,7 @@
 
 	const links: NavLink[] = [
 		{ label: 'Board Index', href: '/' },
-		{ label: 'Reference', href: '/boards/reference/' },
-		{ label: 'Troubleshooting', href: '/boards/troubleshooting/' },
+		...boards.map((board) => ({ label: board.title, href: boardHref(board) })),
 		{ label: 'Search', href: '/search/' },
 		{ label: 'GitHub', href: repositoryUrl },
 	];

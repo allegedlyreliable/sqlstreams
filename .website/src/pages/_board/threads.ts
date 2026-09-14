@@ -1,30 +1,29 @@
 import type { CollectionEntry } from 'astro:content';
-import { recordTitle } from '../../helpers/decision-records';
+import { boards, stickyIds } from './navigation';
 import { isErrorThread, threadCode } from './identifiers';
 
 export type DocsEntry = CollectionEntry<'docs'>;
-export type DecisionEntry = CollectionEntry<'decisions'>;
 
-// one shape for every page a board can name, whichever collection it
-// comes from; the page's URL is /<id>/
+// one shape for every article a board can name; its URL is /<id>/
 export type Thread = {
 	id: string;
+	group: string | null;
 	title: string;
 	description: string;
 	// path relative to .website/, where the build runs
 	filePath: string;
-	entry: DocsEntry | DecisionEntry;
+	entry: DocsEntry;
 };
 
-export function siteThreads(docs: DocsEntry[], decisions: DecisionEntry[]): Thread[] {
-	return [...docs.map(docsThread), ...decisions.map(decisionThread)];
+export function siteThreads(docs: DocsEntry[]): Thread[] {
+	const threads = docs.map(docsThread);
+	const ids = threads.map((thread) => thread.id);
+	const visibleIds = new Set([...stickyIds, ...boards.flatMap((board) => board.threads(ids))]);
+	return threads.filter((thread) => visibleIds.has(thread.id));
 }
 
-// the repo-rooted path GitHub links need; the records live outside .website/
+// the repo-rooted path GitHub links need
 export function repositoryFilePath(thread: Thread): string {
-	if (thread.entry.collection === 'decisions') {
-		return `.work/decisions/${fileName(thread.filePath)}`;
-	}
 	return `.website/${thread.filePath}`;
 }
 
@@ -41,6 +40,7 @@ function docsThread(entry: DocsEntry): Thread {
 
 	return {
 		id: entry.id,
+		group: entry.data.group ?? null,
 		title,
 		description: entry.data.description ?? entry.data.title,
 		filePath: entryFilePath(entry),
@@ -48,29 +48,9 @@ function docsThread(entry: DocsEntry): Thread {
 	};
 }
 
-function decisionThread(entry: DecisionEntry): Thread {
-	const title = `${entry.id} — ${recordTitle(entry.id, entry.body)}`;
-
-	return {
-		id: `decisions/${entry.id}`,
-		title,
-		description: title,
-		filePath: entryFilePath(entry),
-		entry,
-	};
-}
-
-function entryFilePath(entry: DocsEntry | DecisionEntry): string {
+function entryFilePath(entry: DocsEntry): string {
 	if (entry.filePath === undefined) {
 		throw new Error(`entry "${entry.id}" carries no filePath`);
 	}
 	return entry.filePath;
-}
-
-function fileName(filePath: string): string {
-	const name = filePath.split('/').pop();
-	if (name === undefined || name === '') {
-		throw new Error(`path "${filePath}" carries no file name`);
-	}
-	return name;
 }

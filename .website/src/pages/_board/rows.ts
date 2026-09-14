@@ -46,25 +46,13 @@ export function stickyRows(threads: Thread[]): StickyRowData[] {
 }
 
 export function threadRows(board: Board, threads: Thread[]): ThreadRowData[] {
-	return boardThreads(board, threads).map((thread) => ({
-		decisionDate:
-			thread.entry.collection === 'decisions'
-				? thread.entry.data.date.toISOString().slice(0, 10)
-				: null,
-		metadata:
-			thread.entry.collection === 'decisions'
-				? thread.entry.data.status
-				: codeMetadata(thread.entry),
-		title: thread.title,
-		href: `/${thread.id}/`,
-		lastUpdatedDate: lastCommitDate(thread.filePath),
-	}));
+	return boardThreads(board, threads).map(toThreadRow);
 }
 
-// every thread on the board, newest change first -- the /whats-new/ page
+// every visible article, newest change first -- the /whats-new/ page
 // filters this against the visitor's own visit log at hydration
 export function whatsNewRows(threads: Thread[]): ThreadRowData[] {
-	const rows = boards.flatMap((board) => threadRows(board, threads));
+	const rows = threads.map(toThreadRow);
 	rows.sort(
 		(a, b) => b.lastUpdatedDate.localeCompare(a.lastUpdatedDate) || a.title.localeCompare(b.title),
 	);
@@ -81,4 +69,13 @@ export function boardThreads(board: Board, threads: Thread[]): Thread[] {
 		}
 		return thread;
 	});
+}
+
+function toThreadRow(thread: Thread): ThreadRowData {
+	return {
+		metadata: codeMetadata(thread.entry),
+		title: thread.title,
+		href: `/${thread.id}/`,
+		lastUpdatedDate: lastCommitDate(thread.filePath),
+	};
 }

@@ -2,13 +2,14 @@
 	import type { Snippet } from 'svelte';
 	import BoardSection from '../../../components/board-section/board-section.svelte';
 	type Props = {
+		title: string;
 		children: Snippet;
 	};
 
-	let { children }: Props = $props();
+	let { title, children }: Props = $props();
 </script>
 
-<BoardSection title="About this board" columnLabels={null}>
+<BoardSection {title} columnLabels={null}>
 	<div class="thread-body board-intro">{@render children()}</div>
 </BoardSection>
 

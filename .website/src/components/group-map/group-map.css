@@ -1,0 +1,15 @@
+.group-map {
+	min-width: 0;
+	border: 1px solid var(--border-section);
+	border-top: none;
+}
+summary {
+	padding: var(--space-10) var(--space-14);
+	background: var(--color-chrome-pale);
+	font-size: 12px;
+	font-weight: 700;
+	cursor: pointer;
+}
+nav {
+	padding: var(--space-8) var(--space-14);
+}

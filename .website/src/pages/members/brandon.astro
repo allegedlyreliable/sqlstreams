@@ -9,8 +9,7 @@ import { repositoryUrl } from '../../site';
 import { siteThreads } from '../_board/threads';
 
 const docs = await getCollection('docs');
-const decisions = await getCollection('decisions');
-const postCount = siteThreads(docs, decisions).length;
+const postCount = siteThreads(docs).length;
 ---
 
 <BoardLayout

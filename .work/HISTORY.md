@@ -5,6 +5,13 @@ Dated ledger of what shipped, newest first — one entry per milestone.
 Entries before 2026-08-13 were reconstructed from the phase notes when this
 ledger was created; dates come from the phase git tags.
 
+## 2026-09-14 — Chocolatey v0.1.5 approved and public-feed validated [0791] [0804]
+
+The v0.1.5 Chocolatey package submitted by release run 34844608693 is
+approved on the community feed. Clean Windows installation from the public
+feed, version output, and uninstall pass. Both READMEs advertise
+`choco install sqlstreams`. The v0.1.4 submission stays abandoned.
+
 ## 2026-09-14 — CLI database URL variable renamed [0809]
 
 The CLI reads SQLSTREAMS_DATABASE_URL instead of SQLSTREAMS_ADMIN_DATABASE_URL.

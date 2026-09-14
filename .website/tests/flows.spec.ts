@@ -43,6 +43,18 @@ test('utility pages stay outside the search-engine index and sitemap', async ({
 	expect(sitemapXml).not.toContain('/search/');
 	expect(sitemapXml).not.toContain('/whats-new/');
 	expect(sitemapXml).not.toContain('/tags/');
+	for (const pathname of [
+		'/boards/getting-started/',
+		'/getting-started/first-consumer/',
+		'/getting-started/why-sqlstreams/',
+		'/concepts/lifecycle/',
+		'/reference/consumer/',
+		'/errors/SQL0105/',
+		'/decisions/0679/',
+	]) {
+		expect(sitemapXml).not.toContain(pathname);
+		expect((await request.get(pathname)).status()).toBe(404);
+	}
 });
 
 test('the sandbox boots and its panels show rows', async ({ page }) => {

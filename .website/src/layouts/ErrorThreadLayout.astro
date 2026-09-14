@@ -20,8 +20,7 @@ import type { DiagnoseQuery } from '../components/diagnose-queries/types';
 type Props = {
 	title: string;
 	description: string;
-	boardTitle: string;
-	boardHref: string;
+	board: ThreadLink | null;
 	editHref: string;
 	postedDate: string;
 	reportHref: string;
@@ -37,8 +36,7 @@ type Props = {
 const {
 	title,
 	description,
-	boardTitle,
-	boardHref,
+	board,
 	editHref,
 	postedDate,
 	reportHref,
@@ -51,15 +49,11 @@ const {
 	pastePlaceholders,
 } = Astro.props;
 
-const trail = [
-	{ label: 'Board Index', href: '/' },
-	{ label: boardTitle, href: boardHref },
-	{ label: `${title} [${codeThread.code}]`, href: null },
-];
 const returnTrail = [
 	{ label: 'Board Index', href: '/' },
-	{ label: boardTitle, href: boardHref },
+	...(board === null ? [] : [{ label: board.title, href: board.href }]),
 ];
+const trail = [...returnTrail, { label: `${title} [${codeThread.code}]`, href: null }];
 const threadUrl = new URL(Astro.url.pathname, Astro.site).href;
 ---
 
