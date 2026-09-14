@@ -30,7 +30,7 @@ go install github.com/allegedlyreliable/sqlstreams/cmd/sqlstreams@v0.1.5
 Every command needs a privileged Postgres URL, passed by flag or environment:
 
 ```sh
-export SQLSTREAMS_ADMIN_DATABASE_URL="postgres://user:pass@host:5432/db"
+export SQLSTREAMS_DATABASE_URL="postgres://user:pass@host:5432/db"
 # or per-command: --database-url "postgres://..."
 ```
 

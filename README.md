@@ -153,7 +153,7 @@ The binary goes into `GOBIN`, or `$(go env GOPATH)/bin` when `GOBIN` is unset.
 Add that directory to your `PATH` to run the commands below.
 
 ```sh
-export SQLSTREAMS_ADMIN_DATABASE_URL=postgres://user:password@localhost/db
+export SQLSTREAMS_DATABASE_URL=postgres://user:password@localhost/db
 
 sqlstreams stream list                              # every registered stream
 sqlstreams stream get videos.uploaded               # one specific stream's info

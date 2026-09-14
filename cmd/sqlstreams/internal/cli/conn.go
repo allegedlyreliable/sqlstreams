@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	databaseURLEnv = "SQLSTREAMS_ADMIN_DATABASE_URL"
+	databaseURLEnv = "SQLSTREAMS_DATABASE_URL"
 	schemaEnv      = "SQLSTREAMS_ADMIN_SCHEMA"
 )
 

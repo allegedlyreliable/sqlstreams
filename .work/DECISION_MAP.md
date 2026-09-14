@@ -22,7 +22,7 @@ are in `.work/DECISIONS.md`. A new record adds its number to its line.
 - packages, layers, seams, naming, receivers, file layout, configs, constructors, admin, validation, consumer worker selection, health, developer tooling: 0441-0451 0507-0510 0528-0549 0555-0557 0643-0646 0657-0658 0670 0676 0677 0680 0716 0721-0723 0724 0744
 - declarations: newest-wins, CLI never writes config, worker metadata: 0515-0521 0626 0670 0741 0742 0743 0744
 - client shape, handles, Register, lifecycle ctx, shutdown, named return parameters: 0361-0377 0625 0633-0646 0657 0664-0665 0670 0672 0742 0743 0744 0760 0762 0780
-- CLI: nested module, publication order, go install, version output, flags, --output json, client verb alignment: 0354-0355 0576 0766 0768 0770 0771 0774 0777 0786
+- CLI: nested module, publication order, go install, version output, flags, --output json, client verb alignment, database URL environment variable: 0354-0355 0576 0766 0768 0770 0771 0774 0777 0786 0809
 - Dependabot, dependency updates, dev module pins, grouped security updates: 0787
 - release maintenance, module version alignment, backports, deprecation notice, private vulnerability reporting, security policy, schema-upgrade evidence: 0794 0805
 - Homebrew, cask, Chocolatey, stable releases, prerelease publication, Windows package verification: 0788 0790 0791 0803 0804

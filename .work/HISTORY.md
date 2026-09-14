@@ -5,6 +5,13 @@ Dated ledger of what shipped, newest first — one entry per milestone.
 Entries before 2026-08-13 were reconstructed from the phase notes when this
 ledger was created; dates come from the phase git tags.
 
+## 2026-09-14 — CLI database URL variable renamed [0809]
+
+The CLI reads SQLSTREAMS_DATABASE_URL instead of SQLSTREAMS_ADMIN_DATABASE_URL.
+Rename existing environment configuration; --database-url still takes
+precedence. CLI help, missing-URL errors, both READMEs, and .env.example
+use the new name.
+
 ## 2026-09-14 — Producer Register no longer evaluates worker_liveness [0808]
 
 The producer's register-time alert pass runs the same two conditions as

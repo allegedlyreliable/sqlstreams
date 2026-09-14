@@ -32,6 +32,9 @@ The current delivery, ordering and routing semantics remain unchanged.
 
 ## Consequences
 
+The database URL variable spelling is superseded by [0809]: use
+SQLSTREAMS_DATABASE_URL. SQLSTREAMS_ADMIN_SCHEMA remains accepted.
+
 Repository and module ownership is superseded by [0785]: use
 github.com/allegedlyreliable/sqlstreams for the current source and distribution.
 
