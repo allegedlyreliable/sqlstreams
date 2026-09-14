@@ -1,10 +1,12 @@
 ---
-status: accepted
+status: superseded
 date: 2026-09-14
 phase: pre-v1
 ---
 
 # Chocolatey retries skip release publication
+
+Superseded by [0804](0804-chocolatey-recovery-uses-a-new-release.md).
 
 ## Context
 

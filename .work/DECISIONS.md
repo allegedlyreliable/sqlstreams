@@ -600,4 +600,5 @@ in `.work/DECISION_MAP.md` routes a question to its records.
 - 0800 2026-09-13 accepted (pre-v1) — Troubleshooting uses the board index
 - 0801 2026-09-13 accepted (pre-v1) — Reference uses the board index
 - 0802 2026-09-13 accepted (pre-v1) — Each board owns its page
-- 0803 2026-09-14 accepted (pre-v1) — Chocolatey retries skip release publication
+- 0803 2026-09-14 superseded (pre-v1) — Chocolatey retries skip release publication
+- 0804 2026-09-14 accepted (pre-v1) — Chocolatey recovery uses a new release

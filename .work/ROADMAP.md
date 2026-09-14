@@ -48,7 +48,8 @@ the item is removed.
   [run 34839844935](https://github.com/allegedlyreliable/sqlstreams/actions/runs/34839844935).
   0.1.2 approval confirmed on 2026-09-14 at 11:57:05Z, six minutes after
   the rejected submission. Chocolatey documents first-version moderation
-  as a cause of HTTP 403; retry v0.1.4 through the manual workflow [0803].
+  as a cause of HTTP 403. The v0.1.4 retry failed checksum verification;
+  recovery now uses a normal v0.1.5 release [0804], tracked in TODO.
   Use a clean Windows runner to install from the public
   feed with `choco install sqlstreams --version=0.1.2 --yes`, verify
   `sqlstreams --version` reports 0.1.2, and verify uninstall. Then add the

@@ -19,7 +19,7 @@ and [HISTORY](.work/HISTORY.md) with test results and release notes.
 ## 3. Publish
 
 Commit and push the release changes, wait for CI
-to pass. 
+to pass.
 
 From that commit, publish next version tag `vX.Y.Z`:
 
@@ -46,12 +46,6 @@ with `GOWORK=off`, then have the maintainer commit before tagging.
 Verify downloads, installation, and CLI version; record outcomes in HISTORY.
 Chocolatey public-feed installation waits for approval.
 
-To retry Chocolatey submission after approval, without republishing archives:
-
-```sh
-gh workflow run release.yml --ref main -f tag=v0.1.4
-```
-
 ## 6. Docs — when versioning
 
 Update `site.ts` and `public/versions.json` under `.website/`.
@@ -63,3 +57,22 @@ just site-freeze <slug>
 ```
 
 Never reuse a frozen alias.
+
+## Post-release checklist
+
+- [ ] Confirm published root → OTel → CLI pins/tags.
+- [ ] Bump `examples/`, `.tests/`, `.bench/`, `.tools/` module pins; tidy and build with `GOWORK=off`.
+- [ ] Bump and run the [Go quickstart](https://github.com/allegedlyreliable/sqlstreams-quickstart-go/blob/main/go.mod).
+- [ ] Update install versions and release links across READMEs and Markdown/MDX, including the quickstart repo.
+- [ ] Add migration-table evidence; preserve historical versions.
+- [ ] When versioning docs: update `site.ts` / `versions.json`, deploy, freeze, verify.
+- [ ] Verify Homebrew/Chocolatey installs; update HISTORY, ROADMAP, and TODO.
+
+## Gotchas
+
+- Push tags; let GoReleaser create releases. Published releases are immutable.
+- A failed workflow may have published assets. Check before retrying.
+- Chocolatey can return 403 until the first package is approved.
+- Rebuilds can change checksums. Use a new release, not the removed retry path.
+- Verify pins with `GOWORK=off`; keep compatibility pinned to the prior client.
+- Free port 5432 for database checks; use a fresh site build for browser checks.
