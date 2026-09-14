@@ -31,7 +31,7 @@ On the handle:
 
 | verb | returns | notes |
 | --- | --- | --- |
-| `Register(ctx, cfg)` | `*ProducerInstance[T]` | resolves the stream, `ErrStreamNotFound`; `nil` cfg is the defaults; logs [SQL0063](/errors/SQL0063/) when the stream's upkeep workers have no live instance |
+| `Register(ctx, cfg)` | `*ProducerInstance[T]` | resolves the stream, `ErrStreamNotFound`; `nil` cfg is the defaults; logs [SQL0063](/errors/SQL0063/) when a built-in alert condition holds on the stream |
 
 On the instance:
 
@@ -90,6 +90,7 @@ value.
   faster.
 - `ConcurrencyExclusive` in `Message` without a `MessageKey` errors at
   produce time.
-- A deployment that only produces runs no upkeep. Its `Register` logs
-  [SQL0063](/errors/SQL0063/) naming the unclaimed rows; run
-  `sqlstreams manager run` beside it ([Manager](/reference/manager/)).
+- A deployment that only produces runs no upkeep, and `Register` does not
+  warn about it; run `sqlstreams manager run` beside it
+  ([Manager](/reference/manager/)), whose `worker_liveness` check names the
+  rows nothing claims.

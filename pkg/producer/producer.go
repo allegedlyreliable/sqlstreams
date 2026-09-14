@@ -7,7 +7,6 @@ import (
 	"github.com/allegedlyreliable/sqlstreams/pkg/alert"
 	compactionreadcostcontroller "github.com/allegedlyreliable/sqlstreams/pkg/alert/compactionreadcost/controller"
 	partitioncountcontroller "github.com/allegedlyreliable/sqlstreams/pkg/alert/partitioncount/controller"
-	workerlivenesscontroller "github.com/allegedlyreliable/sqlstreams/pkg/alert/workerliveness/controller"
 	"github.com/allegedlyreliable/sqlstreams/pkg/common"
 	"github.com/allegedlyreliable/sqlstreams/pkg/common/logging"
 	"github.com/allegedlyreliable/sqlstreams/pkg/datastore"
@@ -62,11 +61,7 @@ func (p *Producer) Register[Message common.Versioned](ctx context.Context, strea
 	if err != nil {
 		return nil, err
 	}
-	workerLivenessController, err := workerlivenesscontroller.NewWorkerLivenessController(p.ds, logger)
-	if err != nil {
-		return nil, err
-	}
-	evaluators := []alert.Evaluator{partitionCountController, compactionReadCostController, workerLivenessController}
+	evaluators := []alert.Evaluator{partitionCountController, compactionReadCostController}
 
 	current, err := streamController.Get(ctx, streamName)
 	if err != nil {

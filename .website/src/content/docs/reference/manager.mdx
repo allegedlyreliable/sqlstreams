@@ -48,10 +48,9 @@ window when the holder stops. That column takes effect with no deploy:
   deployment-wide rows. The stream janitor creates and drops partitions,
   so a consumer's database role needs DDL rights on its stream's tables.
 - Admin verbs run nothing and the producer runs nothing. A deployment that
-  only produces accumulates partitions; `ProducerHandle.Register` logs
-  [SQL0063](/errors/SQL0063/) naming the unclaimed rows, and the one-minute
-  `worker_liveness` check keeps an alert active on `__system.alerts` until
-  the rows are claimed again.
+  only produces accumulates partitions, and the one-minute `worker_liveness`
+  check keeps an alert active on `__system.alerts` until the rows are
+  claimed again.
 - The stream janitor gives each of its five cleanup steps its own
   five-second deadline, retries included. A step that times out returns its
   error and the remaining steps still run; a pass with any error counts as

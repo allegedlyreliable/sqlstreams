@@ -5,6 +5,14 @@ Dated ledger of what shipped, newest first — one entry per milestone.
 Entries before 2026-08-13 were reconstructed from the phase notes when this
 ledger was created; dates come from the phase git tags.
 
+## 2026-09-14 — Producer Register no longer evaluates worker_liveness [0808]
+
+The producer's register-time alert pass runs the same two conditions as
+the consumer's, partition_count and compaction_read_cost. A producer
+holds no upkeep rows, so the scheduled check is the one reporter of
+unclaimed workers. The SQL0063 page and the producer and manager
+reference pages say so.
+
 ## 2026-09-14 — Catalog reads probe to_regclass before touching a table [0807]
 
 The system, stream, and migrate datastores ask the catalog whether
