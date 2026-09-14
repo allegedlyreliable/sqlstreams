@@ -5,6 +5,16 @@ Dated ledger of what shipped, newest first — one entry per milestone.
 Entries before 2026-08-13 were reconstructed from the phase notes when this
 ledger was created; dates come from the phase git tags.
 
+## 2026-09-14 — Catalog reads probe to_regclass before touching a table [0807]
+
+The system, stream, and migrate datastores ask the catalog whether
+system_config or stream_config exists before reading it, so a fresh
+install's first Register no longer leaves `relation does not exist`
+ERROR lines in the Postgres server log. The 42P01 catches are removed.
+Unit, conventions, and the system, stream, and migrate integration
+suites pass; a fresh Postgres 17 run of examples/01-produce-only twice
+logs zero errors.
+
 ## 2026-09-14 — Explicit client import alias in public samples [0806]
 
 All 13 runnable examples, the README, and the quickstart and handler-outcomes

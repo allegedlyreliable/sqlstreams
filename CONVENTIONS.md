@@ -546,6 +546,12 @@ reaches through `sqlstreams` (the alias closure) states its contract.
 - Controllers own verbs, not tables. A datastore transaction contains every
   statement its operation needs, inline, even on tables another domain
   primarily manages.
+- A read that tolerates an uninstalled database asks the catalog first
+  (`SELECT to_regclass($1) IS NOT NULL`, the name qualified in Go) and
+  answers absence without running the read. Never catch SQLSTATE 42P01
+  on a normal path: Postgres logs every statement error server-side, so
+  the catch hides the error from the caller and leaves it in the
+  operator's log.
 
 ### Transactions
 

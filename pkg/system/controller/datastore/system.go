@@ -140,6 +140,14 @@ func (d *SystemDatastore) Get(ctx context.Context) (*SystemConfigRow, error) {
 }
 
 func (d *SystemDatastore) get(ctx context.Context, q datastore.Querier) (*SystemConfigRow, error) {
+	installed, err := d.tableExists(ctx, q, "system_config")
+	if err != nil {
+		return nil, err
+	}
+	if !installed {
+		return nil, nil
+	}
+
 	sql := fmt.Sprintf(`
 		-- sqlstreams: system.get
 		SELECT id, created_at, updated_at
@@ -148,19 +156,24 @@ func (d *SystemDatastore) get(ctx context.Context, q datastore.Querier) (*System
 	return d.scanSystemConfigRow(q.QueryRow(ctx, sql))
 }
 
-// scanSystemConfigRow returns (nil, nil) when the row -- or the table itself,
-// 42P01 -- isn't there yet.
+// tableExists asks the catalog before a read touches the table: a statement
+// against a missing table is an ERROR in the server log, a NULL regclass is not.
+func (d *SystemDatastore) tableExists(ctx context.Context, q datastore.Querier, name string) (bool, error) {
+	sql := `
+		-- sqlstreams: system.tableExists
+		SELECT to_regclass($1) IS NOT NULL;
+	`
+	var exists bool
+	err := q.QueryRow(ctx, sql, d.Datastore.Schema+"."+name).Scan(&exists)
+	return exists, err
+}
+
+// scanSystemConfigRow returns (nil, nil) when the row isn't there yet.
 func (d *SystemDatastore) scanSystemConfigRow(row pgx.Row) (*SystemConfigRow, error) {
 	var data SystemConfigRow
 	err := row.Scan(&data.Id, &data.CreatedAt, &data.UpdatedAt)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, nil
-		}
-
-		// 42P01 = table does not exist
-		var pgErr *pgconn.PgError
-		if errors.As(err, &pgErr) && pgErr.Code == "42P01" {
 			return nil, nil
 		}
 		return nil, err

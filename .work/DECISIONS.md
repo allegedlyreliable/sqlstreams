@@ -604,3 +604,4 @@ in `.work/DECISION_MAP.md` routes a question to its records.
 - 0804 2026-09-14 accepted (pre-v1) — Chocolatey recovery uses a new release
 - 0805 2026-09-14 accepted (pre-v1) — Release module versions stay in sync
 - 0806 2026-09-14 accepted (pre-v1) — Public examples explicitly alias the client import
+- 0807 2026-09-14 accepted (pre-v1) — Uninstalled tables are probed with to_regclass, never caught as 42P01

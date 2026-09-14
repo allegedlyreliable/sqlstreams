@@ -30,6 +30,14 @@ func (d *StreamDatastore) GetInTx(ctx context.Context, tx datastore.Tx, name str
 }
 
 func (d *StreamDatastore) get(ctx context.Context, q datastore.Querier, name string) (*StreamConfigRow, error) {
+	installed, err := d.tableExists(ctx, q, "stream_config")
+	if err != nil {
+		return nil, err
+	}
+	if !installed {
+		return nil, nil
+	}
+
 	sql := fmt.Sprintf(`
 		-- sqlstreams: stream.get
 		SELECT
@@ -50,6 +58,18 @@ func (d *StreamDatastore) get(ctx context.Context, q datastore.Querier, name str
 	return d.scanStreamConfigRow(q.QueryRow(ctx, sql, name))
 }
 
+// tableExists asks the catalog before a read touches the table: a statement
+// against a missing table is an ERROR in the server log, a NULL regclass is not.
+func (d *StreamDatastore) tableExists(ctx context.Context, q datastore.Querier, name string) (bool, error) {
+	sql := `
+		-- sqlstreams: stream.tableExists
+		SELECT to_regclass($1) IS NOT NULL;
+	`
+	var exists bool
+	err := q.QueryRow(ctx, sql, d.Datastore.Schema+"."+name).Scan(&exists)
+	return exists, err
+}
+
 // GetById resolves a stream by its id. Returns (nil, nil) if no stream has it.
 func (d *StreamDatastore) GetById(ctx context.Context, id int64) (*StreamConfigRow, error) {
 	var streamConfigRow *StreamConfigRow
@@ -62,6 +82,14 @@ func (d *StreamDatastore) GetById(ctx context.Context, id int64) (*StreamConfigR
 }
 
 func (d *StreamDatastore) getById(ctx context.Context, id int64) (*StreamConfigRow, error) {
+	installed, err := d.tableExists(ctx, d.Datastore.Pool, "stream_config")
+	if err != nil {
+		return nil, err
+	}
+	if !installed {
+		return nil, nil
+	}
+
 	sql := fmt.Sprintf(`
 		-- sqlstreams: stream.getById
 		SELECT
@@ -93,6 +121,14 @@ func (d *StreamDatastore) List(ctx context.Context) ([]StreamConfigRow, error) {
 }
 
 func (d *StreamDatastore) list(ctx context.Context) ([]StreamConfigRow, error) {
+	installed, err := d.tableExists(ctx, d.Datastore.Pool, "stream_config")
+	if err != nil {
+		return nil, err
+	}
+	if !installed {
+		return nil, nil
+	}
+
 	sql := fmt.Sprintf(`
 		-- sqlstreams: stream.list
 		SELECT
@@ -112,11 +148,6 @@ func (d *StreamDatastore) list(ctx context.Context) ([]StreamConfigRow, error) {
 	`, d.Datastore.Schema)
 	rows, err := d.Datastore.Pool.Query(ctx, sql)
 	if err != nil {
-		// 42P01 = table does not exist -- an unregistered database has no streams
-		var pgErr *pgconn.PgError
-		if errors.As(err, &pgErr) && pgErr.Code == "42P01" {
-			return nil, nil
-		}
 		return nil, err
 	}
 	defer rows.Close()
@@ -304,8 +335,8 @@ func (d *StreamDatastore) appendStreamConfigLog(ctx context.Context, q datastore
 }
 
 // scanStreamConfigRow scans a row shaped like getStream's SELECT -- the column list
-// every one of those queries shares. Returns (nil, nil) when the row -- or
-// stream_config itself, 42P01 -- isn't there yet.
+// every one of those queries shares. Returns (nil, nil) when the row isn't
+// there yet.
 func (d *StreamDatastore) scanStreamConfigRow(row pgx.Row) (*StreamConfigRow, error) {
 	var data StreamConfigRow
 	err := row.Scan(
@@ -323,12 +354,6 @@ func (d *StreamDatastore) scanStreamConfigRow(row pgx.Row) (*StreamConfigRow, er
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, nil
-		}
-
-		// 42P01 = table does not exist
-		var pgErr *pgconn.PgError
-		if errors.As(err, &pgErr) && pgErr.Code == "42P01" {
 			return nil, nil
 		}
 		return nil, err
