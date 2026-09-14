@@ -12,11 +12,17 @@ brew install --cask allegedlyreliable/tap/sqlstreams
 sqlstreams --version
 ```
 
+On Windows, install the latest approved CLI with Chocolatey:
+
+```powershell
+choco install sqlstreams
+```
+
 Download other platform archives from [GitHub Releases](https://github.com/allegedlyreliable/sqlstreams/releases/tag/v0.1.5).
 Or install the CLI with Go:
 
 ```sh
-go install github.com/allegedlyreliable/sqlstreams/cmd/sqlstreams@v0.1.4
+go install github.com/allegedlyreliable/sqlstreams/cmd/sqlstreams@v0.1.5
 ```
 
 ## Connect

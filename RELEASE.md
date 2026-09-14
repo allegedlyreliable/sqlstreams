@@ -34,10 +34,11 @@ it immutable and blocks artifact uploads. Never move a published tag.
 [Automation](.github/workflows/release.yml) publishes archives and, for
 stable releases with credentials, Homebrew and a Chocolatey submission.
 
-## 4. Go modules — when updated
+## 4. Go modules — every release
 
 `root` → `otel/vX.Y.Z` → `cmd/sqlstreams/vX.Y.Z`
 
+Publish all three at the same version, even without code changes.
 At each step: wait for dependencies to resolve, update pins, tidy/build/test
 with `GOWORK=off`, then have the maintainer commit before tagging.
 
@@ -60,10 +61,11 @@ Never reuse a frozen alias.
 
 ## Post-release checklist
 
-- [ ] Confirm published root → OTel → CLI pins/tags.
+- [ ] Publish matching root → OTel → CLI pins/tags, even without code changes.
 - [ ] Bump `examples/`, `.tests/`, `.bench/`, `.tools/` module pins; tidy and build with `GOWORK=off`.
 - [ ] Bump and run the [Go quickstart](https://github.com/allegedlyreliable/sqlstreams-quickstart-go/blob/main/go.mod).
 - [ ] Update install versions and release links across READMEs and Markdown/MDX, including the quickstart repo.
+- [ ] Verify every `go install .../cmd/sqlstreams@vX.Y.Z` uses the new published tag and reports that version.
 - [ ] Add migration-table evidence; preserve historical versions.
 - [ ] When versioning docs: update `site.ts` / `versions.json`, deploy, freeze, verify.
 - [ ] Verify Homebrew/Chocolatey installs; update HISTORY, ROADMAP, and TODO.

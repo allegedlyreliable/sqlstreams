@@ -19,7 +19,8 @@ downloaded archives match checksums.txt. The Mac arm64 archive and Homebrew
 upgrade from 0.1.4 report version 0.1.5. Windows Chocolatey installation,
 checksum, version output, uninstall, and submission pass. Package metadata
 reports Submitted/Pending, IsApproved=false; public-feed verification waits
-for approval. Unchanged OTel and CLI Go modules retain their v0.1.4 tags.
+for approval. OTel and CLI v0.1.5 publication remains in TODO; every release
+now requires matching module versions, even without code changes [0805].
 
 Post-release preparation: examples, .tests, .bench, and .tools pin v0.1.5
 and pass standalone builds and race tests, including Docker integration tests.
@@ -28,11 +29,15 @@ after correcting the Postgres 18 volume mount to /var/lib/postgresql;
 producer returns message 1, consumer receives user-123 and exits on SIGTERM.
 Its README link now uses sqlstreams.io. The doc-site sample carries the same
 volume correction. Installation links, migration evidence, and docs version
-metadata are updated in the working tree. Site static checks, all 132 unit
+metadata are published in 5a16a596; quickstart changes are pushed in 090039d.
+CI 34845512788 passes. Site static checks, all 132 unit
 tests, build, and 45 browser cases pass; browser tests use temporary port 4322
-because the default port is occupied. Post-release files await maintainer
-commits in this repo and /private/tmp/sqlstreams-quickstart-go-v015. The
-v0.1.5 docs are prepared but not deployed or frozen.
+because the default port is occupied.
+
+Docs deployed live as 8beb3a02 and frozen as 4d93ead2 at
+https://v0-1-5.sqlstreams.pages.dev. Both origins pass homepage, quickstart,
+migration-page, and versions.json checks for v0.1.5; manifests permit CORS
+and the frozen site carries noindex. The v0-1-4 snapshot remains unchanged.
 
 ## 2026-09-14 — v0.1.4 archives and Go modules published [0786] [0789] [0791]
 
