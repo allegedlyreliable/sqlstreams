@@ -14,7 +14,7 @@ go 1.27.0
 //   just compat-lab round-trip
 // Use refused instead when the current registry excludes the pinned build.
 
-require github.com/allegedlyreliable/sqlstreams v0.1.2
+require github.com/allegedlyreliable/sqlstreams v0.1.4
 
 require (
 	github.com/jackc/pgpassfile v1.0.0 // indirect

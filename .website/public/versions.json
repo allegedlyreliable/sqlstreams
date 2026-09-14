@@ -1,4 +1,7 @@
 {
-	"latest": "v0.1.4",
-	"versions": [{ "version": "v0.1.4", "url": "https://v0-1-4.sqlstreams.pages.dev" }]
+	"latest": "v0.1.5",
+	"versions": [
+		{ "version": "v0.1.5", "url": "https://v0-1-5.sqlstreams.pages.dev" },
+		{ "version": "v0.1.4", "url": "https://v0-1-4.sqlstreams.pages.dev" }
+	]
 }

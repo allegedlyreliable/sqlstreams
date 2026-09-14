@@ -61,7 +61,7 @@ I'd love to use Kafka for my [billion dollar, AI powered TODO app](https://githu
 Add it to your module. You need a Postgres.
 
 ```sh
-go get github.com/allegedlyreliable/sqlstreams@v0.1.4
+go get github.com/allegedlyreliable/sqlstreams@v0.1.5
 ```
 
 Import the client from the same module:

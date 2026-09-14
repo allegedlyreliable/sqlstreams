@@ -147,6 +147,7 @@ does not promise compatibility across pre-v1 releases.
 | v0.1.1 | v1 | v1 | v0.1.0-rc.1 | Credential-template fix only; retains the v0.1.0 checkpoint result with unchanged library and schema. |
 | v0.1.2 | v1 | v1 | v0.1.0-rc.1 | Chocolatey packaging change only; retains the same checkpoint result with unchanged library and schema. |
 | v0.1.4 | v1 | v1 | v0.1.2 | Round-trip passed on 2026-09-14 against source 4da16369 with the race detector enabled; release source 40c98b58 adds checkpoint records only. |
+| v0.1.5 | v1 | v1 | v0.1.4 | Round-trip and all four signal cases passed on a fresh database on 2026-09-14 at source fa9d3c15; race detector enabled for compatibility. Library and schema unchanged from v0.1.4. |
 
 The v0.1.0 checkpoint used a fresh database prepared by that build and the
 published RC client with workspace replacement disabled. That client produced

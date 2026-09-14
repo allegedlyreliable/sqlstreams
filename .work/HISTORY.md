@@ -5,6 +5,35 @@ Dated ledger of what shipped, newest first — one entry per milestone.
 Entries before 2026-08-13 were reconstructed from the phase notes when this
 ledger was created; dates come from the phase git tags.
 
+## 2026-09-14 — v0.1.5 published with Chocolatey submission [0789] [0791] [0804]
+
+Root v0.1.5 names fa9d3c15. CI 34844356688 passes just verify. A fresh
+development database passes all four signal cases and the v0.1.4 client
+compatibility round-trip under -race: compat.lab stream 5, consumer group 6,
+five distinct payloads consumed, then the stream destroyed. Library and
+schema are unchanged from v0.1.4; both scopes remain v1.
+
+[Release run 34844608693](https://github.com/allegedlyreliable/sqlstreams/actions/runs/34844608693)
+passes, publishing six archives, checksums, and the Homebrew cask. All six
+downloaded archives match checksums.txt. The Mac arm64 archive and Homebrew
+upgrade from 0.1.4 report version 0.1.5. Windows Chocolatey installation,
+checksum, version output, uninstall, and submission pass. Package metadata
+reports Submitted/Pending, IsApproved=false; public-feed verification waits
+for approval. Unchanged OTel and CLI Go modules retain their v0.1.4 tags.
+
+Post-release preparation: examples, .tests, .bench, and .tools pin v0.1.5
+and pass standalone builds and race tests, including Docker integration tests.
+The external Go quickstart pins v0.1.5 and its fresh-DB walkthrough passes
+after correcting the Postgres 18 volume mount to /var/lib/postgresql;
+producer returns message 1, consumer receives user-123 and exits on SIGTERM.
+Its README link now uses sqlstreams.io. The doc-site sample carries the same
+volume correction. Installation links, migration evidence, and docs version
+metadata are updated in the working tree. Site static checks, all 132 unit
+tests, build, and 45 browser cases pass; browser tests use temporary port 4322
+because the default port is occupied. Post-release files await maintainer
+commits in this repo and /private/tmp/sqlstreams-quickstart-go-v015. The
+v0.1.5 docs are prepared but not deployed or frozen.
+
 ## 2026-09-14 — v0.1.4 archives and Go modules published [0786] [0789] [0791]
 
 Root v0.1.4 names 40c98b58. The checkpoint below passed just verify,

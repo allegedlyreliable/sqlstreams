@@ -42,21 +42,12 @@ the item is removed.
     CI currently exercises only 18. Distinguish server-version compatibility
     from PostgreSQL major upgrades and application schema-upgrade guarantees.
 
-- **Chocolatey approval and public-feed validation** [0791] -- sqlstreams
-  0.1.4 installation, checksum, version output, and uninstall passed, but
-  submission returned HTTP 403 in
-  [run 34839844935](https://github.com/allegedlyreliable/sqlstreams/actions/runs/34839844935).
-  0.1.2 approval confirmed on 2026-09-14 at 11:57:05Z, six minutes after
-  the rejected submission. Chocolatey documents first-version moderation
-  as a cause of HTTP 403. The v0.1.4 retry failed checksum verification;
-  recovery now uses a normal v0.1.5 release [0804], tracked in TODO.
-  Use a clean Windows runner to install from the public
-  feed with `choco install sqlstreams --version=0.1.2 --yes`, verify
-  `sqlstreams --version` reports 0.1.2, and verify uninstall. Then add the
-  Chocolatey install command to READMEs/docs and record the final proof in
-  HISTORY. Packaging, checksum-backed installation from the generated
-  nupkg, version output, uninstall, and submission already pass in
-  [release run 34724932748](https://github.com/allegedlyreliable/sqlstreams/actions/runs/34724932748).
+- **Chocolatey approval and public-feed validation** [0791] [0804] -- v0.1.5
+  submitted successfully in [run 34844608693](https://github.com/allegedlyreliable/sqlstreams/actions/runs/34844608693);
+  status on 2026-09-14 is Submitted/Pending, IsApproved=false. After approval,
+  verify clean Windows public-feed installation, version output, and uninstall.
+  Then advertise Chocolatey installation in READMEs/docs and record the proof.
+  Version 0.1.2 is approved; v0.1.4 submission was abandoned.
 
 ## Later
 
