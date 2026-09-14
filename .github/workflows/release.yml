@@ -1,6 +1,12 @@
 name: release
 
 on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing stable release tag to retry on Chocolatey
+        required: true
+        type: string
   push:
     tags:
       - "v*"
@@ -13,10 +19,13 @@ jobs:
     # choco has no Linux build and the GitHub Windows runner ships it;
     # Go cross-compiles every other target from there.
     runs-on: windows-latest
+    env:
+      RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
     steps:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
+          ref: refs/tags/${{ env.RELEASE_TAG }}
 
       - uses: actions/setup-go@v7
         with:
@@ -32,16 +41,17 @@ jobs:
           version: "~> v2"
           # Chocolatey packages are generated only for stable tags with a key.
           # skip_publish in the config leaves submission to the checked step below.
-          args: release --clean ${{ (secrets.CHOCOLATEY_API_KEY == '' || contains(github.ref_name, '-')) && '--skip=chocolatey' || '' }}
+          # Manual retries rebuild the package without republishing immutable assets.
+          args: release --clean ${{ github.event_name == 'workflow_dispatch' && '--skip=publish' || '' }} ${{ (secrets.CHOCOLATEY_API_KEY == '' || contains(env.RELEASE_TAG, '-')) && '--skip=chocolatey' || '' }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # Pins the release to the pushed tag, so a nested-module tag on the
           # same commit (cmd/sqlstreams/vX.Y.Z) never gets picked instead.
-          GORELEASER_CURRENT_TAG: ${{ github.ref_name }}
+          GORELEASER_CURRENT_TAG: ${{ env.RELEASE_TAG }}
           HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
 
       - name: Verify and publish Chocolatey package
-        if: ${{ !contains(github.ref_name, '-') }}
+        if: ${{ !contains(env.RELEASE_TAG, '-') }}
         env:
           CHOCOLATEY_API_KEY: ${{ secrets.CHOCOLATEY_API_KEY }}
         run: |

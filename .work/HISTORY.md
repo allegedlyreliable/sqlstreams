@@ -5,6 +5,48 @@ Dated ledger of what shipped, newest first — one entry per milestone.
 Entries before 2026-08-13 were reconstructed from the phase notes when this
 ledger was created; dates come from the phase git tags.
 
+## 2026-09-14 — v0.1.4 archives and Go modules published [0786] [0789] [0791]
+
+Root v0.1.4 names 40c98b58. The checkpoint below passed just verify,
+all four fresh-database signal cases, and the v0.1.2 compatibility round-trip
+under the race detector. GoReleaser published all six archives and checksums
+in [run 34839844935](https://github.com/allegedlyreliable/sqlstreams/actions/runs/34839844935).
+All six downloaded archives match checksums.txt. The Mac arm64 archive and
+Homebrew upgrade from 0.1.1 both report sqlstreams version 0.1.4.
+
+otel/v0.1.4 names c03e8b4d; cmd/sqlstreams/v0.1.4 names fd7a631e. Both
+modules passed standalone build, vet, and race tests. Outside the workspace,
+CLI go install reports sqlstreams version v0.1.4 and a separate OTel consumer
+resolves and validates its default configuration.
+
+Windows Chocolatey installation, checksum, version output, and uninstall
+passed; submission returned HTTP 403. The workflow is therefore red despite
+successful archive and Homebrew publication. Public-feed installation remains
+unverified. The earlier v0.1.3 attempt could not upload archives because its
+manually published GitHub release was immutable.
+
+The v0.1.4 docs and permanent alias v0-1-4 are deployed. Site formatting,
+lint, type/prose checks, all 132 unit tests, and the build pass. Browser
+verification covers all 45 cases across Chromium, Firefox, and WebKit:
+24 flow cases passed in the full run; all 21 profile cases passed after
+updating stale clock advances from 4s/110s to the existing 5s/50s behavior.
+The runtime timings are unchanged. Browser checks used a temporary port-4322
+configuration because existing local servers prevented the recipe's preview
+startup. Existing Svelte warnings and build bundling/indexing warnings remain.
+
+Verification fixes include formatting, the existing 8px spacing token,
+one prose punctuation fix, and sandbox SQL comment synchronization; the
+SQL drift test is unchanged.
+
+Approved deployment: live 9e490c70 and frozen 7d691654 at
+https://v0-1-4.sqlstreams.pages.dev. The freeze reused all 1,517 uploaded
+files. Both origins return 200 for the homepage, quickstart, migration guide,
+and versions.json; version metadata is v0.1.4, registry CORS is enabled,
+and frozen HTML carries noindex. Live Cloudflare email obfuscation rewrites
+the quickstart's sqlstreams@v0.1.4 as an email-protection link; frozen content
+is correct. The user confirmed normal browser display; the HTML rewrite
+does not establish a user-facing defect, so no zone-setting change is needed.
+
 ## 2026-09-14 — Release checkpoint verified (unpublished) [0789]
 
 Source 4da16369 passes just verify, including Docker integration tests.

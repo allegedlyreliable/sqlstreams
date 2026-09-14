@@ -43,9 +43,13 @@ the item is removed.
     from PostgreSQL major upgrades and application schema-upgrade guarantees.
 
 - **Chocolatey approval and public-feed validation** [0791] -- sqlstreams
-  0.1.2 was submitted successfully; last verified status on 2026-09-12 was
-  Submitted/Pending, IsApproved=false. Address any moderator feedback.
-  After approval, use a clean Windows runner to install from the public
+  0.1.4 installation, checksum, version output, and uninstall passed, but
+  submission returned HTTP 403 in
+  [run 34839844935](https://github.com/allegedlyreliable/sqlstreams/actions/runs/34839844935).
+  0.1.2 approval confirmed on 2026-09-14 at 11:57:05Z, six minutes after
+  the rejected submission. Chocolatey documents first-version moderation
+  as a cause of HTTP 403; retry v0.1.4 through the manual workflow [0803].
+  Use a clean Windows runner to install from the public
   feed with `choco install sqlstreams --version=0.1.2 --yes`, verify
   `sqlstreams --version` reports 0.1.2, and verify uninstall. Then add the
   Chocolatey install command to READMEs/docs and record the final proof in

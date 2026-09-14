@@ -31,8 +31,8 @@ export const claimCursorSqlTemplate = `
 		),
 		gate AS (
 			-- The gist of this CTE is to find the highest message id (head)
-			-- we can safely claim without skipping messages whose producers
-			-- haven't finished committing or aborting their transactions yet.
+			-- we can safely claim to without skipping messages from producers
+			-- who haven't finished committing or aborting their transactions yet.
 			--
 			-- We associate each head we compare with a transaction id (xid).
 			-- We then check xmin >= xid. That tells us all transactions with

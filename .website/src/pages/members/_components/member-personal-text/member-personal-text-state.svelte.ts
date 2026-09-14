@@ -76,9 +76,9 @@ export class MemberPersonalTextState {
 			animation.updatePlaybackRate(playbackRate);
 		}
 
-    console.log("the end is never the end")
-    if (progress >= 1.0) {
-      console.log("the end.")
-    }
+		console.log('the end is never the end');
+		if (progress >= 1.0) {
+			console.log('the end.');
+		}
 	}
 }

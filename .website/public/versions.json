@@ -1,4 +1,4 @@
 {
-	"latest": "main",
-	"versions": [{ "version": "main", "url": "https://sqlstreams.io" }]
+	"latest": "v0.1.4",
+	"versions": [{ "version": "v0.1.4", "url": "https://v0-1-4.sqlstreams.pages.dev" }]
 }

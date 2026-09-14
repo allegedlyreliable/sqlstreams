@@ -57,7 +57,7 @@
 				data-bait="true"
 				target="_blank"
 				rel="noreferrer"
-        onclick={onDismiss}
+				onclick={onDismiss}
 				href={repositoryUrl}
 			>
 				please no, I'll do anything

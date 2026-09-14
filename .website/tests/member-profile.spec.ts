@@ -15,15 +15,15 @@ test.beforeEach(async ({ page }) => {
 	await page.mouse.move(1, 1);
 });
 
-test('four idle seconds start fading and growth without moving links', async ({ page }) => {
+test('five idle seconds start fading and growth without moving links', async ({ page }) => {
 	const text = page.locator('.personal-text');
 	const website = page.locator('.facts a');
 	const originalBounds = await website.boundingBox();
-	await page.clock.runFor(3_999);
+	await page.clock.runFor(4_999);
 	await expect(text).toHaveAttribute('data-idle', 'false');
 	await page.clock.runFor(50);
 	await expect(text).toHaveAttribute('data-idle', 'true');
-	await page.clock.fastForward(110_000);
+	await page.clock.fastForward(50_000);
 	await expect(page.locator('.personal-text-veil')).toHaveCSS('opacity', '1');
 	const scale = await page.locator('.personal-text-track').evaluate((element) => {
 		return new DOMMatrix(getComputedStyle(element).transform).a;
@@ -44,7 +44,7 @@ test('four idle seconds start fading and growth without moving links', async ({ 
 test('larger text scrolls more slowly and activity restores its normal speed', async ({ page }) => {
 	const text = page.locator('.personal-text-track');
 	await page.clock.runFor(6_000);
-	await page.clock.fastForward(55_000);
+	await page.clock.fastForward(25_000);
 	const middle = await text.evaluate(async (element) => {
 		const animations = element.getAnimations({ subtree: true });
 		await Promise.all(animations.map((animation) => animation.ready));
@@ -56,7 +56,7 @@ test('larger text scrolls more slowly and activity restores its normal speed', a
 	expect(middle[0]).toBeLessThan(1);
 	expect(middle[1]).toBe(middle[0]);
 
-	await page.clock.fastForward(55_000);
+	await page.clock.fastForward(25_000);
 	const full = await text.evaluate(async (element) => {
 		const animations = element.getAnimations({ subtree: true });
 		await Promise.all(animations.map((animation) => animation.ready));
@@ -83,13 +83,13 @@ test('the text widens to the viewport edges without horizontal overflow and rest
 	const growth = page.locator('.personal-text-growth');
 	const original = await growth.boundingBox();
 	expect(original).not.toBeNull();
-	await page.clock.runFor(4_000);
-	await page.clock.fastForward(54_000);
+	await page.clock.runFor(5_000);
+	await page.clock.fastForward(24_000);
 	const middle = await growth.boundingBox();
 	expect(middle!.x).toBeGreaterThan(0);
 	expect(middle!.x).toBeLessThan(original!.x);
 	expect(middle!.width).toBeGreaterThan(original!.width);
-	await page.clock.fastForward(56_000);
+	await page.clock.fastForward(26_000);
 	await expect.poll(async () => (await growth.boundingBox())!.x).toBeCloseTo(0, 1);
 	const full = await growth.boundingBox();
 	const viewportWidth = await page.evaluate(() => document.documentElement.clientWidth);
@@ -154,7 +154,7 @@ test('hidden time does not advance the effect and returning starts a fresh delay
 		Reflect.deleteProperty(document, 'hidden');
 		document.dispatchEvent(new Event('visibilitychange'));
 	});
-	await page.clock.runFor(3_999);
+	await page.clock.runFor(4_999);
 	await expect(page.locator('.personal-text')).toHaveAttribute('data-idle', 'false');
 	await page.clock.runFor(50);
 	await expect(page.locator('.personal-text')).toHaveAttribute('data-idle', 'true');
@@ -164,7 +164,7 @@ test('navigation works on the first tap and returning restarts the profile effec
 	page,
 }) => {
 	await page.clock.runFor(6_000);
-	await page.clock.fastForward(110_000);
+	await page.clock.fastForward(50_000);
 	await page.locator('a[href="/search/"]').first().tap();
 	await expect(page).toHaveURL(/\/search\//);
 	await expect(page.locator('.personal-text-veil')).toHaveCount(0);

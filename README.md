@@ -61,7 +61,7 @@ I'd love to use Kafka for my [billion dollar, AI powered TODO app](https://githu
 Add it to your module. You need a Postgres.
 
 ```sh
-go get github.com/allegedlyreliable/sqlstreams@v0.1.1
+go get github.com/allegedlyreliable/sqlstreams@v0.1.4
 ```
 
 Import the client from the same module:
@@ -137,11 +137,10 @@ brew install --cask allegedlyreliable/tap/sqlstreams
 sqlstreams --version
 ```
 
-Platform archives are available from [GitHub Releases](https://github.com/allegedlyreliable/sqlstreams/releases/tag/v0.1.2).
 Or install the CLI with Go:
 
 ```sh
-go install github.com/allegedlyreliable/sqlstreams/cmd/sqlstreams@v0.1.1
+go install github.com/allegedlyreliable/sqlstreams/cmd/sqlstreams@v0.1.4
 ```
 
 The binary goes into `GOBIN`, or `$(go env GOPATH)/bin` when `GOBIN` is unset.

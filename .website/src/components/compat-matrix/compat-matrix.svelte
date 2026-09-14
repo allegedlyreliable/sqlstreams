@@ -68,7 +68,8 @@
 			<span class="legend-swatch"></span>runs
 		</li>
 		<li class="legend-item" data-support="older_than_build">
-			<span class="legend-swatch"></span>migrate the database up (<a href="/errors/SQL0022">SQL0022</a
+			<span class="legend-swatch"></span>migrate the database up (<a href="/errors/SQL0022"
+				>SQL0022</a
 			>)
 		</li>
 		<li class="legend-item" data-support="newer_than_build">

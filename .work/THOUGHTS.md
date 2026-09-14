@@ -2,6 +2,8 @@
 
 reconsider sqlstreams import alias in all examples etc
 
+should reconsider SQLSTREAMS_ADMIN_DATABASE_URL for cli usage
+
 # Docs
 
 Improve the docsite benchmark chart/graph it is not very **clear**

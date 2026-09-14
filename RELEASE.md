@@ -46,6 +46,12 @@ with `GOWORK=off`, then have the maintainer commit before tagging.
 Verify downloads, installation, and CLI version; record outcomes in HISTORY.
 Chocolatey public-feed installation waits for approval.
 
+To retry Chocolatey submission after approval, without republishing archives:
+
+```sh
+gh workflow run release.yml --ref main -f tag=v0.1.4
+```
+
 ## 6. Docs — when versioning
 
 Update `site.ts` and `public/versions.json` under `.website/`.

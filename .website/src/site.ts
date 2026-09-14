@@ -8,4 +8,4 @@ export const siteUrl = 'https://sqlstreams.io';
 // the version this build carries, shown in the version band and compared
 // against /versions.json's latest; a release bumps it in the same change
 // that adds the release's row to public/versions.json
-export const docsVersion = 'main';
+export const docsVersion = 'v0.1.4';

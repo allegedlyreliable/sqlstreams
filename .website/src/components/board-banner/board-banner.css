@@ -23,7 +23,7 @@
 
 .tagline {
 	margin: 0;
-  padding-left: 8px; 
+	padding-left: var(--space-8);
 	font-family: var(--font-content);
 	color: var(--color-banner-tagline);
 	font-size: 14px;
