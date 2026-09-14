@@ -130,16 +130,16 @@ Retries, dead letters, transactional produce, idempotent produce, keyed ordering
 
 ### CLI
 
-Install the stable CLI on macOS with Homebrew:
+Install the CLI on macOS with Homebrew:
 
 ```sh
 brew install --cask allegedlyreliable/tap/sqlstreams
 sqlstreams --version
 ```
 
-On Windows, install the latest approved CLI with Chocolatey:
+Install the CLI on Windows with Chocolatey:
 
-```powershell
+```sh
 choco install sqlstreams
 ```
 
