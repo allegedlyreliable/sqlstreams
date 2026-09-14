@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - main
+    tags:
+      - "v*"
   pull_request:
 
 permissions:
@@ -32,3 +34,31 @@ jobs:
       - run: touch .env
 
       - run: just verify
+
+  # The supported-version matrix: the integration suite on every PostgreSQL
+  # major the community supports. Pushes to main and tags only; a pull
+  # request gets the one run on 18 inside verify.
+  postgres:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        image: ["postgres:15", "postgres:16", "postgres:17", "postgres:18"]
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: "**/go.sum"
+
+      - uses: extractions/setup-just@v3
+
+      - run: go work init . ./examples ./.bench ./cmd/sqlstreams ./otel ./.tools ./.tests
+
+      - run: touch .env
+
+      - run: just test-integration
+        env:
+          SQLSTREAMS_TEST_POSTGRES_IMAGE: ${{ matrix.image }}

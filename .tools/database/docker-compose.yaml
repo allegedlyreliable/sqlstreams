@@ -1,6 +1,6 @@
 services:
   postgres:
-    image: postgres:17
+    image: postgres:18
     hostname: postgreshost
     env_file:
       - ../../.env
