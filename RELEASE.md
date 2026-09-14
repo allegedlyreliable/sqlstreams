@@ -18,7 +18,18 @@ and [HISTORY](.work/HISTORY.md) with test results and release notes.
 
 ## 3. Publish
 
-Maintainer commits → CI passes → push `vX.Y.Z`.
+Commit and push the release changes, wait for CI
+to pass. 
+
+From that commit, publish next version tag `vX.Y.Z`:
+
+```sh
+git tag -a vX.Y.Z -m "Release vX.Y.Z"
+git push origin refs/tags/vX.Y.Z
+```
+
+Let GoReleaser create the GitHub release. Creating it manually first makes
+it immutable and blocks artifact uploads. Never move a published tag.
 
 [Automation](.github/workflows/release.yml) publishes archives and, for
 stable releases with credentials, Homebrew and a Chocolatey submission.
@@ -41,7 +52,7 @@ Update `site.ts` and `public/versions.json` under `.website/`.
 
 ```sh
 just site-verify
-just site-deploy # Ask first.
+just site-deploy
 just site-freeze <slug>
 ```
 
