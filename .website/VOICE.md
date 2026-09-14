@@ -170,6 +170,23 @@ Measurable only — anything a checklist pass can verify.
   confidence.
 - Zero exclamation points. Zero emoji. At most one CAPS word per
   page for stress.
+- No semicolons in newly written or revised doc prose. Split the sentence
+  or connect its clauses with words. Existing content does not need a
+  retroactive sweep. This rule governs prose, not code syntax.
+- Use paragraph breaks a little more often to emphasize a key point or
+  consequence. A short paragraph can give that point room. Keep connected
+  reasoning together rather than putting every sentence on its own line.
+- Identify what a name refers to on first use: “the `payments.requested`
+  stream,” “the `charge-cards` group,” or “consumer instance A.” Formatting
+  and naming conventions do not establish that context. Repeat the noun
+  when a bare name could refer to more than one thing, including in captions
+  and alternative text. Keep application, group, and instance identities clear.
+- Explain what a technical term denotes before relying on it as shorthand.
+  An incidental mention does not establish a concept, even when the term is
+  an ordinary word such as “range.” Tie it to the concrete example when it
+  first matters. After a change of section or scenario, restore enough context
+  that readers do not have to reconstruct the referent. Prefer the concrete
+  description when introducing another term would not help the explanation.
 - Sentences vary in length; a short verdict sentence may sit beside a
   long mechanism sentence. Do not sand every sentence to the same
   medium length.
@@ -216,3 +233,114 @@ prose, or the sharpened explain-it-back answers — those carry the
 AI-drafted register, and sampling them teaches the AI to imitate
 itself. Hand-corrected before/after pairs from shipped pages outrank
 everything above.
+
+## Concept article playbook
+
+Use this when creating or revising a Concepts page. Start with the reader's
+question, then choose the shape that explains it. This is an editing guide,
+not a required set of headings.
+
+### Define the job before drafting
+
+Write down what the reader should be able to predict after reading. For
+consumer groups: which instances share work, which groups progress
+independently, and what happens when an instance stops.
+
+Name the assumed knowledge. Introduce new terms at the point where the
+example needs them. A definition that requires three more definitions is
+starting too deep in the implementation.
+
+Keep one central question per article. Include a failure or limitation when
+it changes the answer. API variants, field catalogues, setup instructions,
+and recovery procedures belong on their own pages; link at the relevant
+sentence instead of summarizing those pages at the end.
+
+### Build the explanation around a case
+
+- Open with the surrounding situation and the need that makes the concept
+  useful, then name the concept. Let this establish the page's intent naturally;
+  avoid an isolated definition or “this page explains” preamble.
+- Establish normal behavior with a named application, concrete messages,
+  and explicit assumptions. Explain what each participant knows or owns.
+- Change one condition at a time: another instance, another group, a restart,
+  or a crash. Carry the same names and ids through each variation.
+- State the mechanism, then the consequence. Distinguish in-memory results,
+  durable state, and external effects when that boundary matters.
+- Put the limitation beside the behavior it qualifies. End when the question
+  is answered; do not add a recap that repeats the opening.
+
+For example, the Consumer page moves through shared work, independent
+progress, persistence across restarts, and redelivery after a crash. A page
+about ordering might instead compare two execution traces. Choose the
+sequence from the explanation rather than copying an outline mechanically.
+
+### Choose the form that does the work
+
+| What the reader needs to understand | Use |
+| --- | --- |
+| Who owns what, or which components share state | A small labeled diagram with explicit boundaries |
+| What changes over time | Numbered causal steps or a timeline |
+| How two cases differ | A compact comparison using the same attributes |
+| Why a behavior exists or what it costs | Connected prose beside the example |
+| An API expression essential to the mechanism | The smallest real code expression that proves the point |
+
+Use headings that name behavior: “Different groups keep independent
+progress” tells the reader more than “Group behavior.” Keep paragraphs on
+one idea, but retain the connective words that explain cause and effect.
+A concept page should be understandable without running its code.
+
+### Give each visual one job
+
+Write the takeaway caption first. Draw only what supports it. Put the visual
+next to the explanation, with its caption underneath. Reuse names, shapes,
+and direction across related figures; introduce detail progressively.
+
+Show shared storage once. Draw group boundaries explicitly. Label arrows
+with their meaning when direction alone is ambiguous. Mark snapshots and
+possible assignments as examples so a drawing does not invent an ordering,
+load-balancing rule, or delivery guarantee.
+
+Give each resource a separate header containing its kind and name. Put its
+data or current state in the body below that header. Use the same structure
+for streams, groups, instances, and other resources. Nested resources keep
+their own headers within the containing resource's body.
+
+Keep rendered text sizes, header heights, and node padding consistent across
+related diagrams. Choose each diagram's display width to preserve that scale.
+The overall canvas can be wider or taller as the content changes. Do not fit
+every diagram to the same width if that makes its text and nodes smaller.
+
+Use diagrams to expose relationships that prose makes hard to hold in mind.
+Avoid decorative icons, a diagram of every implementation layer, and motion
+that does not explain a state change. Start with static figures; add
+interaction only when changing an input helps the reader reason about the
+result. Keep labels readable on phones, include meaningful alternative text,
+and make the figure understandable without color. Check both site themes.
+
+### Review before calling it ready
+
+- Can a reader answer the central question from the opening and headings?
+- Does the worked case actually demonstrate every claim attached to it?
+  If it introduces four message ids, do those ids have a purpose?
+- Do the prose and diagram agree about scope, state, timing, and ownership?
+- Are durable completion and external effects distinguished where needed?
+- Does every link name useful detail at the point the reader needs it?
+- Could a paragraph be moved unchanged into Reference or a Guide? If so,
+  decide whether it is needed to explain this page's central question.
+- Have claims been checked against shipped code? Keep the slop level honest.
+- Does the page work at phone width and in both themes, with readable labels
+  and no horizontal page overflow?
+
+Then run the existing voice revision checklist. Keep only the visuals and
+prose that help the reader explain or predict the behavior themselves.
+
+### Basis for this playbook
+
+[Diátaxis: Explanation](https://diataxis.fr/explanation/) supplies the scope:
+understanding, connections, reasons, and bounded explanation.
+[Google: Illustrating](https://developers.google.com/tech-writing/two/illustrations)
+supplies the visual guidance: takeaway captions, limited information, and
+progressive detail. [RabbitMQ: Work Queues](https://www.rabbitmq.com/tutorials/tutorial-two-python)
+provides an example of introducing normal work before a failure that motivates
+a mechanism. Borrow that explanatory sequence, not its tutorial scaffolding
+or RabbitMQ-specific delivery behavior.

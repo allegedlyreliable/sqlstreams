@@ -1,0 +1,50 @@
+.diagram {
+	margin: 0;
+	width: 100%;
+	max-width: var(--prose-max-width, 680px);
+	display: grid;
+	justify-items: center;
+	gap: var(--space-10);
+	--xy-background-color: transparent;
+}
+
+.scroll {
+	width: 100%;
+	overflow-x: auto;
+}
+
+.canvas {
+	position: relative;
+	margin-inline: auto;
+}
+
+.drawing {
+	height: 100%;
+}
+
+.attribution {
+	position: absolute;
+	right: var(--space-4);
+	bottom: 0;
+	color: var(--color-text-muted);
+	font-size: 9px;
+	line-height: 1.2;
+	text-decoration: none;
+	opacity: 0.45;
+}
+
+.attribution:hover,
+.attribution:focus-visible {
+	opacity: 1;
+	text-decoration: underline;
+}
+
+figcaption {
+	max-width: 56ch;
+	padding-block: var(--space-4) var(--space-8);
+	color: var(--color-text-muted);
+	font-size: 12px;
+	line-height: 1.5;
+	font-style: italic;
+	text-align: center;
+}

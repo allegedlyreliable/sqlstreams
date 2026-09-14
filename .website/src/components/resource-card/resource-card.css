@@ -1,0 +1,28 @@
+.resource {
+	width: 100%;
+	height: 100%;
+	display: grid;
+	grid-template-rows: var(--header-height) 1fr;
+	border: var(--border-width) solid var(--border-row);
+	background: var(--color-surface);
+	color: var(--color-text);
+	font-family: var(--font-content);
+	font-size: 12px;
+	line-height: var(--line-height);
+	text-align: center;
+}
+
+.header {
+	display: grid;
+	place-items: center;
+	background: var(--color-diagram-header);
+	color: var(--color-text-muted);
+	font-weight: 600;
+	white-space: nowrap;
+}
+
+.body {
+	display: grid;
+	place-items: center;
+	padding: var(--body-padding);
+}

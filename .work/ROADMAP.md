@@ -25,9 +25,6 @@ the item is removed.
   and diagnostics across the same purposes; do not restore whole old boards.
   Active review checkpoints are in TODO.md.
 
-- **PostgreSQL 15–18 compatibility matrix** [0812] -- picked up 2026-09-14
-  in small reviewable chunks; the chunk list is in TODO.md.
-
 - **manual review of cli**
 
 - **manual review of docs**
@@ -49,6 +46,8 @@ the item is removed.
   At pickup, settle how publication requires that evidence and which installation
   checks run for each release; add automation only where the existing workflow
   leaves a concrete gap.
+  - The CI `postgres` matrix job already runs on `v*` tags [0812]; the
+    release workflow can depend on it rather than adding a new gate.
 
 - **Independent user walkthrough** -- have a developer unfamiliar with
   SQLStreams install it, diagnose a failure, upgrade, and submit a small fix

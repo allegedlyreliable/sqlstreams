@@ -78,6 +78,8 @@
 		--color-page: var(--page-blue-gray);
 		--color-page-dot: var(--page-dot-blue-gray);
 		--color-surface: #ffffff;
+		--color-diagram-header: color-mix(in srgb, var(--color-link) 10%, var(--color-surface));
+		--color-diagram-arrow: color-mix(in srgb, var(--color-link) 35%, var(--color-text-muted));
 		--color-text: var(--ink);
 		--color-text-muted: var(--ink-muted);
 		--color-text-faint: var(--ink-faint);

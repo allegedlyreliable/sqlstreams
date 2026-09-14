@@ -23,6 +23,9 @@ beside one:
 - Svelte 5 is the ONE island framework; .astro files are page
   scaffolding and layouts only -- anything worth a Storybook story is
   a Svelte component.
+- Diagrams use Svelte Flow with ELK layout at build time. Articles supply
+  typed resources and connections to the shared Diagram component. ResourceCard
+  owns card markup and CSS. Diagrams render statically without client hydration.
 - CodeMirror 6 (+ lang-sql) and PGlite power the SQL console.
 - Pagefind is site search. Its bundle is imported through a variable
   path -- a literal `import('/pagefind/pagefind.js')` breaks Rollup even
@@ -245,12 +248,14 @@ preprocessor, no utility framework, no third-party token pack.
 - The body starts at H2 (the H1 is the frontmatter title); heading
   levels never skip (remark-lint enforces both).
 - Markdown first: a component appears in MDX only from the
-  whitelisted set (aside, tabs, the console, the compat matrix); anything prose can carry stays prose. A
+  whitelisted set (aside, tabs, the console, the compat matrix, diagrams); anything prose can carry stays prose. A
   component earns a place on the list by rendering something prose
   cannot state -- live query results, a computed grid -- never by
   presenting prose more nicely.
 - Decision records are internal repository documentation. The docsite does
   not load, render, link to, count, or index them.
+- Concepts articles follow the Concept article playbook in VOICE.md for
+  scope, worked cases, visual choices, and review.
 - Each page does ONE job -- tutorial, how-to, reference, or
   explanation; a guide that starts explaining links to the concept
   page instead of drifting. Four boards organize those purposes: Concepts (explanation), Guides

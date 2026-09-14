@@ -2,6 +2,9 @@
 
 # Docs
 
+Need to tweak and visually improve the subsection headers in reference board
+- The '> Consumer Related Pages' drop down should do the same thing
+
 Improve the docsite benchmark chart/graph it is not very **clear**
 
 Roadmap feels lifeless and not exciting. Not sure what to do about that but something should be done

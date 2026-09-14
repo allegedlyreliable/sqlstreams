@@ -5,6 +5,23 @@ Dated ledger of what shipped, newest first — one entry per milestone.
 Entries before 2026-08-13 were reconstructed from the phase notes when this
 ledger was created; dates come from the phase git tags.
 
+## 2026-09-14 — PostgreSQL 15–18 supported-version matrix [0812]
+
+The supported set is the PostgreSQL majors the community supports, 15 to
+18 today, verified per release by the integration suite. The integration
+seam reads SQLSTREAMS_TEST_POSTGRES_IMAGE (default postgres:18) and names
+test schemas with the process id; CI runs a four-major matrix on pushes to
+main and v* tags while pull requests keep one run on 18; the compose stack
+moved from 17 to 18. Evidence at source 15a2dde5: 103 integration tests in
+9 packages green with the race detector on 15.19, 16.15, 17.11, and 18.6,
+and all four signal cases green on 15.19 and 16.15. The shared-server
+override still needs `-p 1`: the claim's snapshot fence sees other
+packages' in-flight transactions. The reference page
+supported-postgresql-versions.mdx carries the matrix and the three-way
+distinction (server version, Postgres major upgrade, schema upgrade), the
+quickstart prerequisites link to it, and the migrations page names it as
+a separate promise; the page is not yet placed on a board.
+
 ## 2026-09-14 — Chocolatey v0.1.5 approved and public-feed validated [0791] [0804]
 
 The v0.1.5 Chocolatey package submitted by release run 34844608693 is

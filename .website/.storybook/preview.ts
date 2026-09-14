@@ -1,4 +1,5 @@
 import type { Preview } from '@storybook/svelte-vite';
+import '@xyflow/svelte/dist/base.css';
 import '../src/styles/global.css';
 import { boardStyles } from '../src/state/board-style.svelte';
 
