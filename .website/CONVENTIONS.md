@@ -103,7 +103,7 @@ default [0606]:
   one concern per file: `model.ts` holds the typed row shapes the
   page renders (the sibling of a datastore's model.go), the hand-
   curated content that feeds them gets its own named file
-  (`boards.ts`), and the functions that build rows from the
+  (each board's `board.ts`), and the functions that build rows from the
   collection live in `rows.ts`. The `.astro` frontmatter is
   fetch-call-render only.
 - A component's styles live in its sibling `<name>.css`, reached ONLY
@@ -245,8 +245,7 @@ preprocessor, no utility framework, no third-party token pack.
 - The body starts at H2 (the H1 is the frontmatter title); heading
   levels never skip (remark-lint enforces both).
 - Markdown first: a component appears in MDX only from the
-  whitelisted set (aside, tabs, the console, the compat matrix, the
-  decision-record index); anything prose can carry stays prose. A
+  whitelisted set (aside, tabs, the console, the compat matrix); anything prose can carry stays prose. A
   component earns a place on the list by rendering something prose
   cannot state -- live query results, a computed grid -- never by
   presenting prose more nicely.

@@ -217,6 +217,7 @@ documentation; the latter want a surface that has stopped moving.
   dead -> ready, with CLI `group exceptions list|retry` and a docs page.
   A list with no action on the same surface is half a feature, so the
   pair ships together. Surfaced by playground scenario 03.
+  - Public discussion: [12](https://github.com/allegedlyreliable/sqlstreams/issues/12).
 
 - **Compacted key Update verb + missed-opt-in Warn** -- read-modify-write
   on a compacted key is an unnamed three-step pattern (InTransaction +
@@ -245,6 +246,7 @@ documentation; the latter want a surface that has stopped moving.
   `AtMessageId` / `AtTime` positions, which is the only way to move an
   existing group. The guide is the spec; this line is its owner. Surfaced
   by playground scenario 07.
+  - Public discussion: [13](https://github.com/allegedlyreliable/sqlstreams/issues/13).
 
 - **Doc-site breadcrumb structured data** -- emit `BreadcrumbList` JSON-LD
   from the same trail each page already renders, so the machine-readable and
@@ -383,6 +385,7 @@ documentation; the latter want a surface that has stopped moving.
     decodes the V2 payload into the V1 struct silently. "not found"
     is the wrong word for it; the answer is whatever the upcaster
     decides, so it waits here with it.
+  - Public discussion: [15](https://github.com/allegedlyreliable/sqlstreams/issues/15).
 
 - **Doc-site pages the 2026-08-28 link sweep found missing** — a
   compaction concept page (concepts/message-key now covers the basics
@@ -441,6 +444,8 @@ documentation; the latter want a surface that has stopped moving.
   - Real systems: Envoy outlier detection (tier 1), Resilience4j/Polly
     (classic in-process), Finagle failure accrual; the two-tier composition
     is per-host ejection + cluster-wide panic thresholds.
+
+  - Public discussion: [14](https://github.com/allegedlyreliable/sqlstreams/issues/14).
 
 ## Parking lot
 
@@ -749,6 +754,8 @@ prerequisite if quorum-as-a-fraction wins.
   matches any run including dots and can't pin an exact depth; NATS splits
   `*` (exactly one token) from `>` (trailing tokens). Real systems: RabbitMQ
   header exchanges (x-match all/any).
+  - Public discussion: [16](https://github.com/allegedlyreliable/sqlstreams/issues/16).
+
 - **LISTEN/NOTIFY latency** (8d) — producers wake idle workers instead of
   waiting for the poll tick. NOTIFY is fire-and-forget (lost if no listener
   or during reconnect), so the fallback poll stays underneath — it also
@@ -768,6 +775,8 @@ prerequisite if quorum-as-a-fraction wins.
   still caps out; in-process the library can only stop renewing, never kill
   the goroutine. Prerequisites (Phase 13 boundary settle, debug readout)
   are satisfied — pick up on merit when a real long-running workload shows.
+  - Public discussion: [17](https://github.com/allegedlyreliable/sqlstreams/issues/17).
+
 - **pgx vs database/sql** (11b) — decide whether dropping pgx for
   database/sql is worth losing native types, COPY, pgx.Batch pipelining, and
   LISTEN/NOTIFY; pgx.Tx threads through every producerFunc closure and

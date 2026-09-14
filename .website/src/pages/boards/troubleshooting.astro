@@ -1,0 +1,39 @@
+---
+import { getCollection } from 'astro:content';
+import BoardLayout from '../../layouts/BoardLayout.astro';
+import Breadcrumb from '../../components/breadcrumb/breadcrumb.svelte';
+import BoardSection from '../../components/board-section/board-section.svelte';
+import ThreadRows from '../../components/thread-rows/thread-rows.svelte';
+import JumpTo from '../../components/jump-to/jump-to.svelte';
+import { jumpTargets } from '../_board/navigation';
+import { siteThreads } from '../_board/threads';
+import { board } from './_troubleshooting/board';
+import BoardIntro from './_components/board-intro.svelte';
+import { troubleshootingSections } from './_troubleshooting/rows';
+
+const docs = await getCollection('docs');
+const sections = troubleshootingSections(siteThreads(docs, []));
+---
+
+<BoardLayout title={board.title} description={board.description} navCurrent={board.title}>
+	<Breadcrumb
+		trail={[
+			{ label: 'Board Index', href: '/' },
+			{ label: board.title, href: null },
+		]}
+	/>
+	<BoardIntro>
+		<p>
+			Errors, log events, metrics, and alerts share the same stable <code>SQL</code> codes. Paste a code
+			or message into <a href="/search/">search</a> to find its page.
+		</p>
+	</BoardIntro>
+	{
+		sections.map((section) => (
+			<BoardSection title={section.title} columnLabels={section.columnLabels}>
+				<ThreadRows client:idle rows={section.rows} />
+			</BoardSection>
+		))
+	}
+	<JumpTo client:idle targets={jumpTargets} />
+</BoardLayout>

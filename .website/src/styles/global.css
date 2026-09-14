@@ -488,7 +488,7 @@
 
 	.thread-body :where(p, ul, ol) {
 		margin: 0;
-		max-width: 680px;
+		max-width: var(--prose-max-width, 680px);
 	}
 
 	.thread-body :where(ul, ol) {

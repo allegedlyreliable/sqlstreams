@@ -4,6 +4,8 @@
 
 	// a listed thread's scope is the thread itself
 	type ThreadRowItem = {
+		decisionDate: string | null;
+		metadata: string | null;
 		title: string;
 		href: string;
 		lastUpdatedDate: string;
@@ -19,6 +21,8 @@
 {#each rows as row, index (row.href)}
 	<ThreadRow
 		{index}
+		decisionDate={row.decisionDate}
+		metadata={row.metadata}
 		title={row.title}
 		href={row.href}
 		updated={readTracking.isUpdated([row.href], row.lastUpdatedDate)}

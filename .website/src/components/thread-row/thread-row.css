@@ -16,9 +16,16 @@
 }
 
 .thread-row-title {
+	overflow-wrap: anywhere;
 	font-family: var(--font-content);
 	font-weight: 600;
 	font-size: 14px;
+}
+
+.thread-row-status {
+	text-align: center;
+	color: var(--color-text-faint);
+	font-size: 10px;
 }
 
 .thread-row-date {
@@ -32,7 +39,13 @@
 		grid-template-columns: var(--grid-board-columns-collapsed);
 	}
 
+	.thread-row-status,
 	.thread-row-date {
 		grid-column: 2;
+		text-align: start;
+	}
+
+	.thread-row-status:empty {
+		display: none;
 	}
 }

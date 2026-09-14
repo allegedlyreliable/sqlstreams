@@ -30,6 +30,8 @@
 	{#each changedRows as row, index (row.href)}
 		<ThreadRow
 			{index}
+			decisionDate={null}
+			metadata={null}
 			title={row.title}
 			href={row.href}
 			updated={true}

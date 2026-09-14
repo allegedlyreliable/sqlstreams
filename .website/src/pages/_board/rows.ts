@@ -1,7 +1,9 @@
 import { lastCommitDate } from '../../helpers/last-commit-date';
 import type { BoardRowData, StickyRowData, ThreadRowData } from './model';
-import { boards, boardHref, stickyIds, type Board } from './boards';
+import { boards, boardHref, stickyIds } from './navigation';
+import { type Board } from './model';
 import type { Thread } from './threads';
+import { codeMetadata } from './codes';
 
 export function boardRows(threads: Thread[]): BoardRowData[] {
 	return boards.map((board) => {
@@ -45,6 +47,14 @@ export function stickyRows(threads: Thread[]): StickyRowData[] {
 
 export function threadRows(board: Board, threads: Thread[]): ThreadRowData[] {
 	return boardThreads(board, threads).map((thread) => ({
+		decisionDate:
+			thread.entry.collection === 'decisions'
+				? thread.entry.data.date.toISOString().slice(0, 10)
+				: null,
+		metadata:
+			thread.entry.collection === 'decisions'
+				? thread.entry.data.status
+				: codeMetadata(thread.entry),
 		title: thread.title,
 		href: `/${thread.id}/`,
 		lastUpdatedDate: lastCommitDate(thread.filePath),

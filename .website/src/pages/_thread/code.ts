@@ -1,5 +1,5 @@
 import type { CollectionEntry } from 'astro:content';
-import { threadCode } from '../_board/boards';
+import { threadCode } from '../_board/identifiers';
 import { pastePlaceholders } from './diagnose';
 import { errorExampleLine, eventExampleLine } from './example-line';
 import type { CodeThreadData } from './model';

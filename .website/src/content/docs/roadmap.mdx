@@ -1,102 +1,96 @@
 ---
 title: Roadmap
-description: Where SQLStreams is, where it's going, and what we want your opinion on.
-slop: high
+description: Proposed features for SQLStreams.
+slop: medium
 ---
 
 import ThreadAside from '../../components/thread-aside/thread-aside.svelte';
 
-SQLStreams is early, in the open, and built in deliberate layers — each one
-proven against integration tests over a real Postgres and an hour-long
-benchmark run that ends in one verdict before the next goes on top. This page
-is the honest state of the world: what ships today, what's in flight, and
-what waits for a real workload to demand it.
+Here is my current running list of new **proposed** features on the Roadmap.
 
-## Built: the engine
+These are not ordered or exact. Other features not listed here may come first.
 
-The core described throughout these docs is shipped, not planned:
+If you want the *full* unordered list [look here](https://github.com/allegedlyreliable/sqlstreams/blob/main/.work/ROADMAP.md).
 
-- **One immutable message log per stream, per-group delivery state beside
-  it** — the architectural keystone. Retention, independent fan-out, and
-  per-group dead-lettered messages all fall out of that split.
-- **Transactional produce** — your business writes and the message in one
-  `COMMIT`. [The full guide →](/guides/transactional-produce/)
-- **The message lifecycle** — claims, leases, retries with backoff,
-  dead-lettering, and a per-attempt audit trail
-  ([lifecycle →](/concepts/lifecycle/)).
-- **Routing-key bindings** — a consumer group declares which messages it
-  receives ([routing →](/concepts/routing/)).
-- **Log compaction** — opt a message into a key whose claims only ever
-  see the latest version.
-- **Partition-based retention** — the message log is partitioned by id
-  range; expiry is a `DROP`, not a million-row `DELETE`.
-- **The maintenance fleet** — partition upkeep, cursor advancement,
-  expired-lease reclaim, schedules, and default alerts run embedded in
-  every consumer, or standalone via `sqlstreams manager run`.
-- **Diagnostics as a system** — every error and operator-facing log event
-  carries a `SQL` code with a docs page; `sqlstreams explain` works offline;
-  the CLI speaks `--output json` throughout.
-- **A migration compatibility gate** — every schema step declares the
-  oldest library version that can run against it, checked at migration
-  time ([upgrades →](/guides/migrations/)).
-
-## Now: measured numbers
-
-Every number on this site cites a recorded run; the
-[benchmarks page](/benchmarks/) holds the sustained-throughput result and
-how to reproduce it. The current work is the lab itself — one command
-that runs a whole scenario, native or in Compose — and then recovery
-under load: a chosen fault, the backlog it leaves, and how long the drain
-takes.
-
-## Next: the v1 surface
-
-The public-surface review is complete. The
-[API reference](/reference/) retains batching, transaction controls, and
-resource-specific migration operations. Shared client construction state and
-diagnostic declarations now have explicit ownership; SQL owner-column helpers
-live outside the supported client surface.
-
-The remaining documentation audit covers defaults, shutdown requirements,
-errors, and destructive effects on the retained handles and instances.
-The entry package's future location is still undecided. v1 means the surface stops moving.
-
-Implementation packages remain importable for advanced use, outside the
-[supported API boundary](/concepts/api-shape/#the-supported-api).
-
-## Later: what a workload has to earn
-
-These are designed-but-not-built, picked up when a real deployment
-demands them rather than on speculation:
-
-- **Circuit breaker** — per-instance trip with group-wide coordination,
-  so a dead downstream doesn't dead-letter a backlog.
-- **Header routing** — attribute-set matching (`region=eu AND tier=gold`)
-  beside the routing key.
-- **Producer wake-ups via LISTEN/NOTIFY** — today consumers poll;
-  wake-on-produce is designed but waits for polling latency to be a
-  measured problem.
-- **Lease heartbeats** — progress-based lease renewal for handlers whose
-  legitimate runtime exceeds the work timeout.
-- **An HTTP API** — produce via POST, consume via SSE, for languages
-  without a Postgres driver in hand.
-
-<ThreadAside label="NOTE" title="What stays open source">
-Every semantic capability — transactions, lifecycle, fan-out, routing,
-compaction, ordering — ships in the open-source engine.
+<ThreadAside label="NOTE" title="Squash em">
+I will always prioritize bugs over features. Only extreme bugs that cause massive
+system rewrites may be acknowledged and postponed.
 </ThreadAside>
 
-## What we want from you
 
-This site exists to collect opinions, and the questions we're actively
-weighing:
+## Retry dead messages
 
-1. **Would you adopt this for a new project?** If not, what's the missing
-   piece — a language SDK, a benchmark, a migration path?
-2. **Which pitch lands harder?** "a job queue you'll never outgrow," or
-   "producing in your own transaction kills your worst class of bugs."
-3. **Where's your line for Postgres-as-queue?** What throughput or
-   retention number would make you reach for Kafka anyway?
+**Problem:** Once a message exhausts its retries, fixing the cause does not
+make it run again. Inspecting and retrying dead messages currently requires
+SQL by hand.
 
-Open an issue, or just reply to whoever sent you this link — they'll make
-sure it reaches us.
+**Solution:** List dead messages, see why they failed, and retry them through
+the client or CLI.
+
+[Upvote or discuss](https://github.com/allegedlyreliable/sqlstreams/issues/12).
+
+## Replay an existing consumer group
+
+**Problem:** A handler can succeed while doing the wrong thing. Fixing its
+code does not revisit messages the group has already processed.
+
+For example, a bad deploy makes `search-indexer` omit prices from orders
+101–200. The handler returned success, so there is nothing to retry. The
+corrected handler needs to read those messages again.
+
+**Solution:** Rewind an existing group to a message id or timestamp and
+process its retained history again. Other groups keep their progress;
+anything the rewound group's handler does may happen again.
+
+[Upvote or discuss](https://github.com/allegedlyreliable/sqlstreams/issues/13).
+
+## Circuit breakers
+
+**Problem:** When a downstream dependency goes down, consumers keep trying
+messages that cannot succeed. An email-provider outage can exhaust the retry
+budgets of otherwise valid receipt requests.
+
+**Solution:** Pause processing when a dependency is failing, then probe for
+recovery before resuming. A problem with one consumer instance should not
+stop healthy instances from making progress.
+
+[Upvote or discuss](https://github.com/allegedlyreliable/sqlstreams/issues/14).
+
+## Message version conversion
+
+**Problem:** A consumer expects one message version. Older versions are
+skipped, even when their data is still useful.
+
+For example, `search-indexer` now reads version 2, which stores prices in
+cents. Retained orders 101–200 use version 1, which stored prices in dollars.
+The new handler needs a conversion before it can rebuild those records.
+
+**Solution:** Let consumers read older versions through converters you
+provide. You define how the old fields map to the new ones, without a
+separate process rewriting the retained messages.
+
+[Upvote or discuss](https://github.com/allegedlyreliable/sqlstreams/issues/15).
+
+## Header/content routing
+
+**Problem:** Routing currently matches one routing-key string. Independent
+attributes such as region and customer tier have to be encoded into that
+string, and every group has to work around its format.
+
+**Solution:** Let each group select messages by attributes such as
+`region=eu` and `tier=gold`. Producers attach the attributes without needing
+to know which groups exist.
+
+[Upvote or discuss](https://github.com/allegedlyreliable/sqlstreams/issues/16).
+
+## Lease renewal
+
+**Problem:** A long-running handler can outlive its lease while still making
+progress. Making every lease longer gives it more time, but also makes crash
+recovery slower.
+
+**Solution:** Let the handler report progress and extend its lease. Renewal
+would depend on progress reported by the handler, with a maximum runtime so
+a stuck handler cannot hold a message forever.
+
+[Upvote or discuss](https://github.com/allegedlyreliable/sqlstreams/issues/17).

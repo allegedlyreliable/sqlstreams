@@ -5,6 +5,45 @@ Dated ledger of what shipped, newest first — one entry per milestone.
 Entries before 2026-08-13 were reconstructed from the phase notes when this
 ledger was created; dates come from the phase git tags.
 
+## 2026-09-13 — Each board owns its page [0802]
+
+Seven dedicated Astro pages replace the dynamic board route. Board definitions
+live beside their pages; Troubleshooting owns its intro and code sections,
+and Decision records owns its column labels. Shared navigation, membership,
+row rendering, and unread tracking remain. The shared intro field and section
+dispatcher are removed.
+
+Verified with the site build, Astro checks, targeted lint, 40 thread/code
+tests, and before/after comparisons of every existing board thread and its
+order. Browser checks covered all seven boards, thread and adjacent links,
+unread indicators, jump targets, home board counts, and mobile layouts.
+The three index redirects and all individual thread URLs still resolve.
+
+## 2026-09-13 — Reference uses one board index [0801]
+
+Removed the duplicate API reference index and its board entry. `/reference/`
+redirects to the Reference board; individual lookup pages and the API shape
+explanation retain their content. Verified with targeted formatting and lint,
+the site build, and checks of the generated redirect and board links.
+
+## 2026-09-13 — Troubleshooting uses one board index [0800]
+
+The Troubleshooting board groups all code pages into errors, log events,
+metrics, and alerts, with recovery, level, kind, or severity alongside each.
+Code lookup guidance moves onto the board; the stale Error codes index
+redirects there. Metadata uses the declaration export and code-page log
+levels. Verified with the site build, Astro checks, targeted lint, 11 code
+metadata tests, and browser checks covering all 109 codes, redirects,
+navigation, decision-board metadata, and mobile width.
+
+## 2026-09-13 — Decision records use one board index [0799]
+
+The Decision records board shows status and decision dates, newest record
+first. The duplicate Regrets page redirects there; its index components are
+removed. Read tracking still uses Git update dates. Long record titles wrap
+on mobile. Verified with the site build, Astro type checks, targeted lint,
+and browser checks for redirect, ordering, navigation, and mobile width.
+
 ## 2026-09-13 — Runtime alerts distinguish invalid evidence from unavailable evidence [0797]
 
 AlertEvaluationSnapshot carries EvidenceInvalid and preserves the specific

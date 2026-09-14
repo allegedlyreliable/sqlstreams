@@ -1,7 +1,7 @@
 import { lastCommitDate } from '../../helpers/last-commit-date';
 import { repositoryUrl } from '../../site';
 import type { ThreadLink } from '../../components/prev-next/types';
-import { boards } from '../_board/boards';
+import { boards } from '../_board/navigation';
 import { boardThreads } from '../_board/rows';
 import { repositoryFilePath, type Thread } from '../_board/threads';
 import type { ThreadData } from './model';

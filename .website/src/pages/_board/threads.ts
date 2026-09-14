@@ -1,6 +1,6 @@
 import type { CollectionEntry } from 'astro:content';
 import { recordTitle } from '../../helpers/decision-records';
-import { isErrorThread, threadCode } from './boards';
+import { isErrorThread, threadCode } from './identifiers';
 
 export type DocsEntry = CollectionEntry<'docs'>;
 export type DecisionEntry = CollectionEntry<'decisions'>;

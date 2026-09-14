@@ -1,3 +1,10 @@
+export type Board = {
+	title: string;
+	slug: string;
+	description: string;
+	threads: (ids: string[]) => string[];
+};
+
 export type BoardRowData = {
 	title: string;
 	href: string;
@@ -10,6 +17,8 @@ export type BoardRowData = {
 };
 
 export type ThreadRowData = {
+	decisionDate: string | null;
+	metadata: string | null;
 	title: string;
 	href: string;
 	lastUpdatedDate: string;

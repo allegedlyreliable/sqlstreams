@@ -4,6 +4,10 @@ reconsider sqlstreams import alias in all examples etc
 
 # Docs
 
+Improve the docsite benchmark chart/graph it is not very **clear**
+
+Roadmap feels lifeless and not exciting. Not sure what to do about that but something should be done
+
 keyword highlighting and or linking (stream, produce, consume, dead)
 
 thought bubbles (hover over text and I interject my random thoughts)

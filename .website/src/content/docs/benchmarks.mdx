@@ -18,27 +18,30 @@ Unfortunately we live in a cruel world and these results are only *okay* and not
 
 ## General Methodology
 
-The benchmarks drive producers unpaced and measure how quickly consumers keep up.
-Each scenario ran three measured repetitions from one build; the workload,
-configuration, and reproduction steps are recorded separately below.
+These are the goals of the benchmark tests: Be **clear**, **accurate**, and **reproducible**.
 
-Per-message recording is disabled to avoid its JSON and disk-write overhead.
-Aggregate counters measure rates and totals; they do not prove that every
-individual message was handled exactly once. Detailed latency is unavailable
-in these runs. The quiet scenario retains full recording for its identity
-checks ([0687](/decisions/0687/)).
+### Clear
 
-Keep integration tests, other database workloads, and builds out of the measured
-window. The settings are tuned for this host; reproduction on another machine
-measures that machine's capacity. No additional handler work is included.
+I don't want you staring cross-eyed at some charts and graphs trying to interpret what they mean.
+Someone making things unnecessarily hard to understand normally has something to hide.
 
-See the [default settings](#default-config) shared by both scenarios.
+### Accurate
+
+Yes, accurate, not precise. Make sure we actually measure what we intended to measure. This is easier to mess
+up than it sounds.
+
+### Reproducible
+
+Be completely transparent about how the stated results were produced, so ideally someone else
+can come along after me and either confirm or challenge the results.
 
 <ThreadAside label="NOTE" title="You calling me a liar">
 Because benchmarks have somewhat of a history of being *contentious* I have tried my best to give as much
 info as possible such that they are reproducable. If you try to benchmark yourself and get drastically different
 results please let me know in whatever way you want.
 </ThreadAside>
+
+See the [default settings](#default-config) shared by all scenarios.
 
 ## Single Stream Scenario
 

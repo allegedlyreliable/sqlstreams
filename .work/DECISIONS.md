@@ -596,3 +596,7 @@ in `.work/DECISION_MAP.md` routes a question to its records.
 - 0796 2026-09-13 accepted (pre-v1) — Registration alert evidence is debug diagnostics
 - 0797 2026-09-13 accepted (pre-v1) — Runtime alerts classify invalid evidence
 - 0798 2026-09-13 accepted (pre-v1) — Threads declare a slop level
+- 0799 2026-09-13 accepted (pre-v1) — Decision records use the board index
+- 0800 2026-09-13 accepted (pre-v1) — Troubleshooting uses the board index
+- 0801 2026-09-13 accepted (pre-v1) — Reference uses the board index
+- 0802 2026-09-13 accepted (pre-v1) — Each board owns its page

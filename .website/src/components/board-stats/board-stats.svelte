@@ -16,10 +16,10 @@
 			<a href="/whats-new/">{docCount} documents</a>
 		</span>
 		<span class="stats-line">
-			<a href="/errors/">{codeCount} error and event codes</a>
+			<a href="/boards/troubleshooting/">{codeCount} diagnostic codes</a>
 		</span>
 		<span class="stats-line">
-			<a href="/decisions/">{decisionRecordCount} decision records</a>
+			<a href="/boards/decisions/">{decisionRecordCount} decision records</a>
 		</span>
 	</div>
 	<div class="legend">

@@ -1,0 +1,8 @@
+.board-intro {
+	--prose-max-width: none;
+	padding: var(--space-12) var(--space-14);
+	background: var(--color-chrome-pale);
+	font-size: 13px;
+	line-height: 1.65;
+	gap: var(--space-10);
+}

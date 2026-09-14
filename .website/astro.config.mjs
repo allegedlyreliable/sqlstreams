@@ -31,6 +31,11 @@ const keywordScopes = [
 // https://astro.build/config
 export default defineConfig({
 	site: siteUrl,
+	redirects: {
+		'/decisions/': '/boards/decisions/',
+		'/errors/': '/boards/troubleshooting/',
+		'/reference/': '/boards/reference/',
+	},
 	vite: {
 		build: {
 			// Vite 8's baseline-widely-available list, pinned -- the default

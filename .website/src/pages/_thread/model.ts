@@ -1,6 +1,6 @@
 import type { ThreadLink } from '../../components/prev-next/types';
 import type { SlopLevel } from '../../components/slop-notice/types';
-import type { Board } from '../_board/boards';
+import type { Board } from '../_board/model';
 
 export type ThreadData = {
 	board: Board;

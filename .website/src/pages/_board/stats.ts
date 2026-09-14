@@ -1,4 +1,4 @@
-import { isDecisionRecordThread, isErrorThread } from './boards';
+import { isDecisionRecordThread, isErrorThread } from './identifiers';
 import type { SiteStats } from './model';
 import type { Thread } from './threads';
 

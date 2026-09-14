@@ -2,7 +2,8 @@
 import type { InferGetStaticPropsType, GetStaticPaths } from 'astro';
 import { getCollection, render } from 'astro:content';
 import ThreadLayout from '../layouts/ThreadLayout.astro';
-import { boards, boardHref, isDecisionRecordThread, isErrorThread } from './_board/boards';
+import { boards, boardHref } from './_board/navigation';
+import { isDecisionRecordThread, isErrorThread } from './_board/identifiers';
 import { boardThreads } from './_board/rows';
 import { siteThreads } from './_board/threads';
 import { threadData } from './_thread/thread';
