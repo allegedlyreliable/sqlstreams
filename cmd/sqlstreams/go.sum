@@ -1,9 +1,9 @@
 charm.land/lipgloss/v2 v2.0.6 h1:EaGKeuA8FvF+v2BT5VmZd2LoYLaMZJXA5n34th8nCIQ=
 charm.land/lipgloss/v2 v2.0.6/go.mod h1:ipDDJNSGa1hlwDtSfW1s2/xR8Vdhbut4PXh2zEKZd0Q=
-github.com/allegedlyreliable/sqlstreams v0.1.4 h1:o97idHBiRC6QaHKumNzMbQlFOejof6fZ/hbOivGaeNY=
-github.com/allegedlyreliable/sqlstreams v0.1.4/go.mod h1:VLfHx2OFpTPRMx9sn7D8JMEC8nQK8howQ1vbxcM2u5c=
-github.com/allegedlyreliable/sqlstreams/otel v0.1.4 h1:Ly+B+C95fqhuoW2wIWYHmaIZfmMLtVjyN73bqw+U7Gg=
-github.com/allegedlyreliable/sqlstreams/otel v0.1.4/go.mod h1:E2PrhCi74V13UnkFrpYsfPbT53X3CwnuEpWbA/yKqBM=
+github.com/allegedlyreliable/sqlstreams v0.1.5 h1:Sgn6I3S4sq10sPyPjCzCSMAGpABcapTDgZgAhe7TcG0=
+github.com/allegedlyreliable/sqlstreams v0.1.5/go.mod h1:VLfHx2OFpTPRMx9sn7D8JMEC8nQK8howQ1vbxcM2u5c=
+github.com/allegedlyreliable/sqlstreams/otel v0.1.5 h1:KUBcP7G884tWnilp4WxCOPI4JIdd3kGQhHce07tQOKw=
+github.com/allegedlyreliable/sqlstreams/otel v0.1.5/go.mod h1:jZwN4iRN/RdDa1uDNKf0jsfoRELoY0BxlDy5DYDsomM=
 github.com/aymanbagabas/go-udiff v0.4.1 h1:OEIrQ8maEeDBXQDoGCbbTTXYJMYRCRO1fnodZ12Gv5o=
 github.com/aymanbagabas/go-udiff v0.4.1/go.mod h1:0L9PGwj20lrtmEMeyw4WKJ/TMyDtvAoK9bf2u/mNo3w=
 github.com/beorn7/perks v1.0.1 h1:VlbKKnNfV8bJzeqoa4cOKqO6bYr3WgKZxO8Z16+hsOM=

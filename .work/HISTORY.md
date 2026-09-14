@@ -19,8 +19,10 @@ downloaded archives match checksums.txt. The Mac arm64 archive and Homebrew
 upgrade from 0.1.4 report version 0.1.5. Windows Chocolatey installation,
 checksum, version output, uninstall, and submission pass. Package metadata
 reports Submitted/Pending, IsApproved=false; public-feed verification waits
-for approval. OTel and CLI v0.1.5 publication remains in TODO; every release
-now requires matching module versions, even without code changes [0805].
+for approval. OTel v0.1.5 is published at b529043e after CI 34846835381
+passed. CLI root/OTel pins now use v0.1.5 and pass standalone build and race
+tests; CLI publication awaits the maintainer's push. Every release requires
+matching module versions, even without code changes [0805].
 
 Post-release preparation: examples, .tests, .bench, and .tools pin v0.1.5
 and pass standalone builds and race tests, including Docker integration tests.
