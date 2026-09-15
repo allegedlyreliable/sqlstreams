@@ -6,9 +6,13 @@ shipped work in HISTORY.md; decision rationale in DECISIONS.md ->
 
 ## Documentation structure review
 
-- [ ] Review the rewritten Consumer groups and delivery concept page and its
-  three diagrams. Reusable writing guidance is in VOICE.md, Concept article
-  playbook. Settle this example before applying it to other Concepts pages.
+- [ ] Review the rewritten Consumer leases concept page: one shared lease
+  deadline, queue waiting, the check before a handler starts, and recovery.
+  The worked example and diagram use the established payment stream and group.
+
+- [x] User review of the Consumer groups concept page and its three diagrams
+  is complete. .website/CONCEPTS.md captures the concept-writing guide.
+  VOICE.md holds general prose, terminology, and naming requirements.
   Svelte Flow with ELK is the accepted diagram renderer. All three examples
   use the shared Diagram and ResourceCard components. Mermaid, Graphviz, and
   the original SVG comparison assets have been removed.

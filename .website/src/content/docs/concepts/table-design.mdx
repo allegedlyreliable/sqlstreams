@@ -72,7 +72,7 @@ creation time, expiry, token, and failure count. Release and expiry cleanup
 remove the live row without deleting these snapshots; deleting the worker
 removes its history. The existing manager sweep retains snapshots for 24 hours
 after recorded lease expiry by default. The log has no lifecycle-operation
-field; proposed [lease-coverage evaluation](/decisions/0700/) uses the copied
+field; proposed lease-coverage evaluation uses the copied
 timestamps.
 
 ## The family

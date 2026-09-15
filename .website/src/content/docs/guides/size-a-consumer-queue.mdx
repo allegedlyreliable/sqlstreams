@@ -1,0 +1,110 @@
+---
+group: consumer
+title: Size a consumer queue
+description: Start with a small queue, run your workload, and adjust batching and concurrency based on the result.
+slop: medium
+---
+
+import ThreadAside from '../../../components/thread-aside/thread-aside.svelte';
+
+A consumer can claim messages ahead of the handler so work is ready when it
+finishes processing. A larger queue keeps more claimed messages ready
+locally, but those messages spend lease time waiting.
+
+Start small, run the workload you expect, and increase capacity only when
+it improves processing. Aim for a queue that keeps handlers supplied without
+making messages wait too long to start.
+
+This example continues the [Quickstart](/quickstart/), using the
+`email-sender` consumer group on the `signup.welcome-email` stream. You can
+apply the same options to your application's `Consume` call.
+
+## 1. Set a small starting queue
+
+In `cmd/consume/main.go`, replace the final `Consume` call in `run` with:
+
+```go
+return consumer.Consume(ctx, receiveEmail, &sqlstreams.ConsumeOptions{
+	BatchLimit:         1,
+	QueueSize:          1,
+	MessageConcurrency: 1,
+})
+```
+
+These settings give the consumer one message per new claim, one place in
+its waiting queue, and one handler at a time for those messages. The small
+batch requires more claims for the same amount of work, but gives you a
+starting point with little waiting inside each claim.
+
+Set `BatchLimit` and `QueueSize` together. The queue must hold at least one
+batch, so setting only `QueueSize` to 1 conflicts with the default batch
+limit of 4.
+
+## 2. Run the consumer
+
+Produce a few messages by running this command several times:
+
+```sh
+go run ./cmd/produce
+```
+
+Then start the consumer:
+
+```sh
+go run ./cmd/consume
+```
+
+For each message it handles, the Quickstart's `receiveEmail` function prints:
+
+```text
+received welcome email request for user-123
+```
+
+This checks that the example runs with your selected options.
+
+## 3. Adjust the setting that limits progress
+
+Use your real handler and a representative message rate, including expected
+bursts. Keep that workload the same between runs. After editing the options,
+stop the consumer with Ctrl-C and wait for it to exit, then run it again.
+Options take effect on the next `Consume` call.
+
+**When handlers are busy and work keeps accumulating**, try increasing
+`MessageConcurrency` from 1 to 2 while leaving the batch and queue at 1.
+Do this when handlers can run independently and the service they call has
+capacity for more simultaneous requests. A larger queue alone cannot make
+those handlers finish faster.
+
+**When handlers finish quickly but sit idle between claims while work remains**,
+try increasing `BatchLimit` and `QueueSize` from 1 to 4, keeping concurrency at the value
+from your previous run. This lets each new claim bring in more messages and
+keeps them ready for processing. It also gives later messages more work to
+wait behind.
+
+Keep a change when the consumer keeps up better without slower handlers,
+more failures, or [SQL0105](/troubleshooting/queued-message-cannot-start/),
+which means a queued message has too little lease time left to start.
+Otherwise, return to the previous settings.
+
+Use [cursor backlog](/reference/consumer-cursor-backlog/) to follow progress
+after a burst, alongside application results. Backlog can reach zero while
+failed messages still need processing.
+
+<ThreadAside label="NOTE" title="Waiting needs its own time allowance">
+
+Increase `QueueMargin` when the waiting is
+intentional and acceptable. A longer margin also makes other instances wait
+longer to reclaim work after a crash. Raising the handler timeout does not
+add queue waiting time. [Consumer leases](/concepts/consumer-leases/)
+explains the tradeoff.
+
+</ThreadAside>
+
+## Related topics
+
+- [Consumer session options](/reference/consumer-session-options/) — Exact
+  defaults and requirements for batching, queueing, and concurrency.
+- [Queued message cannot start](/troubleshooting/queued-message-cannot-start/) —
+  Investigate SQL0105 and recover affected work.
+- [Stop a consumer gracefully](/guides/stop-a-consumer/) — Stop a session
+  before running it with new options.

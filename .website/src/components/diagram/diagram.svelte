@@ -1,11 +1,12 @@
 <script lang="ts">
 	import { MarkerType, SvelteFlow } from '@xyflow/svelte';
 	import ResourceCard from '../resource-card/resource-card.svelte';
+	import QueueCard from '../queue-card/queue-card.svelte';
 	import type { DiagramLayout } from './types';
 
 	type Props = { graph: DiagramLayout; description: string; caption: string };
 	let { graph, description, caption }: Props = $props();
-	const nodeTypes = { resource: ResourceCard };
+	const nodeTypes = { resource: ResourceCard, queue: QueueCard };
 	const zoom = 1.15;
 	const defaultEdgeOptions = {
 		type: 'smoothstep',

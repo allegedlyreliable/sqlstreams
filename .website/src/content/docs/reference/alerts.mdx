@@ -165,7 +165,7 @@ classification without logging or recording an alert.
   insufficient evidence leaves the recorded alert unchanged. Missing coverage
   logs at DEBUG; invalid completion evidence logs at WARN.
   Coverage is read from `worker_instance_log`, so a released or crashed
-  manager counts until its last recorded expiry ([0700](/decisions/0700/)).
+  manager counts until its last recorded expiry.
 - An alert's key is its owner's id, so the read resolves the name first.
   Destroy the stream and `stream.Alerts().PartitionCount().Latest(ctx)`
   returns `ErrStreamNotFound` rather than the last alert; a missing group is

@@ -1,2 +1,4 @@
 @CONVENTIONS.md
 @VOICE.md
+@CONCEPTS.md
+@GUIDES.md

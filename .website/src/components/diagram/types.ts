@@ -1,9 +1,10 @@
 import type { Edge, Node } from '@xyflow/svelte';
+import type { QueueNode } from '../queue-card/types';
 
 export type ResourceNode = Node<{ title: string; lines: string[] | null }, 'resource'>;
 
 export type DiagramLayout = {
-	nodes: ResourceNode[];
+	nodes: (ResourceNode | QueueNode)[];
 	edges: Edge[];
 	width: number;
 	height: number;

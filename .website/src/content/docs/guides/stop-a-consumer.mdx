@@ -1,0 +1,188 @@
+---
+group: consumer
+title: Stop a consumer gracefully
+description: Connect shutdown signals, let active handlers finish, and verify that the database pool closes after Consume returns.
+slop: medium
+---
+
+import ThreadAside from '../../../components/thread-aside/thread-aside.svelte';
+
+When you stop an application for a deploy or restart, a consumer may still
+be processing a message. Give it time to finish that work and record the
+result before closing its database connection.
+
+Pass a cancellable context to `Consume`, cancel it to request shutdown, and
+wait for `Consume` to return before closing the pool. The example below makes
+that order visible so you can check it in a running process.
+
+## Before you begin
+
+Use the local Go project and PostgreSQL database from the [Quickstart](/quickstart/).
+Its producer writes `WelcomeEmail` messages to the `signup.welcome-email`
+stream. This guide keeps that stream and the `email-sender` consumer group.
+
+## 1. Connect shutdown to the consumer's lifetime
+
+Replace `cmd/consume/main.go` with this complete example. The handler simulates three seconds
+of work and prints the message id. It does not send an email.
+
+```go title="cmd/consume/main.go"
+package main
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"os"
+	"time"
+
+	sqlstreams "github.com/allegedlyreliable/sqlstreams/client"
+)
+
+type WelcomeEmail struct {
+	UserId string `json:"user_id"`
+}
+
+func (WelcomeEmail) SchemaVersion() int { return 1 }
+
+func main() {
+	if err := run(); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+}
+
+func run() error {
+	sessionCtx, stop := sqlstreams.LifecycleContext(nil)
+	defer stop()
+
+	pool, err := sqlstreams.NewPostgresPool(sessionCtx, "username", "password", "localhost", "quickstart", nil)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		pool.Close()
+		fmt.Println("database pool closed")
+	}()
+
+	client, err := sqlstreams.NewClient(sessionCtx, pool, nil)
+	if err != nil {
+		return err
+	}
+
+	emails := client.Stream[WelcomeEmail]("signup.welcome-email")
+	registered, err := emails.Get(sessionCtx)
+	if err != nil {
+		return err
+	}
+	if registered == nil {
+		return errors.New("stream not registered -- run the producer first")
+	}
+
+	consumer, err := emails.Consumer("email-sender").Register(sessionCtx, nil)
+	if err != nil {
+		return err
+	}
+
+	err = consumer.Consume(sessionCtx, receiveEmail, nil)
+	fmt.Println("Consume returned")
+	return err
+}
+
+func receiveEmail(ctx context.Context, email *WelcomeEmail) error {
+	metadata, _ := sqlstreams.MetaFromContext(ctx)
+	fmt.Printf("started message %d for %s\n", metadata.Id, email.UserId)
+
+	timer := time.NewTimer(3 * time.Second)
+	defer timer.Stop()
+	select {
+	case <-ctx.Done():
+		fmt.Printf("cancelled message %d\n", metadata.Id)
+		return ctx.Err()
+	case <-timer.C:
+		fmt.Printf("finished message %d\n", metadata.Id)
+		return nil
+	}
+}
+```
+
+`LifecycleContext` cancels `sessionCtx` on SIGINT or SIGTERM. `Consume` stays
+in the foreground while shutdown finishes. Only after it returns can `run`
+exit and execute the deferred pool closure.
+
+When applying this to your own application, keep the pool open until all
+consumer sessions that use it have returned. If your application already
+handles shutdown signals, pass its cancellable shutdown context to `Consume`.
+
+<ThreadAside label="NOTE" title="Press Ctrl-C once">
+
+With `LifecycleContext`, a second shutdown signal forces the process to exit
+immediately. Send one signal and allow shutdown to finish when testing the
+graceful path.
+
+</ThreadAside>
+
+## 2. Run the consumer and stop it
+
+Produce four messages by running this command four times:
+
+```sh
+go run ./cmd/produce
+```
+
+Start the consumer:
+
+```sh
+go run ./cmd/consume
+```
+
+As soon as you see `started message`, press **Ctrl-C once**. The handler
+should finish its simulated work before `Consume` returns and the pool
+closes.
+
+This is the captured output from a run with message 1. Your timestamps and
+message ids will differ. The plain lines come from the example's `fmt` calls,
+and the `level=INFO` lines come from `LifecycleContext`.
+
+```text
+started message 1 for user-123
+^Ctime=2026-09-14T20:45:20.710-04:00 level=INFO msg="graceful shutdown started (send signal again to force exit)" signal=interrupt
+finished message 1
+Consume returned
+database pool closed
+time=2026-09-14T20:45:23.728-04:00 level=INFO msg="graceful shutdown complete"
+```
+
+## 3. Use the handler's context for its work
+
+When replacing the simulated wait with database calls or HTTP requests,
+pass the handler's `ctx` to those operations. Keep `sessionCtx` for the
+consumer session. The two contexts have different jobs.
+
+Cancelling `sessionCtx` starts shutdown. A handler already running gets time
+to finish under its own timeout. If that timeout expires, its `ctx` is
+cancelled and the handler should return promptly. The timer example selects
+on `ctx.Done()` so it can return without completing the wait.
+
+Go cannot forcibly stop application code that ignores cancellation. Check
+that your database and HTTP calls use the handler's context before relying
+on graceful shutdown in your application.
+
+<ThreadAside label="NOTE" title="Allow time to stop in a deployment">
+
+A deployment can interrupt this sequence if it kills the process while a
+handler is still finishing. Keep `ShutdownTimeout` unset for the derived
+drain budget, and configure your deployment to allow that wait plus cleanup
+time. The [ShutdownTimeout reference](/reference/consumer-session-options/#shutdowntimeout)
+gives the calculation.
+
+</ThreadAside>
+
+## Related topics
+
+- [Consumer groups](/concepts/consumer-groups/#a-message-can-run-again) — Why
+  processing can repeat after a handler succeeds.
+- [Consumer leases](/concepts/consumer-leases/) — When unfinished work becomes
+  available for another instance to claim.
+- [Consumer stopped log](/reference/consumer-stopped-log/) — Inspect the
+  session summary and understand what its counters measure.

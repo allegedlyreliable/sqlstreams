@@ -1,0 +1,151 @@
+---
+group: consumer
+title: Consumer groups
+description: How instances share work, groups keep independent progress, and crashes can cause a message to be processed again.
+slop: low
+---
+
+import Diagram from '../../../components/diagram/diagram.svelte';
+import { layoutResources } from '../../../components/diagram/layout';
+
+Producers write messages to a stream. Consumers read those messages and run
+your application's processing logic. An application may run several consumer
+instances to share the work, while other applications need to process the
+same stream independently. SQLStreams needs to track which work each
+application has completed across all of its instances.
+
+A **consumer group** holds that shared progress. Instances in the same group
+divide the work. Different groups keep their own progress through the stream.
+
+Because progress belongs to the group, an instance can stop without losing
+the record of completed work. If completion was never recorded, another
+instance can process the message again.
+
+## Instances in a group share work
+
+Suppose the `payments.requested` stream contains four messages, with ids 1–4.
+A payment application runs two consumer instances, A and B. Both use the
+`charge-cards` group on that stream.
+
+Each instance claims work from the group. If A claims ids 1–2, B can claim
+ids 3–4. A claim gives the instance a time-limited **lease** on its claimed
+range of message ids.
+While the lease is valid, another instance in the group cannot claim the
+same range.
+
+export const sharedWork = await layoutResources([
+    { id: 'stream', title: 'Stream: payments.requested', width: 250, lines: ['Messages: 1 · 2 · 3 · 4'] },
+    {
+      id: 'group', title: 'Consumer group: charge-cards', width: 0,
+      children: [
+        { id: 'A', title: 'Instance A', width: 140, lines: ['Claims: 1–2'] },
+        { id: 'B', title: 'Instance B', width: 140, lines: ['Claims: 3–4'] },
+      ],
+    },
+  ], [['stream', 'group']]);
+
+<Diagram
+  graph={sharedWork}
+  description="The payments.requested stream contains message ids 1–4. Inside the charge-cards group, consumer instance A claims ids 1–2 and instance B claims ids 3–4."
+  caption="Two instances share one group's work. These ranges are one possible pair of claims, not permanent assignments."
+/>
+
+Adding an instance adds another worker to the `charge-cards` group. It does
+not give that instance its own pass through every message.
+
+The group is the shared identity stored in Postgres. An instance is a running
+consumer that claims and processes work under that identity.
+
+## Different groups keep independent progress
+
+Now another application needs to audit the payments. It uses a second
+group, `audit-payments`, on the same stream. For this example, both groups
+start before id 1 and read all four messages without routing filters.
+
+The `charge-cards` group can finish ids 1–4 while `audit-payments` has only
+finished ids 1–2. The audit group still has its own work to do on ids 3–4.
+It does not share the other group's claims or completion state.
+
+export const independentProgress = await layoutResources([
+    { id: 'stream', title: 'Stream: payments.requested', width: 250, lines: ['Stored messages: 1 · 2 · 3 · 4'] },
+    { id: 'charges', title: 'Group: charge-cards', width: 190, lines: ['Completed: 1 · 2 · 3 · 4'] },
+    { id: 'audit', title: 'Group: audit-payments', width: 190, lines: ['Completed: 1 · 2', 'Remaining: 3 · 4'] },
+  ], [
+    ['stream', 'charges'],
+    ['stream', 'audit'],
+  ]);
+
+<Diagram
+  graph={independentProgress}
+  description="One stored stream feeds two groups. The charge-cards group has completed message ids 1–4. The audit-payments group has completed ids 1–2 and still needs ids 3–4."
+  caption="The messages are stored once. Each group tracks its own progress."
+/>
+
+Finishing a message in the `charge-cards` group does not delete it from the
+stream or mark it complete for the `audit-payments` group.
+
+Reading old messages still depends on retention: a group can only read
+messages that remain in the stream.
+
+## Progress survives an instance
+
+If instance A stops, the `charge-cards` group remains in Postgres. Starting
+another instance under that name uses the existing group's progress.
+Work whose completion was recorded does not become new work just because
+a process restarted.
+
+[Registering the group again](/reference/consumer-registration/) preserves
+its cursor. Its configured starting position applies when the group is
+created. Changing that setting does not rewind an existing group. A new
+group name creates independent progress with its own starting position.
+
+A restart can still repeat work whose completion was **not** recorded.
+
+## A message can run again
+
+Consider message id 1, a request to charge a card. The payment provider
+records the charge. SQLStreams separately records the message as complete
+for the `charge-cards` group in Postgres.
+
+A crash can occur between those two writes.
+
+1. Instance A claims ids 1–2 for the `charge-cards` group and calls the payment
+   provider for id 1. The provider accepts the charge.
+2. The handler returns `nil`, reporting success to the consumer. Before
+   SQLStreams records completion in Postgres, A crashes. The charge has
+   already happened.
+3. A's lease on message ids 1–2 eventually expires. On a later claim, instance B can
+   reclaim the unresolved work, including id 1.
+4. B runs the handler for id 1 again. Without application-level
+   deduplication, it can charge the card again.
+
+export const repeatedProcessing = await layoutResources([
+    { id: 'provider', title: 'Payment provider', width: 300, lines: ['Charge recorded for message 1'] },
+    { id: 'A', title: 'Instance A', width: 300, lines: ['Handler returns nil, then A crashes', 'Completion not recorded'] },
+    { id: 'lease', title: 'Lease: message range 1–2', width: 300, lines: ['Lease expires', 'Unresolved work can be reclaimed'] },
+    { id: 'B', title: 'Instance B', width: 300, lines: ['Reclaims and runs message 1 again', 'The first charge still exists'] },
+  ], [
+    ['provider', 'A'],
+    ['A', 'lease'],
+    ['lease', 'B'],
+  ]);
+
+<Diagram
+  graph={repeatedProcessing}
+  description="For message 1 in the charge-cards group, the provider records the charge, but instance A crashes before SQLStreams records completion. After lease expiry and reclaim, instance B can run the same message again."
+  caption="The handler can succeed before SQLStreams records completion."
+/>
+
+For this payment, both attempts need the same payment-provider idempotency
+key, such as the payment's business id. The provider can then recognize the
+second request as the same operation.
+
+Limiting retries alone cannot tell the application whether the first charge
+happened.
+
+## Related topics
+
+- [Consumer leases](/concepts/consumer-leases/) — How long claimed work can
+  wait and run.
+- [Consume reference](/reference/consume/#results-and-failures) — How handler
+  results affect retries, delays, and terminal failures.

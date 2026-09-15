@@ -13,8 +13,8 @@
 						title: 'Concepts',
 						entries: [
 							{
-								title: 'Consumer groups and delivery',
-								href: '/concepts/consumer-groups-and-delivery/',
+								title: 'Consumer groups',
+								href: '/concepts/consumer-groups/',
 							},
 						],
 					},

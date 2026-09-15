@@ -39,5 +39,6 @@ __debug_bin*
 # Evidence selected for the public throughput report.
 !.bench/results/published/2026-09-11/
 
-# Private grading rubric, never committed.
+# Local things because I'm too lazy to put them somewhere else
 /rubric.md
+/prep.md

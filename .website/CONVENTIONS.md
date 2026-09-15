@@ -254,8 +254,10 @@ preprocessor, no utility framework, no third-party token pack.
   presenting prose more nicely.
 - Decision records are internal repository documentation. The docsite does
   not load, render, link to, count, or index them.
-- Concepts articles follow the Concept article playbook in VOICE.md for
-  scope, worked cases, visual choices, and review.
+- Concepts articles follow CONCEPTS.md for scope, introductions, worked
+  cases, visual choices, and review. Guides follow GUIDES.md for task scope,
+  setup and execution order, examples, notes, and review. VOICE.md governs
+  prose style across all page types.
 - Each page does ONE job -- tutorial, how-to, reference, or
   explanation; a guide that starts explaining links to the concept
   page instead of drifting. Four boards organize those purposes: Concepts (explanation), Guides

@@ -153,7 +153,8 @@ file) and README/CLAUDE.md stay at root:
 - .work/THOUGHTS.md -- the user's scratch: ideas not yet promoted to the
   ROADMAP. Never edited by agents.
 - CONVENTIONS.md (code rules), .website/CONVENTIONS.md (frontend code
-  rules) and .website/VOICE.md (site prose voice) -- both loaded via
+  rules), .website/VOICE.md (general site prose), .website/CONCEPTS.md
+  (concept-page writing), and .website/GUIDES.md (guide writing) -- the website rules are loaded via
   .website/CLAUDE.md when working in that tree -- and AGENTS.md (this
   file) hold the binding CURRENT rules -- never infer today's rules by
   replaying decision history.

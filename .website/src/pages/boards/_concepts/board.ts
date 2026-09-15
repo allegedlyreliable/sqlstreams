@@ -5,5 +5,5 @@ export const board: Board = {
 	title: 'Concepts',
 	slug: 'concepts',
 	description: 'Understand how delivery, shared groups, and leases behave.',
-	threads: () => ['concepts/consumer-groups-and-delivery', 'concepts/consumer-leases'],
+	threads: () => ['concepts/consumer-groups', 'concepts/consumer-leases'],
 };
