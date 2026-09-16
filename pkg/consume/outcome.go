@@ -34,6 +34,8 @@ func Terminal(cause error) error {
 
 // Delay runs this delivery again after delay without counting a failure: the
 // row's can_run_after moves out by delay and its delays count goes up by one.
+// delay is a time.Duration: use 500*time.Millisecond, 5*time.Second, or
+// time.Minute. A bare integer is interpreted as nanoseconds.
 // Zero or less runs it on the next poll.
 func Delay(delay time.Duration) error {
 	return NewDelayedDelivery(delay)

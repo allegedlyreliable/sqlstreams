@@ -11,6 +11,7 @@ package main
 //   - a producer looping under LifecycleContext exits 0 on SIGTERM, and
 //     every message it reported landed, none more
 //   - an idle consumer exits 0 promptly on SIGTERM
+//   - an active consumer records completed work without warnings during drain
 //   - a consumer whose handler ignores its context force-exits on the second
 //     SIGTERM with status 128 + the signal, long before the message timeout
 
@@ -64,7 +65,7 @@ func run() error {
 	}
 	name := fmt.Sprintf("signal.e2e.%d", time.Now().UnixNano())
 	handle := client.Stream[common.Work](name)
-	registered, err := handle.Register(ctx, &sqlstreams.StreamConfig{})
+	registered, err := handle.Register(ctx, &sqlstreams.StreamConfig{DeliveryLogMode: sqlstreams.DeliveryLogModeAll})
 	if err != nil {
 		return err
 	}
@@ -183,6 +184,54 @@ func run() error {
 	}
 	fmt.Printf("✓ an idle consumer under SIGTERM exits 0 in %v\n", idleElapsed.Round(time.Millisecond))
 
+	// Completed work is committed quietly even after the lifecycle context cancels.
+	draining, drainingLines, err := startChild(ctx, "hungconsumer", name)
+	if err != nil {
+		return err
+	}
+	if err := awaitLine(drainingLines, "consuming"); err != nil {
+		return err
+	}
+	work, err := common.NewWork(30, "admin@example.com")
+	if err != nil {
+		return err
+	}
+	produced, err := producer.Produce(ctx, work, nil)
+	if err != nil {
+		return err
+	}
+	if err := awaitLine(drainingLines, "handler blocked"); err != nil {
+		return err
+	}
+	if err := draining.Process.Signal(syscall.SIGTERM); err != nil {
+		return err
+	}
+	if err := awaitLine(drainingLines, "draining"); err != nil {
+		return err
+	}
+	if err := draining.Process.Signal(syscall.SIGUSR1); err != nil {
+		return err
+	}
+	drainingExit, err := exitCode(draining.Wait())
+	if err != nil {
+		return err
+	}
+	if drainingExit != 0 {
+		return fmt.Errorf("SIGTERM draining consumer exit code = %d, want 0 with no warning/error records", drainingExit)
+	}
+	// The manager advances committed separately; the success row proves recording.
+	var successes int64
+	if err := ds.Pool.QueryRow(ctx, fmt.Sprintf(`
+		-- sqlstreams: signal.verifyDrainedDelivery
+		SELECT count(*) FROM %s.%s WHERE message_id = $1 AND status = 'success';
+	`, ds.Schema, stream.DeliveryLogTable(registered.Id)), produced.Id).Scan(&successes); err != nil {
+		return err
+	}
+	if successes != 1 {
+		return fmt.Errorf("drained message %d success rows = %d, want 1", produced.Id, successes)
+	}
+	fmt.Println("✓ an active consumer commits its completed work without warnings during SIGTERM drain")
+
 	// a second SIGTERM past a hung handler force-exits with 128 + the signal
 	hung, hungLines, err := startChild(ctx, "hungconsumer", name)
 	if err != nil {
@@ -191,7 +240,7 @@ func run() error {
 	if err := awaitLine(hungLines, "consuming"); err != nil {
 		return err
 	}
-	work, err := common.NewWork(30, "admin@example.com")
+	work, err = common.NewWork(30, "admin@example.com")
 	if err != nil {
 		return err
 	}

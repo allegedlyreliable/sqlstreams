@@ -16,8 +16,11 @@ type MessageMeta struct {
 	CompactionRank int64     `json:"compaction_rank"` // the message's rank under its key; 0 for an uncompacted message
 	CreatedAt      time.Time `json:"created_at"`
 	ScheduledAt    time.Time `json:"scheduled_at"` // the scheduled time a schedule's message is for; zero on every other message
-	Attempts       int       `json:"attempts"`     // runs before this one -- 0 on the first delivery
-	Delays         int       `json:"delays"`       // later runs the handler requested so far
+
+	// Attempts is the retry position: 0 on the cursor path, 1 on the first
+	// exception claim. A deferred message can reach 1 before its handler runs.
+	Attempts int `json:"attempts"`
+	Delays   int `json:"delays"` // later runs the handler requested so far
 
 	// Options - the resolved MessageOptions this delivery runs under (bounds
 	// applied), not the message's raw request.

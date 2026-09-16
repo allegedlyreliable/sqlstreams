@@ -2,12 +2,10 @@ package main
 
 // Scenario 03 -- consume with retry and dead-lettering.
 //
-// The transcoder from scenario 02 now handles real outcomes: a corrupt
+// This scenario produces three uploads and handles their outcomes: a corrupt
 // upload will never succeed (terminal), unavailable storage may recover
 // (retry), and an embargoed video waits without counting as a failure
-// (delay).
-//
-// Run first: 01
+// (delay). Its own consumer group leaves scenario 02's cursor and config alone.
 
 import (
 	"context"
@@ -59,7 +57,15 @@ func run() error {
 	}
 
 	uploads := client.Stream[VideoUploadedV1]("videos.uploaded")
-	transcoder := uploads.Consumer("transcoder")
+	if _, err := uploads.Register(ctx, nil); err != nil {
+		return err
+	}
+	producer, err := uploads.Producer().Register(ctx, nil)
+	if err != nil {
+		return err
+	}
+
+	transcoder := uploads.Consumer("transcoder-with-retry")
 	consumer, err := transcoder.Register(ctx, &sqlstreams.ConsumerConfig{
 		Message: &sqlstreams.MessageOptions{
 			Timeout: 10 * time.Second,
@@ -70,7 +76,16 @@ func run() error {
 		return err
 	}
 
-	//blocking
+	for _, video := range []VideoUploadedV1{
+		{VideoId: "video-corrupt", OwnerId: "creator-7", UploadId: "upl-corrupt", SourceStatus: "corrupt"},
+		{VideoId: "video-unavailable", OwnerId: "creator-7", UploadId: "upl-unavailable", SourceStatus: "unavailable"},
+		{VideoId: "video-embargoed", OwnerId: "creator-7", UploadId: "upl-embargoed", SourceStatus: "ready", ReleaseAtUnix: time.Now().Add(5 * time.Second).Unix()},
+	} {
+		if _, err := producer.Produce(ctx, &video, nil); err != nil {
+			return err
+		}
+	}
+
 	return consumer.Consume(ctx, transcodeVideo, nil)
 }
 

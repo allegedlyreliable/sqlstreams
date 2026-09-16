@@ -77,6 +77,8 @@ roadmap later item for review code for interesting design decisions to write art
 
 # Review
 
+Make sure all our payload structs in examples, docs and quickstart suffix with V1 for good patterns
+
 ## Manual
 
 Probably should have one more table name and column review (this will be hard to change later)

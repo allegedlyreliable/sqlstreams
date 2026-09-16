@@ -392,9 +392,14 @@ func (r *messageRunner[Message]) releaseKey(ctx context.Context, claim *keylease
 }
 
 func (r *messageRunner[Message]) commitRange(ctx context.Context, commit *rangeSnapshot) {
+	// A handler may finish during graceful drain, after ctx was cancelled.
+	commitCtx, cancel := context.WithTimeoutCause(context.WithoutCancel(ctx), r.Config.RecordMargin,
+		fmt.Errorf("commit exceeded RecordMargin (%s) for group %q stream %d", r.Config.RecordMargin, r.Owner.Name, r.Stream.Id))
+	defer cancel()
+
 	// range always frees -- the cursor advancer advances committed
 	// past it; failures become unresolved exceptions, not a blocked range.
-	err := r.consumers.Commit(ctx, r.Stream.Id, r.Owner.ConsumerGroupId, commit.Lease.Token, commit.Outcomes, r.groupConfig.current().ExceptionInitialBackoff, r.Stream.DeliveryLogMode)
+	err := r.consumers.Commit(commitCtx, r.Stream.Id, r.Owner.ConsumerGroupId, commit.Lease.Token, commit.Outcomes, r.groupConfig.current().ExceptionInitialBackoff, r.Stream.DeliveryLogMode)
 	switch {
 	case err == nil:
 		r.countDeliveryRows(commit.Outcomes)

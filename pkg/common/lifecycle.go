@@ -16,8 +16,8 @@ import (
 // graceful wind-down (new work refused, queued work drains). A SECOND exit
 // signal during the drain force-exits immediately (status 128+signum).
 //
-// log may be nil -- the warn-level default logger is used, which keeps the
-// two graceful-shutdown info lines quiet and still surfaces a forced exit.
+// log may be nil -- an info-level logger reports graceful shutdown starting
+// and completing, and warns when a second signal forces an exit.
 //
 //	ctx, stop := common.LifecycleContext(nil)
 //	defer stop()

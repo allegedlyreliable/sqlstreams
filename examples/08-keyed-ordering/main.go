@@ -88,6 +88,6 @@ func applyStateChange(ctx context.Context, change *VideoStateChangedV1) error {
 	if change.VideoId == "video-42" && change.State == "scanned" && meta.Attempts == 0 {
 		return errors.New("scanner result is not committed")
 	}
-	fmt.Printf("%s -> %s (message %d, attempt %d)\n", change.VideoId, change.State, meta.Id, meta.Attempts+1)
+	fmt.Printf("%s -> %s (message %d)\n", change.VideoId, change.State, meta.Id)
 	return nil
 }

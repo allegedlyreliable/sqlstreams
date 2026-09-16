@@ -2,6 +2,7 @@ package producer
 
 import (
 	"context"
+	"errors"
 
 	"github.com/allegedlyreliable/sqlstreams/pkg/alert"
 	"github.com/allegedlyreliable/sqlstreams/pkg/common"
@@ -28,6 +29,9 @@ func (p *Producer) logAlerts(ctx context.Context, current *stream.Stream, logger
 		}
 		result, err := evaluator.Evaluate(ctx, owner, policy)
 		if err != nil {
+			if ctx.Err() != nil && errors.Is(err, ctx.Err()) {
+				return
+			}
 			logger.WarnContext(ctx, "could not run register-time alert pass", "stream", current.Name, "error", err)
 			continue
 		}

@@ -1,15 +1,13 @@
 package main
 
-// Scenario 09 -- a handler that runs longer than its lease.
+// Scenario 09 -- a longer timeout for a slow message.
 //
-// The transcoder from scenarios 02 and 03 usually finishes quickly, but
-// feature-length videos can take an hour. The handler cannot know its actual
-// runtime up front, so the timeout is resolved per message.
+// Simulate each minute of video with 50 milliseconds of work. A short video
+// fits the consumer's one-second default; a 95-minute video takes 4.75 seconds
+// and asks for ten seconds. Both finish within their timeout and lease.
 //
 // How timeout resolves, highest first:
 //	consumer clamp (MessageMin/MessageMax) > produced message > producer defaults > consumer defaults > system defaults
-//
-// Run first: 01
 
 import (
 	"context"
@@ -20,17 +18,13 @@ import (
 	sqlstreams "github.com/allegedlyreliable/sqlstreams/client"
 )
 
-type VideoUploadedV1 struct {
+type VideoTranscodeRequestedV1 struct {
 	VideoId         string `json:"video_id"`
-	OwnerId         string `json:"owner_id"`
-	UploadId        string `json:"upload_id"`
 	DurationMinutes int    `json:"duration_minutes"`
-	SourceStatus    string `json:"source_status"`
-	ReleaseAtUnix   int64  `json:"release_at_unix"`
 }
 
 // increment on breaking changes
-func (VideoUploadedV1) SchemaVersion() int { return 1 }
+func (VideoTranscodeRequestedV1) SchemaVersion() int { return 1 }
 
 func main() {
 	if err := run(); err != nil {
@@ -54,47 +48,52 @@ func run() error {
 		return err
 	}
 
-	uploads := client.Stream[VideoUploadedV1]("videos.uploaded")
-	producer, err := uploads.Producer().Register(ctx, nil)
+	requests := client.Stream[VideoTranscodeRequestedV1]("videos.transcode-requested")
+	if _, err := requests.Register(ctx, nil); err != nil {
+		return err
+	}
+	producer, err := requests.Producer().Register(ctx, nil)
 	if err != nil {
 		return err
 	}
 
 	// ConsumerConfig.Message    -> the timeout a message gets when it asks for nothing (most videos)
 	// ConsumerConfig.MessageMax -> the most a message may ask for; a request above it is lowered to it
-	transcoder := uploads.Consumer("transcoder")
+	transcoder := requests.Consumer("feature-transcoder")
 	consumer, err := transcoder.Register(ctx, &sqlstreams.ConsumerConfig{
-		Message:    &sqlstreams.MessageOptions{Timeout: 2 * time.Minute},
-		MessageMax: &sqlstreams.MessageOptions{Timeout: time.Hour},
+		Message:    &sqlstreams.MessageOptions{Timeout: time.Second},
+		MessageMax: &sqlstreams.MessageOptions{Timeout: 10 * time.Second},
 	})
 	if err != nil {
 		return err
 	}
 
-	// ProduceOptions.Message    -> what this one message asks for; the producer knows the upload is feature-length
-	if _, err := producer.Produce(ctx, &VideoUploadedV1{
-		VideoId:         "video-99",
-		OwnerId:         "creator-7",
-		UploadId:        "upl-999",
-		DurationMinutes: 95,
-		SourceStatus:    "ready",
-	}, &sqlstreams.ProduceOptions{Message: &sqlstreams.MessageOptions{Timeout: time.Hour}}); err != nil {
+	if _, err := producer.Produce(ctx, &VideoTranscodeRequestedV1{VideoId: "video-42", DurationMinutes: 12}, nil); err != nil {
+		return err
+	}
+
+	// The feature-length video asks for longer than the consumer's default.
+	if _, err := producer.Produce(ctx, &VideoTranscodeRequestedV1{VideoId: "video-99", DurationMinutes: 95},
+		&sqlstreams.ProduceOptions{Message: &sqlstreams.MessageOptions{Timeout: 10 * time.Second}}); err != nil {
 		return err
 	}
 
 	return consumer.Consume(ctx, transcodeVideo, nil)
 }
 
-func transcodeVideo(ctx context.Context, video *VideoUploadedV1) error {
-	// past the timeout ctx is cancelled, not the goroutine: a handler that
-	// ignores ctx.Done() keeps running while the message is redelivered
-	for minute := range video.DurationMinutes {
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case <-time.After(time.Minute):
-			fmt.Printf("%s: minute %d\n", video.VideoId, minute+1)
-		}
+func transcodeVideo(ctx context.Context, video *VideoTranscodeRequestedV1) error {
+	meta, _ := sqlstreams.MetaFromContext(ctx)
+	work := time.Duration(video.DurationMinutes) * 50 * time.Millisecond
+	fmt.Printf("transcoding %s: simulated work %s, timeout %s\n", video.VideoId, work, meta.Options.Timeout)
+
+	// Observe the deadline so a timed-out handler stops its work before retry.
+	timer := time.NewTimer(work)
+	defer timer.Stop()
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-timer.C:
+		fmt.Printf("transcoded %s\n", video.VideoId)
 	}
 	return nil
 }

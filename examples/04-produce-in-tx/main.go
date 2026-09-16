@@ -4,6 +4,8 @@ package main
 //
 // A completed upload and its VideoUploaded message are recorded atomically;
 // then the multi-stream form also records billable usage.
+// Reruns append new messages; ON CONFLICT only deduplicates the business rows.
+// See scenario 05 for idempotent message production.
 
 import (
 	"context"

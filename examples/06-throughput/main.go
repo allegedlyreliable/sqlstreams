@@ -74,11 +74,11 @@ func run() error {
 		})
 	}
 
-	// BatchLimit         -> messages claimed per poll (default 1)
+	// BatchLimit         -> messages claimed per poll (default 4)
 	// QueueSize          -> messages held ready ahead of the handlers, so the next claim
 	//                       runs while this one is still being processed (default BatchLimit)
 	// MessageConcurrency -> handlers running at once; unkeyed messages have no order to keep (default 1)
-	// ClaimPollRate      -> how long an instance that found nothing waits before claiming again (default 5s)
+	// ClaimPollRate      -> how long an instance that found nothing waits before claiming again (default 500ms)
 	routines.Go(func() error {
 		return consumer.Consume(routinesCtx, renderThumbnail, &sqlstreams.ConsumeOptions{
 			BatchLimit:         100,
@@ -91,6 +91,9 @@ func run() error {
 }
 
 func renderThumbnail(ctx context.Context, request *ThumbnailRequestedV1) error {
-	fmt.Printf("rendered %s at %ds\n", request.VideoId, request.OffsetSeconds)
+	// Show ten sample results instead of printing every delivery in the burst.
+	if request.OffsetSeconds%500 == 0 {
+		fmt.Printf("rendered %s at %ds (sample)\n", request.VideoId, request.OffsetSeconds)
+	}
 	return nil
 }

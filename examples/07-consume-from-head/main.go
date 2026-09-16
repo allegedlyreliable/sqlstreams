@@ -6,7 +6,8 @@ package main
 //
 // The head is the newest message in the stream at the moment the consumer
 // group is registered. A group that starts there reads only messages produced
-// after it. The default, sqlstreams.Beginning(), reads every message ever stored.
+// after it. The default, sqlstreams.Beginning(), reads the retained messages.
+// Start applies when the group is first created; reruns resume its saved cursor.
 //
 // Moderation is added a year after videos.uploaded went live. It wants live
 // uploads only rather than processing the entire archive, so the new consumer
@@ -59,7 +60,7 @@ func run() error {
 	uploads := client.Stream[VideoUploadedV1]("videos.uploaded")
 	moderation := uploads.Consumer("moderation")
 
-	// skip the archive: only consume uploads produced after this registration
+	// A new group skips the archive; an existing group keeps its saved cursor.
 	consumer, err := moderation.Register(ctx, &sqlstreams.ConsumerConfig{
 		Start: sqlstreams.Head(),
 	})
@@ -67,6 +68,7 @@ func run() error {
 		return err
 	}
 
+	fmt.Println("waiting for uploads; run example 01 again in another terminal")
 	return consumer.Consume(ctx, moderateVideo, nil)
 }
 

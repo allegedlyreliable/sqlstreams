@@ -58,10 +58,19 @@ func run() error {
 
 	video := states.Key("video-42")
 
-	// Put
-	_, err = producer.Produce(ctx, &VideoProcessingStateV1{VideoId: "video-42", Stage: "transcoding", Attempts: 1},
-		&sqlstreams.ProduceOptions{MessageKey: "video-42", Compaction: &sqlstreams.CompactionOptions{Enable: true}})
-	if err != nil {
+	// Initialize under the same lock as updates, so reruns cannot reset the count.
+	if err := client.InTransaction(ctx, func(ctx context.Context, tx sqlstreams.Tx) error {
+		head, err := video.LockCompactionHead(ctx, tx)
+		if err != nil {
+			return err
+		}
+		if head != nil {
+			return nil
+		}
+		_, err = producer.ProduceInTx(ctx, tx, &VideoProcessingStateV1{VideoId: "video-42", Stage: "transcoding", Attempts: 1},
+			&sqlstreams.ProduceOptions{MessageKey: "video-42", Compaction: &sqlstreams.CompactionOptions{Enable: true}})
+		return err
+	}); err != nil {
 		return err
 	}
 
@@ -72,7 +81,7 @@ func run() error {
 	}
 	fmt.Printf("current: id=%d stage=%s attempts=%d\n", current.Id, current.Message.Stage, current.Message.Attempts)
 
-	// Update (compare-and-set): lock the head, write the next version
+	// Update: hold the head's row lock throughout the read-modify-write.
 	if err := client.InTransaction(ctx, func(ctx context.Context, tx sqlstreams.Tx) error {
 		head, err := video.LockCompactionHead(ctx, tx)
 		if err != nil {

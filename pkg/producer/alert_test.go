@@ -71,3 +71,47 @@ func TestRegistrationLogsInsufficientEvidenceAtDebugAndFailuresAtWarn(t *testing
 		})
 	}
 }
+
+// Regression: cancellation ends registration diagnostics without hiding unrelated failures.
+func TestRegistrationCancellationIsQuietButReadFailuresStillWarn(t *testing.T) {
+	for _, test := range []struct {
+		name     string
+		err      error
+		wantWarn bool
+	}{
+		{name: "caller cancelled", err: context.Canceled},
+		{name: "read failed during cancellation", err: errors.New("measurement read failed"), wantWarn: true},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			// setup
+			var output bytes.Buffer
+			logger := slog.New(slog.NewJSONHandler(&output, &slog.HandlerOptions{Level: slog.LevelDebug}))
+			current := &stream.Stream{SystemId: 1, Id: 42, Name: "signup.welcome-email"}
+			ctx, cancel := context.WithCancel(t.Context())
+			defer cancel()
+			evaluator := registrationEvaluator(func(ctx context.Context, owner *common.Owner, policy *alert.JobPayload) (*alert.AlertEvaluationSnapshot, error) {
+				cancel()
+				return nil, test.err
+			})
+			var instance Producer
+
+			// test
+			instance.logAlerts(ctx, current, logger, []alert.Evaluator{evaluator})
+
+			// verify
+			if !test.wantWarn {
+				if output.Len() != 0 {
+					t.Errorf("logAlerts(%s) output = %q, want no log records", test.name, output.String())
+				}
+				return
+			}
+			var record map[string]any
+			if err := json.Unmarshal(output.Bytes(), &record); err != nil {
+				t.Fatalf("logAlerts(%s) output = %q, want one JSON record: %v", test.name, output.String(), err)
+			}
+			if record["level"] != "WARN" {
+				t.Errorf("logAlerts(%s) level = %v, want WARN", test.name, record["level"])
+			}
+		})
+	}
+}

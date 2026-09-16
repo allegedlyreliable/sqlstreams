@@ -456,8 +456,8 @@ var (
 	// graceful wind-down (new work refused, queued work drains). A SECOND exit
 	// signal during the drain force-exits immediately (status 128+signum).
 	//
-	// log may be nil -- the warn-level default logger is used, which keeps the
-	// two graceful-shutdown info lines quiet and still surfaces a forced exit.
+	// log may be nil -- an info-level logger reports graceful shutdown starting
+	// and completing, and warns when a second signal forces an exit.
 	//
 	//	ctx, stop := common.LifecycleContext(nil)
 	//	defer stop()
@@ -474,6 +474,8 @@ var (
 
 	// Delay runs this delivery again after delay without counting a failure: the
 	// row's can_run_after moves out by delay and its delays count goes up by one.
+	// delay is a time.Duration: use 500*time.Millisecond, 5*time.Second, or
+	// time.Minute. A bare integer is interpreted as nanoseconds.
 	// Zero or less runs it on the next poll.
 	Delay = consume.Delay
 

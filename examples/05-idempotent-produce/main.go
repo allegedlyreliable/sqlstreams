@@ -5,6 +5,8 @@ package main
 // Upload-complete webhooks arrive from a storage provider. The provider
 // retries on any non-2xx, so the same upload arrives more than once and must
 // be stored once on videos.uploaded.
+// Reruns report two duplicates while the key is retained (24 hours by default).
+// A duplicate returns id=0 because no new message was appended.
 
 import (
 	"fmt"
