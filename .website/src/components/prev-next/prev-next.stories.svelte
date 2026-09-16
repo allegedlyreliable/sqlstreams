@@ -6,8 +6,11 @@
 		title: 'Board/PrevNext',
 		component: PrevNext,
 		args: {
-			previous: { title: 'Routing', href: '/concepts/routing/' },
-			next: { title: 'Ordering & Concurrency', href: '/concepts/ordering/' },
+			previous: {
+				title: 'Retries and failed messages',
+				href: '/concepts/retries-and-failed-messages/',
+			},
+			next: { title: 'Ordering and concurrency', href: '/concepts/ordering/' },
 		},
 	});
 </script>

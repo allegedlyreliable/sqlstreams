@@ -1,0 +1,101 @@
+---
+group: stream
+title: Streams and messages
+description: What a stream stores and how retention determines when messages can be removed.
+slop: medium
+---
+
+import Diagram from '../../../components/diagram/diagram.svelte';
+import ThreadAside from '../../../components/thread-aside/thread-aside.svelte';
+import { layoutResources } from '../../../components/diagram/layout';
+
+A payment application can record a request now and process it later.
+SQLStreams stores that request as a **message** in a named **stream** in
+Postgres. Producers write messages to the stream. Consumers read those
+messages and run the application's processing logic.
+
+Suppose the application produces four requests to the `payments.requested`
+stream. Once their database transactions commit, the messages remain
+available even if the producing application stops. A consumer can start
+later and read the stored requests.
+
+export const storedRequests = await layoutResources([
+  {
+    id: 'producer', title: 'Producer: payment application', width: 270,
+    lines: ['Produces payment requests'],
+  },
+  {
+    id: 'stream', title: 'Stream: payments.requested', width: 270,
+    lines: ['Message ids: 1 · 2 · 3 · 4'],
+  },
+], [['producer', 'stream']]);
+
+<Diagram
+  graph={storedRequests}
+  description="The payment application's producer writes four requests to the payments.requested stream. The stream stores messages with ids 1-4 in Postgres."
+  caption="Committed messages are stored in Postgres."
+/>
+
+## Messages carry application data
+
+A message's **payload** is the application data needed to process it.
+For example, message 1 asks the payment application to process order
+`order-101`:
+
+```json title="Message 1 payload"
+{"order_id": "order-101"}
+```
+
+SQLStreams stores the payload as JSON, along with a message id, creation
+time, and payload schema version.
+
+These payloads are defined as a Go struct and are encoded in the producer
+and decoded in the consumer using JSON.
+
+The required [schema version](/reference/message-payload/) on the payload
+struct identifies the expected format the consumer instance should understand.
+
+## Retention controls when cleanup is allowed
+
+A stream's retention policy considers message age and, unless configured
+otherwise, each group's cursor position. A background **janitor** checks
+those conditions and removes eligible data.
+
+Suppose the `payments.requested` stream retains messages for 30 days, and
+messages 1-4 are now 31 days old. The stream has two
+[consumer groups](/concepts/consumer-groups/): `charge-cards` has recorded
+completion through message 4, while `audit-payments` has recorded completion
+only through message 2.
+
+On the janitor's next cleanup pass, the janitor considers both age and group 
+progress:
+
+- **Messages 1-2 can be removed.** Both groups have recorded progress
+  through them, and they are older than the retention period.
+- **Messages 3-4 remain.** The audit group's cursor is still at 2, so it
+  holds back cleanup of those messages despite their age.
+
+Once the audit group finishes messages 3-4 and its cursor position reaches
+4, those messages become eligible too.
+
+<ThreadAside label="NOTE" title="Default retention">
+
+Without a configured retention period, messages are kept indefinitely.
+
+</ThreadAside>
+
+The [`AllowDropPastCommitted` setting](/reference/stream-registration/#streamconfig)
+allows retention to remove old messages even when a group still needs them.
+This prevents a lagging group from holding back cleanup, at the cost of
+losing that group's opportunity to process the removed messages.
+
+## Related topics
+
+- [Consumer groups](/concepts/consumer-groups/) — How instances share work
+  and groups keep independent progress.
+- [Background managers and workers](/concepts/background-managers-and-workers/)
+  — Where janitors run and how processes coordinate maintenance.
+- [Register a stream](/reference/stream-registration/) — Configure retention
+  and stream maintenance.
+- [Payload versions and raw JSON](/reference/message-payload/) — Define a
+  payload type and its schema version.

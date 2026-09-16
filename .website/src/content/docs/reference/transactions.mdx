@@ -1,0 +1,88 @@
+---
+group: producer
+title: Run a database transaction
+description: "InTransaction: run database work and message production in one caller-controlled transaction."
+slop: high
+---
+
+import ThreadAside from '../../../components/thread-aside/thread-aside.svelte';
+
+```go title="Client.InTransaction"
+InTransaction(ctx context.Context, transactionFunc TransactionFunc) error
+```
+
+Opens a transaction on the client's pool and calls `transactionFunc` once.
+A `nil` callback result commits. An error rolls back the transaction and is
+returned unchanged. `InTransaction` does not retry the callback.
+
+## Example
+
+Use an initialized `client` and a registered `producer` for the
+`payments.requested` stream, with the [example payload](/reference/consumer-group/#example-payload).
+The application owns an `orders` table with an `id text PRIMARY KEY` column.
+
+```go
+err := client.InTransaction(ctx, func(ctx context.Context, tx sqlstreams.Tx) error {
+	if _, err := tx.Exec(ctx,
+		`INSERT INTO orders (id) VALUES ($1) ON CONFLICT DO NOTHING`, "order-123"); err != nil {
+		return err
+	}
+	_, err := producer.ProduceInTx(ctx, tx, &PaymentRequestedV1{OrderId: "order-123"},
+		&sqlstreams.ProduceOptions{IdempotencyKey: "payment-request:order-123"})
+	return err
+})
+if err != nil {
+	return err
+}
+```
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `ctx` | `context.Context` | Yes | Controls beginning the transaction, statements using this context, and commit. |
+| `transactionFunc` | `TransactionFunc` | Yes | A non-`nil` callback. Run database work through its tx and return errors to roll back. |
+
+### TransactionFunc
+
+```go
+type TransactionFunc func(ctx context.Context, tx Tx) error
+```
+
+### Tx and Querier
+
+`Tx` exposes the statement methods of `Querier` and `Raw() pgx.Tx`.
+Transaction completion belongs to `InTransaction`, so the callback must not
+commit or roll back the underlying transaction. Use `tx` sequentially.
+
+| Method | Return value | Purpose |
+| --- | --- | --- |
+| `Exec(ctx, sql, args...)` | `(pgconn.CommandTag, error)` | Execute a statement without result rows. |
+| `Query(ctx, sql, args...)` | `(pgx.Rows, error)` | Read multiple rows. Close the rows after use. |
+| `QueryRow(ctx, sql, args...)` | `pgx.Row` | Read one row. Scan reports its error. |
+| `SendBatch(ctx, batch)` | `pgx.BatchResults` | Send a batch of statements. Close the results after use. |
+| `CopyFrom(ctx, tableName, columnNames, rowSource)` | `(int64, error)` | Copy rows into a table. |
+| `Raw()` | `pgx.Tx` | Access pgx operations beyond the statement interface. |
+
+## Returns
+
+| Condition | Return value |
+| --- | --- |
+| Callback succeeds and commit is confirmed | `nil`. |
+| Callback returns an error | That error. Its transaction is rolled back. |
+| Begin or commit fails | The database or context error. A commit error can leave the outcome uncertain. |
+
+<ThreadAside label="NOTE" title="Retry the application transaction deliberately">
+
+An idempotency key protects the message insert. It does not deduplicate the
+other statements in `transactionFunc`. Retrying after a lost commit confirmation
+requires safe repetition of the entire callback, including its application
+writes. External effects do not roll back with this transaction.
+
+</ThreadAside>
+
+## Related topics
+
+- [Produce a message from database work](/reference/produce-func/) — A producer-owned transaction that may retry its callback.
+- [Produce a message](/reference/produce/#produceoptions) — Idempotency keys and result fields.
+- [Make message processing safe to repeat](/guides/side-effects-and-retries/) — Record a reward and update its balance in one transaction.

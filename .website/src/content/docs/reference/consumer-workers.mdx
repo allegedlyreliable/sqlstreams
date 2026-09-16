@@ -1,0 +1,100 @@
+---
+group: consumer
+title: Read consumer worker settings
+description: "Workers: read the worker declarations stored for a consumer group."
+slop: high
+---
+
+import ThreadAside from '../../../components/thread-aside/thread-aside.svelte';
+
+```go title="ConsumerHandle[T].Workers"
+Workers(ctx context.Context) ([]*Worker, error)
+```
+
+Reads the worker declarations owned by a consumer group. These are stored
+settings shared by the group's instances.
+
+## Example
+
+Inspect the `charge-cards` group on the `payments.requested` stream using an initialized
+`client`.
+
+```go
+payments := client.Stream[sqlstreams.RawPayload]("payments.requested")
+workers, err := payments.Consumer("charge-cards").Workers(ctx)
+if err != nil {
+	return err
+}
+for _, worker := range workers {
+	fmt.Println(worker.Name, worker.TargetInstances, worker.Metadata)
+}
+```
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `ctx` | `context.Context` | Yes | Cancellation or its deadline interrupts the read. |
+
+## Returns
+
+| Condition | Return value |
+| --- | --- |
+| Read succeeds | `(workers, nil)`, where `workers` contains [Worker objects](#worker). The slice can be empty. |
+| Stream or group is absent | `(nil, err)` with the corresponding not-found error. |
+| Read fails | `(nil, err)`. |
+
+### Worker
+
+| Field | Type | JSON name | Description |
+| --- | --- | --- | --- |
+| `Id` | `int64` | `id` | Worker registration id. |
+| `Name` | `string` | `worker` | Worker kind, such as `message_consumer`. |
+| `Owner` | [`*Owner`](#owner) | `owner` | Resource owning the worker declaration. |
+| `Metadata` | `any` | `metadata` | Stored configuration, with worker-specific fields and omitted defaults. |
+| `TargetInstances` | `InstanceTarget` | `target_instances` | Allowed concurrent instances across the deployment. Zero means suspended, a positive value sets a limit, and `NoInstanceTarget` (`-1`) removes the limit. |
+
+### Owner
+
+| Field | Type | JSON name | Description |
+| --- | --- | --- | --- |
+| `SystemId` | `int64` | `system_id` | Owning system id. |
+| `StreamId` | `int64` | `stream_id` | Owning stream id. Zero for system ownership. |
+| `ConsumerGroupId` | `int64` | `group_id` | Owning group id. Zero unless the owner is a group. |
+| `Name` | `string` | `owner` | System, stream, or group name. |
+
+`Owner.Kind` returns `OwnerSystem`, `OwnerStream`, or `OwnerConsumerGroup` from the
+deepest populated id. `InstanceTarget.Suspended` reports whether the target is zero.
+
+<ThreadAside label="NOTE" title="Stored settings and running instances">
+
+`Metadata` is not an instance's effective configuration. Reading it does not
+show whether an instance is running, and editing a returned `Worker` does not
+update the declaration.
+
+</ThreadAside>
+
+## CLI
+
+```sh
+sqlstreams consumer worker list payments.requested charge-cards
+```
+
+Prints stored configuration keys and the worker declaring each one. An
+optional third argument selects a key. `--output json` returns the CLI's
+configuration-key view, not the raw `Worker` slice.
+
+## Errors
+
+| Error | When |
+| --- | --- |
+| Validation error | The stream or group name is empty. |
+| `ErrStreamNotFound` | The stream is absent. |
+| `ErrConsumerNotFound` | The group is absent. |
+| Database or context error | The read fails or is interrupted. |
+
+## Related topics
+
+- [Register a consumer group](/reference/consumer-registration/) — Declare shared configuration.
+- [Consumer CLI](/reference/consumer-cli/#consumer-worker-list) — Stored-key filters and output.
+- [Background managers and workers](/concepts/background-managers-and-workers/) — How worker declarations become running background tasks.

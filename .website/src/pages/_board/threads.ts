@@ -1,6 +1,5 @@
 import type { CollectionEntry } from 'astro:content';
 import { boards, stickyIds } from './navigation';
-import { isErrorThread, threadCode } from './identifiers';
 
 export type DocsEntry = CollectionEntry<'docs'>;
 
@@ -32,16 +31,10 @@ export function repositoryFilePath(thread: Thread): string {
 // ***************
 
 function docsThread(entry: DocsEntry): Thread {
-	// an error thread's display title carries its code, everywhere the
-	// board names it
-	const title = isErrorThread(entry.id)
-		? `${entry.data.title} [${threadCode(entry.id)}]`
-		: entry.data.title;
-
 	return {
 		id: entry.id,
 		group: entry.data.group ?? null,
-		title,
+		title: entry.data.title,
 		description: entry.data.description ?? entry.data.title,
 		filePath: entryFilePath(entry),
 		entry,

@@ -20,12 +20,38 @@ Keep one central question per article. Include a failure or limitation when
 it changes the answer. API variants, field catalogues, setup instructions,
 and recovery procedures belong on their own pages. Link at the relevant
 sentence instead of summarizing those pages at the end.
+Describe stored records only to the depth the explanation needs. Readers
+may need to know that a failure is recorded without needing an inventory
+of the exception record's fields.
+
+Apply the same scope discipline to each section. A fact can be accurate and
+still interrupt the explanation. Once a section has explained manager scopes,
+it can stop without adding a separate qualification about which application
+code a system manager cannot run. Keep that qualification only when the
+reader needs it to understand the behavior being explained.
+
+Review scope across related pages too. Give each explanation one primary
+home and link directly to the relevant section from other pages. Consumer
+groups owns independent group progress. Streams and messages owns message
+retention. Background managers and workers explains the janitor's role and
+links to retention instead of repeating its mechanics.
+
+Keep the local setup an example needs without repeating the underlying
+concept. A retention example needs the group names, their recorded progress,
+message ages, and retention period. It does not need another explanation of
+how consumer groups work. A link supplies deeper background, not missing
+facts needed to follow the current example.
 
 ## Build the explanation around a case
 
 - Open with the surrounding situation and the need that makes the concept
   useful, then name the concept. Let this establish the page's intent naturally.
   Avoid an isolated definition or “this page explains” preamble.
+- When application code triggers the behavior, establish that interaction
+  before the domain example. For retries, start with the consumer handler's
+  return value and SQLStreams' response, then introduce the failed payment.
+  A generic statement that payment providers can be unavailable skips the
+  connection the reader needs first.
 - When the introduction asks readers to picture unfamiliar relationships,
   ownership, or simultaneous states, add a small visual alongside it. Show
   the participants and their relationships before introducing timing math or
@@ -33,6 +59,9 @@ sentence instead of summarizing those pages at the end.
   the opening. Use prose alone when the situation is already easy to picture.
 - Establish normal behavior with a named application, concrete messages,
   and explicit assumptions. Explain what each participant knows or owns.
+  Use the smallest case that demonstrates the mechanism. One message can
+  explain retries without introducing other messages, concurrency, instance
+  changes, or a separate approval-delay scenario.
 - Change one condition at a time: another instance, another group, a restart,
   or a crash. Carry the same names and ids through each variation.
 - State the mechanism, then the consequence. Distinguish in-memory results,
@@ -70,12 +99,31 @@ Reuse those identities on related pages that continue the same example.
 
 ## Explain before compressing
 
+State the inputs or conditions that determine behavior directly. For retention,
+explain that cleanup considers message age and group progress, rather than
+opening with “age alone is not enough.” Correct an assumption explicitly only
+when that correction helps the reader understand the mechanism.
+
+Give a worked example its own paragraph when it follows a general rule.
+“For example…” makes the transition visible. In the janitor explanation, the
+reader first learns what controls cleanup, then sees why a lagging group's
+messages can remain after 30 days, then learns that the janitor attempts
+removal once the conditions are met. Keep that sequence connected without
+packing the rule, example, and resulting action into one dense paragraph.
+
 A short statement can still ask the reader to supply several missing steps.
 When a consequence is surprising, continue the current example until the
 reader can see why it follows. A diagram does not replace that explanation.
 “A message can become too late to start before the lease expires” needs the
 steps connecting waiting, elapsed lease time, and the check before starting
-the next handler. Show what A does and why before relying on that shorthand.
+the next consumer handler. Show what A does and why before relying on that shorthand.
+
+Explain the reason for an application decision before naming the API that
+expresses it. For a permanent rejection: the consumer handler checks the
+order, finds it cancelled, determines that retrying the payment would not
+help, and returns `Terminal` to stop retries. Naming `Terminal` and its
+result alone leaves out the reasoning. Spend words on that causal chain
+while cutting unrelated detail elsewhere.
 
 When explaining a duration or budget built from several parts, give each
 part its own line with its purpose and a concrete value. Then show the total,
@@ -105,6 +153,10 @@ A concept page should be understandable without running its code.
 Write the takeaway caption first. Draw only what supports it. Put the visual
 next to the explanation, with its caption underneath. Reuse names, shapes,
 and direction across related figures. Introduce detail progressively.
+Remove a diagram when it mainly explains a neighboring topic. The original
+retry diagram explained concurrency, while a short numbered sequence better
+explained one message's failure and retry. A concept page does not need a diagram
+when prose, a sequence, or a table already makes the mechanism clear.
 
 Show shared storage once. Draw group boundaries explicitly. Label arrows
 with their meaning when direction alone is ambiguous. Mark snapshots and
@@ -115,6 +167,11 @@ Give each resource a separate header containing its kind and name. Put its
 data or current state in the body below that header. Use the same structure
 for streams, groups, instances, and other resources. Nested resources keep
 their own headers within the containing resource's body.
+
+Put supporting commentary in the caption rather than among a resource's
+data or state. In the stream diagram, message ids belong in the body.
+“Stored in Postgres” belongs in the caption because it explains the storage
+context rather than representing another item in the stream.
 
 Keep rendered text sizes, header heights, and node padding consistent across
 related diagrams. Choose each diagram's display width to preserve that scale.
@@ -179,6 +236,16 @@ scope, and clock's starting event from the figure itself.
 - Does every link name useful detail at the point the reader needs it?
 - Could a paragraph be moved unchanged into Reference or a Guide? If so,
   decide whether it is needed to explain this page's central question.
+- Does each section stop once its question is answered? Are examples easy
+  to distinguish from the rules they illustrate, without unrelated caveats?
+- Does another page already explain this mechanism better? Keep only the
+  context needed here and link to that explanation.
+- After removing or moving a section, check what depended on it. Phrases
+  such as “both groups” or “the audit group's cursor” need an introduction
+  that still exists. Restore the necessary setup without restoring the
+  duplicated explanation. Check smaller cuts too: after removing a record's
+  field inventory, “after the recorded time” may need to become “after the
+  backoff period” to refer to the explanation that remains.
 - Have claims been checked against shipped code? Keep the slop level honest.
 - Does the page work at phone width and in both themes, with readable labels
   and no horizontal page overflow?

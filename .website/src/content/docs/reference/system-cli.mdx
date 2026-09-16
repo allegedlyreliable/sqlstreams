@@ -1,0 +1,80 @@
+---
+group: system
+title: System commands
+description: "CLI syntax for system registration, lookup, bindings, and destruction."
+slop: high
+---
+
+```sh
+sqlstreams system get
+```
+
+Administers the installation selected by the [connection and schema flags](/reference/cli/#connection-and-global-flags).
+
+## Register
+
+```sh
+sqlstreams system register
+```
+
+Creates absent shared tables and applies the default system declaration,
+including built-in streams, alert schedules, and collector settings. Running
+this against an existing installation **reapplies defaults**. Declare custom
+settings through [`System.Register`](/reference/system-registration/) in Go.
+
+This command does not migrate existing database tables or start a manager.
+Success exits `0` and JSON returns `{"registered":true}`. Registration
+can make partial progress before an error.
+
+## Retrieve
+
+```text
+sqlstreams system get [--quiet]
+```
+
+| Option or result | Behavior |
+| --- | --- |
+| Found | Prints the [system object](/reference/system-object/) and exits `0`. |
+| Absent | Exits `1`. JSON prints `null`. |
+| `--quiet`, `-q` | Suppresses output. Cannot be combined with `--output json`. |
+
+## List binding declarations
+
+```sh
+sqlstreams system binding list
+```
+
+Lists consumer-group [binding declarations](/reference/consumer-bindings/),
+including declarations waiting to be installed. Rows are ordered by stream
+and group name.
+
+JSON returns an array of Binding objects, or `[]` if none exist. A successful
+empty read exits `0`.
+
+## Destroy
+
+```text
+sqlstreams system destroy [--force] [--yes]
+```
+
+Permanently removes the installation's streams and shared tables. It leaves
+the database and schema itself in place.
+
+| Flag | Default | Effect |
+| --- | --- | --- |
+| `--force` | `false` | Bypass guards for live workers and registered application streams. |
+| `--yes`, `-y` | `false` | Skip typing the database name to confirm. Required in non-interactive and JSON use. |
+
+Without force, stop running managers and consumers and destroy application
+streams first. Force does not stop those processes. Destruction can make
+partial progress before failing. See [Delete the system](/reference/destroy-system/).
+
+Success exits `0`. An absent system exits `1`, unlike the Go Destroy
+operation's successful absence result. JSON success contains `database`
+and `destroyed: true`.
+
+## Related topics
+
+- [SQLStreams CLI](/reference/cli/) — Global flags, output, and errors.
+- [Schema migrations](/reference/schema-migrations/#cli) — Upgrade or downgrade installed schemas.
+- [Manager commands](/reference/manager-cli/) — Run registered background work.

@@ -1,0 +1,105 @@
+---
+group: client
+title: SQLStreams CLI
+description: "Install the administrative CLI and configure connection, output, and exit behavior."
+slop: medium
+---
+
+```sh
+sqlstreams --help
+sqlstreams stream list --output json
+```
+
+The CLI administers a SQLStreams installation, including registrations,
+migrations, maintenance, metrics, and alerts. It does not run application
+consumer handlers or declare application streams and consumer groups.
+
+## Installation
+
+### Homebrew (macOS)
+
+```sh
+brew install --cask allegedlyreliable/tap/sqlstreams
+```
+
+### Chocolatey (Windows)
+
+```sh
+choco install sqlstreams
+```
+
+### Go
+
+```sh
+go install github.com/allegedlyreliable/sqlstreams/cmd/sqlstreams@latest
+```
+
+Use the CLI version matching the library version you deploy. To pin a
+release, replace `latest` with that release tag.
+
+## Connection and global flags
+
+| Flag | Default | Description |
+| --- | --- | --- |
+| `--database-url` | `SQLSTREAMS_DATABASE_URL` | PostgreSQL URL or keyword/value connection string. Required for database commands. An explicit flag takes precedence over the environment. |
+| `--schema` | `SQLSTREAMS_ADMIN_SCHEMA`, then `sqlstreams` | Installation schema. Must match `^[a-z_][a-z0-9_]*$`. |
+| `--output` | `text` | `text` or `json`. |
+| `--help` | Off | Show command usage and flags. |
+| `--version` | Off | Show CLI version. |
+
+```sh
+export SQLSTREAMS_DATABASE_URL='postgres://username:password@localhost:5432/quickstart?sslmode=disable'
+sqlstreams system get --schema sqlstreams
+```
+
+This connection example uses the local [Quickstart](/quickstart/) database. Connection-string
+options such as `sslmode`, `connect_timeout`, and `pool_max_conns` are parsed
+by pgx. A connection string containing `search_path` is rejected. Select the
+installation with `--schema` instead.
+
+## Output and exit status
+
+| Status | Meaning |
+| --- | --- |
+| `0` | The command succeeded. Empty list commands also succeed. |
+| `1` | An operation failed, a requested object/report was absent, or interactive confirmation was declined. Individual commands document absence behavior. |
+| `2` | Usage or validation error, such as an invalid flag or missing argument. |
+
+### Structured error fields
+
+| Field | Meaning |
+| --- | --- |
+| `code` | SQL diagnostic code, when available. |
+| `problem` | Failure description. |
+| `recovery` | Transient or permanent classification, when available. |
+| `values` | Attached diagnostic attributes. |
+| `cause` | Underlying error text. |
+| `fix` | Suggested action. |
+| `docs` | Code documentation URL. |
+
+Optional fields are omitted when absent. Plain failures may contain only
+`problem`. Use [Explain](/reference/diagnostics/#cli) to inspect declared
+codes and diagnostic queries offline.
+
+## Destructive commands
+
+The CLI enables the library's `AllowDestroy` capability. Commands that
+require confirmation prompt on an interactive terminal. Use `--yes` for
+non-interactive or JSON destruction. A command's `--force` bypasses only
+the documented resource guard, not confirmation or database failures.
+
+## Command references
+
+- [Stream commands](/reference/stream-cli/)
+- [Consumer commands](/reference/consumer-cli/)
+- [System commands](/reference/system-cli/)
+- [Schedule commands](/reference/schedule-cli/)
+- [Manager commands](/reference/manager-cli/)
+- [Metric commands](/reference/metric-cli/)
+- [Alert commands](/reference/alert-cli/)
+- [Schema migration commands](/reference/schema-migrations/#cli)
+
+## Related topics
+
+- [Upgrading SQLStreams](/guides/migrations/) — Use the CLI to inspect and migrate database versions.
+- [Errors and diagnostics](/reference/diagnostics/#cli) — Look up diagnostic codes and their SQL queries.

@@ -1,0 +1,77 @@
+---
+group: stream
+title: Rename a stream
+description: "Rename: change a stream's name while preserving its id and data."
+slop: high
+---
+
+import ThreadAside from '../../../components/thread-aside/thread-aside.svelte';
+
+```go title="StreamHandle[T].Rename"
+Rename(ctx context.Context, newName string) (*Stream, error)
+```
+
+Changes the stream's registered name. Its id, settings, messages, and consumer
+groups are preserved. The old name becomes available for another registration.
+
+## Example
+
+Rename the `payments.requested` stream to `payments.pending` using an
+initialized `client`.
+
+```go
+payments := client.Stream[sqlstreams.RawPayload]("payments.requested")
+renamed, err := payments.Rename(ctx, "payments.pending")
+if err != nil {
+	return err
+}
+fmt.Println(renamed.Id, renamed.Name)
+```
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `ctx` | `context.Context` | Yes | Cancellation or its deadline interrupts the operation. |
+| `newName` | `string` | Yes | An unused name matching `^[a-z0-9._-]+$`, different from the current name. |
+
+## Returns
+
+| Condition | Return value |
+| --- | --- |
+| Rename succeeds | `(stream, nil)`, containing the updated [stream object](/reference/stream-object/). |
+| Rename fails | `(nil, err)`. |
+
+<ThreadAside label="NOTE" title="Update configured stream names">
+
+The existing `payments` handle still names `payments.requested`. Create a
+handle for `payments.pending` for later calls. Registered producer and consumer
+instances continue using the stream id, but application configuration must
+use the new name on restart. Registering the old name can create a separate
+stream or attach to a replacement registered under that name.
+
+</ThreadAside>
+
+## CLI
+
+```sh
+sqlstreams stream rename payments.requested payments.pending
+```
+
+Prints the old name, new name, and preserved id. `--output json` returns the
+updated registration.
+
+## Errors
+
+| Error | When |
+| --- | --- |
+| Validation error | A name is empty, the new name is invalid, or both names are identical. |
+| `ErrReservedStreamName` | Either name starts with `__system.`. |
+| `ErrStreamNotFound` | The original stream is absent. |
+| `ErrStreamNameTaken` | The new name is already registered. |
+| Database or context error | The rename fails or is interrupted. |
+
+## Related topics
+
+- [Retrieve a stream](/reference/get-stream/) — Read the registration by its current name.
+- [Register a stream](/reference/stream-registration/) — Declare stream settings.

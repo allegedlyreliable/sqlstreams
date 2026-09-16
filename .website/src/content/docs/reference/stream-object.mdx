@@ -1,0 +1,77 @@
+---
+group: stream
+title: The stream object
+description: "Stream: the stored identity and settings of a registered stream."
+slop: high
+---
+
+```go title="sqlstreams.Stream"
+type Stream struct {
+	Id                     int64           `json:"stream_id"`
+	SystemId               int64           `json:"system_id"`
+	Name                   string          `json:"stream"`
+	PartitionSize          int64           `json:"partition_size"`
+	RetentionTTL           time.Duration   `json:"retention_ttl"`
+	AllowDropPastCommitted bool            `json:"allow_drop_past_committed"`
+	IdempotencyKeyTTL      time.Duration   `json:"idempotency_key_ttl"`
+	EmptyCompactionHeadTTL time.Duration   `json:"empty_compaction_head_ttl"`
+	DeliveryLogMode        DeliveryLogMode `json:"delivery_log_mode"`
+}
+```
+
+A `Stream` contains a registered stream's identity and stored settings.
+`Register`, `Get`, `Streams`, and `Rename` return this object. Changing its fields
+does not update the registration.
+
+## Fields
+
+| Field | Type | JSON name | Description |
+| --- | --- | --- | --- |
+| `Id` | `int64` | `stream_id` | The stream's id. It stays the same when the stream is renamed. |
+| `SystemId` | `int64` | `system_id` | The SQLStreams system that owns the stream. |
+| `Name` | `string` | `stream` | The stream's registered name, unique within its system. |
+| `PartitionSize` | `int64` | `partition_size` | The message-id interval covered by each message-log partition. |
+| `RetentionTTL` | `time.Duration` | `retention_ttl` | How old messages must be before retention cleanup can remove them. Zero disables time-based retention cleanup. |
+| `AllowDropPastCommitted` | `bool` | `allow_drop_past_committed` | Whether retention cleanup may remove messages a lagging consumer group has not finished processing. |
+| `IdempotencyKeyTTL` | `time.Duration` | `idempotency_key_ttl` | How long keys used to deduplicate produce retries are retained before they become eligible for cleanup. |
+| `EmptyCompactionHeadTTL` | `time.Duration` | `empty_compaction_head_ttl` | How long a compaction-head row with no current message may stay idle before cleanup. Rows pointing to a current message are excluded. |
+| `DeliveryLogMode` | [`DeliveryLogMode`](#deliverylogmode) | `delivery_log_mode` | Which message-processing outcomes are recorded in the stream's per-attempt log. |
+
+### DeliveryLogMode
+
+| Constant | Value | Recorded outcomes |
+| --- | --- | --- |
+| `DeliveryLogModeOff` | `"off"` | None. |
+| `DeliveryLogModeFailures` | `"failures"` | Every outcome except success. |
+| `DeliveryLogModeAll` | `"all"` | Every outcome, including success. |
+
+## Example
+
+Read the `payments.requested` stream using an initialized `client`.
+`RawPayload` lets this lookup run without declaring a message payload type.
+
+```go
+payments := client.Stream[sqlstreams.RawPayload]("payments.requested")
+stream, err := payments.Get(ctx)
+if err != nil {
+	return err
+}
+if stream == nil {
+	return errors.New("payments.requested is not registered")
+}
+fmt.Println(stream.Id, stream.Name, stream.RetentionTTL)
+```
+
+## Operations returning this object
+
+| Operation | Go API |
+| --- | --- |
+| [Register a stream](/reference/stream-registration/) | `payments.Register(ctx, cfg)` |
+| [Retrieve a stream](/reference/get-stream/) | `payments.Get(ctx)` |
+| [List streams](/reference/list-streams/) | `client.Streams(ctx)` |
+| [Rename a stream](/reference/rename-stream/) | `payments.Rename(ctx, newName)` |
+
+## Related topics
+
+- [Consumer groups](/concepts/consumer-groups/) — How groups share the messages on a stream.
+- [Streams and messages](/concepts/streams-and-messages/) — How stored messages, consumer progress, and retention fit together.

@@ -29,8 +29,3 @@ export type StickyRowData = {
 	href: string;
 	lastUpdatedDate: string;
 };
-
-export type SiteStats = {
-	docCount: number;
-	codeCount: number;
-};

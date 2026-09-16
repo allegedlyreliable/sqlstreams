@@ -1,0 +1,100 @@
+---
+group: system
+title: System metrics
+description: "Built-in series for worker, schedule, alert, and collector state."
+slop: high
+---
+
+```go title="Client.System().Metrics()"
+Metrics() *SystemMetricsHandle
+```
+
+Selects installation-wide metrics without I/O. The selectors below return
+`*MetricHandle`. Call [Latest or History](/reference/read-metrics/) to read
+retained observations. There is no system-wide `Snapshot` method.
+
+## Example
+
+Using an initialized `client`, read the last completed collector pass:
+
+```go
+measurement, err := client.System().Metrics().CollectorCompletedTimestamp().Latest(ctx)
+if err != nil {
+	return err
+}
+if measurement != nil {
+	fmt.Println(time.Unix(int64(measurement.Value), 0))
+}
+```
+
+## Worker series
+
+All are gauges without attributes. Values include workers owned by the
+system, streams, and consumer groups.
+
+| Selector | Wire name | Code | Unit | Value |
+| --- | --- | --- | --- | --- |
+| `UnclaimedWorkers()` | `sqlstreams.worker.state.unclaimed_workers` | `SQL0067` | `{worker}` | Workers with no live instance and a nonzero target. |
+| `OldestUnclaimedAge()` | `sqlstreams.worker.state.oldest_unclaimed_age` | `SQL0068` | `ms` | Largest elapsed time since instance expiry among unclaimed workers. `0` if no retained expired instance establishes that age. |
+| `FailingWorkers()` | `sqlstreams.worker.state.failing_workers` | `SQL0069` | `{worker}` | Workers with a live instance on a nonzero consecutive failure streak. |
+
+Suspended workers are excluded from unclaimed counts. See
+[worker liveness](/reference/worker-liveness-alert/) for the alert contract.
+
+## Schedule series
+
+All are gauges without attributes.
+
+| Selector | Wire name | Code | Unit | Value |
+| --- | --- | --- | --- | --- |
+| `OverdueSchedules()` | `sqlstreams.schedule.state.overdue` | `SQL0070` | `{found}` | Unsuspended schedules more than 10 minutes past their next scheduled production time. |
+| `OldestDueAge()` | `sqlstreams.schedule.state.oldest_due_age` | `SQL0071` | `ms` | Largest elapsed time past next production among unsuspended schedules. `0` if none are due. |
+| `SuspendedSchedules()` | `sqlstreams.schedule.state.suspended` | `SQL0072` | `{found}` | Suspended schedules, excluded from overdue counts. |
+
+## Alert series
+
+All are gauges. Counts of active and resolved alerts have no attributes.
+They describe retained alert heads, not lifetime totals.
+
+| Selector | Wire name | Code | Unit | Value |
+| --- | --- | --- | --- | --- |
+| `ActiveAlerts()` | `sqlstreams.alert.state.active_alerts` | `SQL0073` | `{alert}` | Active retained alert heads. |
+| `ResolvedAlerts()` | `sqlstreams.alert.state.resolved_alerts` | `SQL0074` | `{alert}` | Resolved retained alert heads. |
+| `CheckStreamsEvaluated(alert string)` | `sqlstreams.alert.check.streams_evaluated` | `SQL0075` | `{stream}` | Streams evaluated in the check's latest recorded pass. |
+| `CheckStreamsFailed(alert string)` | `sqlstreams.alert.check.streams_failed` | `SQL0076` | `{stream}` | Streams with evaluation or recording errors, or insufficient evidence. |
+| `CheckPublishedAlerts(alert string)` | `sqlstreams.alert.check.published_alerts` | `SQL0077` | `{alert}` | Active reports written in that pass, including reminders. |
+| `CheckResolvedAlerts(alert string)` | `sqlstreams.alert.check.resolved_alerts` | `SQL0078` | `{alert}` | Alerts changed to resolved in that pass. |
+
+The four check selectors require the `alert` attribute. Supported checks use `partition_count`, `compaction_read_cost`, or `worker_liveness`.
+Their values are per-pass counts, not cumulative counters.
+
+## Collector completion
+
+| Selector | Wire name | Code | Kind | Unit |
+| --- | --- | --- | --- | --- |
+| `CollectorCompletedTimestamp()` | `sqlstreams.metrics.collector.completed_timestamp` | `SQL0100` | Gauge | `s` |
+
+The value is a Unix timestamp in seconds, without attributes. It advances
+only after every source read and measurement write in a collector pass
+succeeds. A partial pass can update other measurements without advancing
+this value.
+
+The collector normally runs every `30s`, with jitter. Alert-check series
+are recorded by their own checks. See [collection and retention](/reference/read-metrics/#collection-and-retention)
+for shared timing and freshness rules.
+
+## CLI
+
+```sh
+sqlstreams metric latest sqlstreams.metrics.collector.completed_timestamp
+```
+
+Reads the retained completion series. An absent series exits with status `1`.
+Use [metric history](/reference/metric-cli/#latest-and-history) for earlier observations
+and [explain](/reference/diagnostics/#cli) for definitions.
+
+## Related topics
+
+- [Read metric measurements](/reference/read-metrics/) — Returns, errors, and series identity.
+- [Register the system](/reference/system-registration/) — Collector and alert configuration.
+- [Collector progress alert](/reference/metric-collector-progress-alert/) — Detect missing completed collections.

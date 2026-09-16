@@ -256,8 +256,11 @@ preprocessor, no utility framework, no third-party token pack.
   not load, render, link to, count, or index them.
 - Concepts articles follow CONCEPTS.md for scope, introductions, worked
   cases, visual choices, and review. Guides follow GUIDES.md for task scope,
-  setup and execution order, examples, notes, and review. VOICE.md governs
-  prose style across all page types.
+  setup and execution order, examples, notes, and review. Reference entries
+  follow REFERENCE.md for contracts, examples, tables, and review.
+  Troubleshooting pages follow TROUBLESHOOTING.md for diagnostic procedures,
+  result tables, scope, and review. VOICE.md governs prose style across all
+  page types.
 - Each page does ONE job -- tutorial, how-to, reference, or
   explanation; a guide that starts explaining links to the concept
   page instead of drifting. Four boards organize those purposes: Concepts (explanation), Guides
@@ -268,7 +271,7 @@ preprocessor, no utility framework, no third-party token pack.
   from other boards. A diagnostic code keeps one canonical page, reachable
   from both reference and troubleshooting.
 - Concepts, Guides, and Reference group their articles beneath group
-  headings. Consumer is the current example. Reference's six subsections sit
+  headings. Consumer is the current example. Reference's resource and lookup subsections sit
   inside Consumer; Concepts and Guides list their articles directly under it.
   Article breadcrumbs include the group after the board, linking to that
   group's anchor on the board. Standalone stickies and Troubleshooting keep
@@ -291,43 +294,28 @@ preprocessor, no utility framework, no third-party token pack.
   by kind, and changelog prose ("X has been removed") is deleted, never
   kept -- the decision records hold history. A moved or split thread
   leaves an astro.config `redirects` entry at its old URL.
-- Reference has six sections: Go API, Configuration, CLI, Metrics, Logs,
-  and Alerts. Article dropdown trees provide another route to those pages.
+- Reference groups Go API entries by recognizable resources, following
+  Stripe's resource-and-operation model. The Consumer group has Consumer
+  groups (the object, Register, Get, Consumers, Destroy, and Consume), Messages
+  (message metadata), CLI, Metrics, Logs, and Alerts. Article dropdown trees provide another route to those pages.
   The route's section mapping owns membership and order; it does not move
-  a linked guide or code page out of its owning board.
-- A reference entry answers one independently useful lookup. Neither a
-  handle nor a symbol forces a page boundary. Keep closely related variants
-  together when readers need to compare them. Open with the answer and the
-  exact name. State applicable inputs, outputs, absence, errors, side effects,
-  cancellation, and concurrency beside the operation they qualify.
-- Configuration owns settings' types, defaults, zero/nil meanings, validity,
-  precedence, scope, and effective timing. Derived defaults name their
-  dependencies and when they resolve. Go API owns calling contracts and
-  returned values; CLI owns syntax, flags, output, and exits. Metrics owns
-  measurement definitions, calculations, units, attributes, and freshness.
-  Logs owns emission conditions, levels, fields, and suppression. Alerts owns
-  triggering conditions, thresholds, severity, evaluation, and resolution.
-  Troubleshooting owns investigation and recovery. Link to shared definitions instead of maintaining a second table. Task-specific
-  command inputs can stay with their operation.
-- Use descriptive titles and exact symbols in headings or labeled entries.
-  Important settings and operations have directly linkable anchors. Examples
-  clarify contracts; procedures link to guides. No required Verbs/Config/
-  Gotchas skeleton; omit inapplicable sections and place limitations locally.
-  A changed contract updates its definition in the same change.
-- During the documentation structure review, only the new Consumer subset
-  appears on the site alongside the user's original Quickstart and Why
-  SQLStreams articles. Other existing article sources remain
-  on disk but have no generated article routes or search entries. Board
+  a linked guide or troubleshooting page out of its owning board.
+- REFERENCE.md owns reference page structure and writing rules. Operations
+  and important settings have directly linkable anchors. A changed contract
+  updates its canonical definition in the same change.
+- The approved documentation scope and work order live in .work/TODO.md. Board
   membership and the homepage sticky list control visibility, navigation, and counts through
   siteThreads; article dropdown trees consume that same visible collection.
-  Do not redirect hidden articles into the preview or list the archive.
-  This review exception replaces the moved-page redirect rule until migration.
+  Remove retired article sources once their replacements are complete, keeping
+  redirects to their canonical pages in astro.config. Diagnostic code URLs
+  redirect to the relevant Reference entry or Troubleshooting procedure, without
+  separate per-code articles. Retired topics without a replacement have no route.
 - The homepage opens with one Start Here section: Quickstart and Why SQLStreams
   stickies, then the sandbox. They are standalone pages, not a Getting Started
   board. These stickies use the original quickstart.mdx
   and why-sqlstreams.mdx without rewriting their prose. Navigation metadata
-  may be added to frontmatter. Their existing
-  links into hidden articles remain as written during the preview. The board listing follows. Keep board-purpose
+  may be added to frontmatter. Update their onward links to the reviewed
+  canonical pages. The board listing follows. Keep board-purpose
   explanations on their boards and group discovery in the article dropdown trees;
   do not add a separate introductory panel above the stickies.
 - Every board introduction is one sentence stating its purpose. Omit
@@ -343,8 +331,11 @@ preprocessor, no utility framework, no third-party token pack.
   they do not become another reference manual. Never link into hidden articles to complete an example.
 - Code samples show real error handling -- `if err != nil { return err }`
   or `_` for an unused value -- never a `must()` helper: it hides the
-  path readers copy and is not a real API. Pages that still carry one
-  (schema-versions, new-group-start, replay) are swept when touched.
+  path readers copy and is not a real API.
+- Custom SQL commands against the Quickstart database use
+  `docker compose exec -T db psql -U username -d quickstart` from the
+  Quickstart project directory, consistently across all boards. Use `-c`
+  for a single statement and a quoted `<<'SQL'` heredoc for multiline SQL.
 - An MDX aside inside a list item closes at the item's indent.
 - Every thread through the thread route declares `slop` in its
   frontmatter, the author's review depth of the LLM-drafted body:
@@ -352,12 +343,12 @@ preprocessor, no utility framework, no third-party token pack.
   (structure checked, samples run), `low` (read line by line), `none`
   (hand-checked, renders no notice). The level's copy is fixed in the
   slop-notice component; a page never writes its own. The diagnostics
-  reference and the code threads carry no field.
+  reference carries no field.
 - Contextual internal links sit where the reader needs them. When another
   thread owns a prerequisite, the detailed mechanism, or a relevant
   contrast, link its first useful mention with anchor text that names what
-  the reader will find (`See [Message Lifecycle](/concepts/lifecycle/) for
-  the delivery states`, never `learn more`). Review this as prose: there is
+  the reader will find (`See [Retries and failed messages](/concepts/retries-and-failed-messages/)
+  for how failed attempts are retried`, never `learn more`). Review this as prose: there is
   no link quota, generated related-thread box, or mechanically added link.
 - Vale runs in CI with the Google developer-docs style plus the
   SQLStreams style; the SQLStreams substitution rule mirrors the root

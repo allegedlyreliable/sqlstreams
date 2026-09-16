@@ -1,0 +1,147 @@
+---
+group: consumer
+title: Consumer cursor backlog (SQL0083)
+description: Definition, live reads, retained measurements, and freshness of consumer cursor backlog.
+slop: high
+---
+
+import ThreadAside from '../../../components/thread-aside/thread-aside.svelte';
+
+```text title="Metric name"
+sqlstreams.consumer.cursor.backlog
+```
+
+Measures the distance between a consumer group's committed cursor and its
+stream's highest retained message id. Use it to observe how far the group's recorded
+progress trails the stream.
+
+## Measurement definition
+
+| Property | Value |
+| --- | --- |
+| Code | `SQL0083` |
+| Kind | Gauge |
+| Unit | `{message}` |
+| Scope | Consumer group |
+| Identity attributes | `stream`, `group` |
+| Calculation | `Head - Committed` |
+
+For the `charge-cards` group on the `payments.requested` stream:
+
+| Stream head id | Committed cursor id | Backlog |
+| --- | --- | --- |
+| `4` | `2` | `2` |
+| `4` | `4` | `0` |
+
+<ThreadAside label="NOTE" title="Cursor distance and message outcomes">
+
+Gaps in message ids make cursor distance differ from message count. A backlog
+of zero does not prove that every message succeeded. Dead-lettered messages
+do not block the committed cursor. Read `snapshot.Exceptions` alongside
+cursor progress when checking message outcomes.
+
+</ThreadAside>
+
+## Live snapshot
+
+```go title="ConsumerMetricsHandle.Snapshot"
+Snapshot(ctx context.Context) (*ConsumerGroupSnapshot, error)
+```
+
+Computes current group metrics from source tables. This example uses an
+initialized `client` and the [example payload](/reference/consumer-group/#example-payload).
+
+```go
+payments := client.Stream[PaymentRequestedV1]("payments.requested")
+chargeCards := payments.Consumer("charge-cards")
+snapshot, err := chargeCards.Metrics().Snapshot(ctx)
+if err != nil {
+	return err
+}
+fmt.Println(snapshot.Cursor.Backlog)
+```
+
+Cancelling `ctx` or reaching its deadline interrupts the database reads.
+
+| Condition | Return value |
+| --- | --- |
+| Read succeeds | `(snapshot, nil)`. `snapshot.Cursor.Backlog` contains the cursor distance. |
+| Stream or group is absent, or the read fails | `(nil, err)`. See [Errors](#errors). |
+
+The snapshot also reports `Cursor.Head`, `Cursor.Claimed`, and
+`Cursor.Committed`.
+
+## Retained measurements
+
+`chargeCards.Metrics().CursorBacklog()` selects this group's measurement
+series without querying the database. The collector records measurements
+at a default interval of 30 seconds, with scheduling jitter.
+
+### Latest
+
+```go title="MetricHandle.Latest"
+Latest(ctx context.Context) (*Measurement, error)
+```
+
+Reads the newest retained measurement for the series.
+
+```go
+payments := client.Stream[PaymentRequestedV1]("payments.requested")
+chargeCards := payments.Consumer("charge-cards")
+measurement, err := chargeCards.Metrics().CursorBacklog().Latest(ctx)
+if err != nil {
+	return err
+}
+if measurement == nil {
+	return errors.New("no retained cursor backlog measurement for charge-cards")
+}
+fmt.Println(measurement.Value, measurement.At)
+```
+
+| Condition | Return value |
+| --- | --- |
+| A retained measurement matches the series | `(measurement, nil)`. |
+| No retained measurement matches | `(nil, nil)`. |
+| Read fails | `(nil, err)`. See [Errors](#errors). |
+
+### History
+
+```go title="MetricHandle.History"
+History(ctx context.Context, limit int) ([]*Measurement, error)
+```
+
+Reads up to `limit` retained measurements, newest first. `limit` must be
+positive. Both `History` and `Latest` use `ctx` to cancel database reads or
+stop them at a deadline.
+
+| Condition | Return value |
+| --- | --- |
+| Retained measurements match | `(measurements, nil)`, ordered newest first. |
+| No retained measurements match | `(measurements, nil)`, where `len(measurements) == 0`. |
+| Limit is invalid or the read fails | `(nil, err)`. See [Errors](#errors). |
+
+See [Measurement](/reference/read-metrics/#measurement) for the returned fields.
+
+<ThreadAside label="NOTE" title="Latest does not guarantee freshness">
+
+A retained measurement can be older than the collection interval and can
+outlive the group it describes. Check `At` when interpreting it. Use a live
+snapshot when the decision requires a new database read.
+
+</ThreadAside>
+
+## Errors
+
+| Error | When |
+| --- | --- |
+| `ErrStreamNotFound` | A live snapshot's stream is not registered. |
+| `ErrConsumerNotFound` | A live snapshot's group is not registered. |
+| `ErrNotRegistered` | The system metrics storage needed for a retained read is not registered. |
+| Validation error | A live snapshot has an empty resource name, or `History` receives a nonpositive limit. |
+| Database error | A snapshot or retained measurement cannot be read. |
+| Context cancellation or deadline error | The database operation is interrupted by its context. |
+
+## Related topics
+
+- [Size a consumer queue](/guides/size-a-consumer-queue/) — Use progress measurements while tuning a consumer.
+- [Queued message cannot start](/troubleshooting/queued-message-cannot-start/) — Diagnose the `SQL0105` dispatch warning.

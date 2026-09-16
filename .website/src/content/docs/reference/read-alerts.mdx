@@ -1,0 +1,170 @@
+---
+group: system
+title: Read alerts
+description: "Definitions, Latest, History, and Snapshot: retained reports and current evaluations."
+slop: medium
+---
+
+import ThreadAside from '../../../components/thread-aside/thread-aside.svelte';
+
+```go title="SystemAlertsHandle"
+// List built-in alert definitions.
+Definitions() []AlertDefinition
+
+// Read the latest retained reports across all owners.
+Latest(ctx context.Context) ([]*Alert, error)
+
+// Select one alert on the system.
+Alert(name string) *AlertHandle
+```
+
+```go title="AlertHandle"
+// Read the selected alert's newest retained report.
+Latest(ctx context.Context) (*Alert, error)
+
+// Read earlier reports too, newest first.
+History(ctx context.Context, limit int) ([]*Alert, error)
+
+// Evaluate the available evidence.
+Snapshot(ctx context.Context) (*AlertEvaluationSnapshot, error)
+```
+
+`Latest` and `History` read reports retained on the `__system.alerts` stream.
+`Snapshot` evaluates a built-in alert using retained evidence.
+
+## Example
+
+Using an initialized `client`, evaluate partition count for the
+`payments.requested` stream with the [example payload](/reference/consumer-group/#example-payload):
+
+```go
+check := client.Stream[PaymentRequestedV1]("payments.requested").
+	Alerts().PartitionCount()
+snapshot, err := check.Snapshot(ctx)
+if err != nil {
+	return err
+}
+fmt.Println(snapshot.State, snapshot.ObservedAt)
+```
+
+## Select an owner
+
+| Handle | Available operations |
+| --- | --- |
+| `client.System().Alerts()` | `Definitions`, installation-wide `Latest`, `Alert(name)`, and `MetricCollectorProgress()`. |
+| `client.Stream[T](name).Alerts()` | Stream-scoped `Definitions` and `Latest`, `Alert(name)`, `PartitionCount()`, `CompactionReadCost()`, and `WorkerLiveness()`. |
+| `client.Stream[T](name).Consumer(group).Alerts()` | Group-scoped `Definitions` and `Latest`, and `Alert(name)`. No current built-in alert is group-owned. |
+
+Selectors and `Definitions` perform no I/O. `Definitions` returns metadata in
+SQL code order. `Latest` on a resource handle lists that scope's retained
+reports, ordered by message key. `SystemAlertsHandle.Latest` includes every owner.
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `ctx` | `context.Context` | For reads | Cancellation or its deadline interrupts the database reads. |
+| `name` | `string` | For `Alert` | Alert name, such as `partition_count`. `Snapshot` requires a supported built-in and owner scope. |
+| `limit` | `int` | For `History` | Positive maximum reports, newest message id first. |
+
+## Returns
+
+| Condition | Return value |
+| --- | --- |
+| Individual `Latest` finds a report | `(report, nil)`, active or resolved. |
+| Owner exists but no report is retained | Individual `Latest` returns `(nil, nil)`. List and `History` return an empty slice with `nil` error. |
+| `Snapshot` evaluates successfully | `(snapshot, nil)`, including insufficient evidence as a state. |
+| Owner is absent | `(nil, err)` for the missing system, stream, or consumer group. |
+| Alerts stream or check schedule is absent, or a read fails | `(nil, err)`. |
+
+<ThreadAside label="NOTE" title="When measurements stop arriving">
+
+`Latest` returns the last saved report. If metric collection stops after a
+partition-count alert becomes active, that report can keep saying `active`
+without any recent partition counts to support it.
+
+`Snapshot` checks the available measurements. If they are missing or too old,
+its `State` is `"insufficient_evidence"`. Read `Reason` to see what prevented
+the evaluation.
+
+</ThreadAside>
+
+### Alert
+
+| Field | Type | JSON name | Description |
+| --- | --- | --- | --- |
+| `Name` | `string` | `name` | Alert name. |
+| `Owner` | `*Owner` | `owner` | [Resource identity](/reference/consumer-workers/#owner). |
+| `Status` | `AlertStatus` | `status` | `"active"` or `"resolved"`. |
+| `Severity` | `AlertSeverity` | `severity` | `"warn"` for built-ins. |
+| `Message` | `string` | `message` | Summary of the condition. |
+| `Detail` | `string` | `detail` | Evidence explanation. |
+| `Hint` | `string` | `hint` | Suggested corrective action. |
+| `Data` | `map[string]any` | `data` | Measurements supporting the report. Defined by each alert. |
+| `Metadata` | `map[string]any` | `metadata` | Context about the check. Does not affect alert identity. |
+| `At` | `time.Time` | `at` | Time the check observed the condition or its resolution. |
+
+One alert name and owner identify one retained series. Active reminders and
+later resolution reports share that identity. Alert retention is configured
+as `7d` at system registration, with partition-based cleanup.
+
+### AlertDefinition
+
+| Field | Type | JSON name | Description |
+| --- | --- | --- | --- |
+| `Code` | `string` | `code` | Built-in diagnostic code. |
+| `Name` | `string` | `name` | Name in `Alert` reports. |
+| `Description` | `string` | `description` | Condition the alert detects. |
+| `Scope` | `MetricScope` | `scope` | Resource scope. |
+| `Severity` | `AlertSeverity` | `severity` | Declared severity. |
+
+### AlertEvaluationSnapshot
+
+| Field | Type | JSON name | Description |
+| --- | --- | --- | --- |
+| `State` | `AlertEvaluationState` | `state` | Evaluation outcome, defined below. |
+| `Finding` | `*Alert` | `finding` | Proposed active finding for pending/active conditions. `nil` otherwise. It has not been recorded by `Snapshot`. |
+| `EvaluatedAt` | `time.Time` | `evaluated_at` | Database evaluation time. |
+| `ObservedAt` | `time.Time` | `observed_at` | Newest sample's storage time, or collector completion time. Zero when unavailable. |
+| `UnhealthySince` | `time.Time` | `unhealthy_since` | Start of the established unhealthy span. Zero if no span was calculated. |
+| `ObservedDuration` | `time.Duration` | `observed_duration` | Established unhealthy span within the evidence window. |
+| `PendingDuration` | `time.Duration` | `pending_duration` | Required span under the resolved policy. |
+| `MaximumGap` | `time.Duration` | `maximum_gap` | Sample-gap and age limit. Zero for collector progress. |
+| `MaximumAge` | `time.Duration` | `maximum_age` | Completion-age limit. Zero for stream alerts. |
+| `DisablePending` | `bool` | `disable_pending` | Whether fresh unhealthy evidence can activate immediately. |
+| `EvidenceInvalid` | `bool` | `evidence_invalid` | Semantically rejected evidence. `true` only with insufficient evidence. `false` alone does not establish health. |
+| `Reason` | `string` | `reason` | Display explanation for insufficient evidence. Branch on `State`, not this text. |
+
+| State | Meaning for a scheduled check |
+| --- | --- |
+| `"healthy"` | Fresh evidence can resolve an active report. |
+| `"pending"` | Unhealthy evidence has not met the required span. Leave the report unchanged. |
+| `"active"` | Evidence meets activation requirements. The scheduled check can write an active report or a due reminder. |
+| `"insufficient_evidence"` | Missing, stale, or invalid evidence cannot establish health. Leave the report unchanged. |
+
+## CLI
+
+```sh
+sqlstreams alert latest partition_count --stream payments.requested
+```
+
+Reads the retained report. `Snapshot` is available through the Go API.
+See [alert commands](/reference/alert-cli/) for retained reports, history,
+owner filters, and exit behavior.
+
+## Errors
+
+| Error | When |
+| --- | --- |
+| Validation error | The limit is nonpositive or `Snapshot` uses an unsupported alert name or owner scope. |
+| `ErrNotRegistered` | The system or alerts stream is absent. |
+| `ErrStreamNotFound` / `ErrConsumerNotFound` | The selected owner is absent. |
+| `ErrScheduleNotFound` | `Snapshot` cannot find the built-in check's schedule. |
+| Policy, database, decoding, or context error | Required evidence or policy cannot be read or evaluated. |
+
+## Related topics
+
+- [Partition count alert](/reference/partition-count-alert/) — Partition threshold and evidence.
+- [Compaction read cost alert](/reference/compaction-read-cost-alert/) — Partition cost for compacted streams.
+- [Worker liveness alert](/reference/worker-liveness-alert/) — Unclaimed workers.
+- [Collector progress alert](/reference/metric-collector-progress-alert/) — Missing collector completion.

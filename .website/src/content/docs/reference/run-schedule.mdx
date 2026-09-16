@@ -1,0 +1,102 @@
+---
+group: schedule
+title: Run a schedule now
+description: "Run: produce the stored payload immediately, outside the schedule's expression."
+slop: high
+---
+
+```go title="SchedulerHandle.Run"
+Run(ctx context.Context, options *ScheduleRunOptions) (*ProduceResult[ScheduleStoredMessage], error)
+```
+
+Produces the schedule's stored payload immediately, including when the
+schedule is suspended. It leaves the expression and scheduled times unchanged
+and does not wait for a consumer group to process the message.
+
+## Example
+
+Using an initialized `client`, run the registered `payment-reminder` schedule:
+
+```go
+result, err := client.Scheduler("payment-reminder").Run(ctx,
+	&sqlstreams.ScheduleRunOptions{Concurrency: sqlstreams.ConcurrencyExclusive},
+)
+if err != nil {
+	return err
+}
+fmt.Println(result.Id)
+```
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `ctx` | `context.Context` | Yes | Controls registration reads and the produce call. [Produce cancellation](/reference/produce/#idempotency-and-cancellation) applies once the message enters the batch queue. |
+| `options` | `*ScheduleRunOptions` | No | Per-run options. `nil` uses defaults. Defaults are filled into a supplied object. |
+
+### ScheduleRunOptions
+
+| Field | Type | Default | Description |
+| --- | --- | --- | --- |
+| `Concurrency` | `ConcurrencyPolicy` | `ConcurrencyParallel` | Overrides the schedule's policy for this message. `ConcurrencyExclusive` waits for earlier processing on the same key. `ConcurrencyOrdered` is incompatible with the compaction enabled by this call. |
+
+The message retains the schedule's timeout. Consumer group bounds apply
+when it is processed. Options do not update the stored schedule.
+
+## Returns
+
+| Condition | Return value |
+| --- | --- |
+| `Produce` succeeds | `(result, nil)`, with the committed message id and stored payload. |
+| Schedule is absent | `(nil, ErrScheduleNotFound)`. |
+| Validation, read, or produce fails | `(nil, err)`. |
+
+The [`ProduceResult`](/reference/produce/#produceresult) payload type is:
+
+```go title="sqlstreams.ScheduleStoredMessage"
+type ScheduleStoredMessage struct {
+	Payload json.RawMessage
+	Version int
+}
+```
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `Payload` | `json.RawMessage` | Schedule's stored JSON, produced without re-encoding its fields. |
+| `Version` | `int` | Stored payload schema version. `SchemaVersion()` returns this value. |
+
+## Repeated calls
+
+Every Run call uses a fresh idempotency key and can produce another message.
+The schedule name is both its routing key and message key. Compaction is
+always enabled, so the new message can supersede an earlier message that
+has not started processing.
+
+The default parallel policy permits overlap even if the stored schedule
+uses exclusive concurrency. Set the run option explicitly to preserve
+exclusive processing for this message.
+
+## CLI
+
+```sh
+sqlstreams scheduler run payment-reminder --concurrency exclusive
+```
+
+Prints the produced message id. `--output json` returns `schedule` and
+`message_id`. Success exits with status `0`, without waiting for processing.
+Omitting `--concurrency` uses `parallel`.
+
+## Errors
+
+| Error | When |
+| --- | --- |
+| Validation error | The name or concurrency policy is invalid, or ordered concurrency is used with compaction. |
+| `ErrScheduleNotFound` | The named schedule is absent. |
+| `ErrStreamNotFound` | The target stream disappears before production. |
+| Payload or schema error | The stored payload/version cannot be produced or the target database schema is unsupported. |
+| Database or context error | A read or produce operation fails. An interrupted produce can have an uncertain outcome. |
+
+## Related topics
+
+- [Register a schedule](/reference/schedule-registration/) — Configure automatic runs.
+- [Read schedule message outcomes](/reference/schedule-messages/) — Inspect processing results.

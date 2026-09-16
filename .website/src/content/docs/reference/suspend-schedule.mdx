@@ -1,0 +1,80 @@
+---
+group: schedule
+title: Suspend a schedule
+description: "Suspend and Unsuspend: pause or resume automatic production."
+slop: medium
+---
+
+```go title="SchedulerHandle"
+Suspend(ctx context.Context) error
+Unsuspend(ctx context.Context) error
+```
+
+`Suspend` stops future automatic production for the named schedule. It does
+not retract produced messages or cancel their consumer handlers.
+
+`Unsuspend` resumes at the expression's next occurrence after the database's
+current time. Occurrences missed while suspended are dropped.
+
+## Example
+
+Using an initialized `client`, suspend the `payment-reminder` schedule:
+
+```go
+if err := client.Scheduler("payment-reminder").Suspend(ctx); err != nil {
+	return err
+}
+```
+
+Resume it when automatic production should continue:
+
+```go
+if err := client.Scheduler("payment-reminder").Unsuspend(ctx); err != nil {
+	return err
+}
+```
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `ctx` | `context.Context` | Yes | Cancellation or its deadline interrupts the database operation. |
+
+## Returns
+
+| Condition | Return value |
+| --- | --- |
+| State change succeeds | `nil`. |
+| Schedule is absent | `ErrScheduleNotFound`. |
+| Validation or database operation fails | `err`. |
+
+Repeated `Suspend` calls leave the schedule suspended. `Unsuspend` recalculates
+the next occurrence even when the schedule was already active. A running
+[manager](/reference/manager/) is required to produce automatic occurrences.
+
+[Run](/reference/run-schedule/) remains available while suspended.
+
+## CLI
+
+```sh
+sqlstreams scheduler suspend payment-reminder
+sqlstreams scheduler unsuspend payment-reminder
+```
+
+Each command reports the new state and exits with status `0` on success.
+An absent schedule exits with status `1`. `--output json` includes `schedule`,
+`suspended`, and `next_scheduled_at`. The last field is `null` on suspension.
+
+## Errors
+
+| Error | When |
+| --- | --- |
+| Validation error | The schedule name is empty. |
+| `ErrScheduleNotFound` | The schedule is absent or disappears before the update. |
+| Expression error | Unsuspend cannot parse the stored expression or find a future occurrence. The change does not commit. |
+| Database or context error | The state change cannot complete. |
+
+## Related topics
+
+- [Retrieve a schedule](/reference/get-schedule/) — Read suspension and scheduled times.
+- [Delete a schedule](/reference/destroy-schedule/) — Permanently remove the registration.

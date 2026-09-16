@@ -1,0 +1,92 @@
+---
+group: schedule
+title: Schedule commands
+description: "CLI syntax for schedule reads, immediate runs, suspension, and destruction."
+slop: high
+---
+
+```sh
+sqlstreams scheduler get payment-reminder
+```
+
+Administers schedules in the selected installation. Declare a schedule
+through [Register](/reference/schedule-registration/) in Go. The CLI has
+no schedule registration command.
+
+## Read schedules
+
+```text
+sqlstreams scheduler list [--quiet]
+sqlstreams scheduler get <name> [--quiet]
+sqlstreams scheduler status <name>
+sqlstreams scheduler messages <name> [--limit 20]
+```
+
+| Command | Output | Absence or empty results |
+| --- | --- | --- |
+| `list` | Table of schedules ordered by name. Quiet prints names. JSON returns [schedule objects](/reference/schedule-object/). | Empty list exits `0`, with JSON `[]`. |
+| `get` | One registration. Quiet suppresses output. | Absent schedule exits `1`, with JSON `null`. |
+| `status` | [Retained outcome counts](/reference/schedule-messages/) per matching consumer group. | No matching groups exits `0`, with JSON `[]`. Absent schedule exits `1`. |
+| `messages` | Newest message outcomes, one row per message and matching group. | Empty results exit `0`, with JSON `[]`. Absent schedule exits `1`. |
+
+Quiet and JSON output cannot be combined. Messages' positive limit counts
+messages, not returned rows. It defaults to `20`.
+
+```sh
+sqlstreams scheduler messages payment-reminder --limit 10 --output json
+```
+
+Status and messages depend on retained outcome rows. Use `DeliveryLogModeAll`
+on the target stream for accurate success reporting.
+
+## Run now
+
+```text
+sqlstreams scheduler run <name> [--concurrency parallel|exclusive]
+```
+
+```sh
+sqlstreams scheduler run payment-reminder --concurrency exclusive
+```
+
+[Run](/reference/run-schedule/) produces the stored payload immediately,
+even while suspended. It leaves scheduled times unchanged and does not wait
+for processing. A newer message can supersede an unprocessed compacted message.
+
+The default concurrency is `parallel`, regardless of the stored schedule's
+policy. Ordered concurrency is incompatible with schedule compaction.
+JSON returns `schedule` and `message_id`. Success exits `0`.
+
+## Suspend and resume
+
+```sh
+sqlstreams scheduler suspend payment-reminder
+sqlstreams scheduler unsuspend payment-reminder
+```
+
+Suspend stops future automatic production. Unsuspend resets the next
+occurrence from the database's current time, dropping missed occurrences.
+Produced messages remain available to consumers.
+
+JSON returns `schedule`, `suspended`, and `next_scheduled_at`. The last field
+is null for suspension. A running manager is required for automatic runs.
+See [Suspend a schedule](/reference/suspend-schedule/) for repeated-call behavior.
+
+## Destroy
+
+```text
+sqlstreams scheduler destroy <name> [--yes]
+```
+
+Permanently removes the registration. Existing messages remain in the stream.
+`--yes` (`-y`) skips interactive confirmation by schedule name and is required
+for non-interactive and JSON use. There is no force flag.
+
+JSON success contains `schedule`, `schedule_id`, and `destroyed: true`.
+An absent schedule exits `1`. A later application `Register` call can recreate it.
+
+## Related topics
+
+- [SQLStreams CLI](/reference/cli/) — Connection, output, and exit status.
+- [The schedule object](/reference/schedule-object/) — Stored fields.
+- [Read schedule message outcomes](/reference/schedule-messages/) — Outcome interpretation.

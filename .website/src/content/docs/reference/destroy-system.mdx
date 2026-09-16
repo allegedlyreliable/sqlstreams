@@ -1,0 +1,81 @@
+---
+group: system
+title: Delete the system
+description: "System.Destroy: remove the installation's streams, messages, and shared tables."
+slop: high
+---
+
+import ThreadAside from '../../../components/thread-aside/thread-aside.svelte';
+
+```go title="SystemHandle.Destroy"
+Destroy(ctx context.Context, options *DestroyOptions) error
+```
+
+Permanently deletes every SQLStreams stream and message in the installation,
+including built-in streams, consumer groups, schedules, workers, and shared
+tables. The PostgreSQL schema itself remains.
+
+## Example
+
+Use an initialized `client` with `ClientConfig.AllowDestroy` enabled.
+Stop applications using the installation and remove user streams before
+calling with the default guards.
+
+```go
+if err := client.System().Destroy(ctx, nil); err != nil {
+	return err
+}
+```
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `ctx` | `context.Context` | Yes | Cancellation or its deadline interrupts deletion. Earlier deletion steps remain completed. |
+| `options` | `*DestroyOptions` | No | `nil` retains the live-worker and user-stream guards. |
+
+### DestroyOptions
+
+| Field | Type | Default | Description |
+| --- | --- | --- | --- |
+| `Force` | `bool` | `false` | Bypasses live-worker and registered-user-stream checks. Does not stop those processes or bypass `ClientConfig.AllowDestroy`. |
+
+## Returns
+
+| Condition | Return value |
+| --- | --- |
+| Deletion succeeds | `nil`. |
+| System is already absent and deletion is enabled | `nil`. |
+| Deletion is disabled, refused, or fails | A non-`nil` error. |
+
+<ThreadAside label="NOTE" title="Partial deletion">
+
+Streams are deleted individually before shared tables. A later error does
+not restore earlier deletions. Retrying resumes the remaining work.
+
+</ThreadAside>
+
+## CLI
+
+```sh
+sqlstreams system destroy --yes
+```
+
+`--yes` skips typing the database name to confirm. `--force` bypasses the
+live-worker and user-stream guards. Noninteractive use and `--output json`
+require `--yes`. Unlike the Go API, the CLI reports an absent system as a failure.
+
+## Errors
+
+| Error | When |
+| --- | --- |
+| `ErrDestroyDisabled` | The client was created without `AllowDestroy`. |
+| `ErrSystemLive` | A worker instance is live and Force is `false`. |
+| `ErrStreamsRegistered` | A non-system stream remains registered and Force is `false`. |
+| `ErrStreamPartitionsRemain` | A stream's partitions cannot be fully removed. |
+| Database or context error | A deletion step fails or is interrupted. |
+
+## Related topics
+
+- [Delete a stream](/reference/destroy-stream/) — Remove one stream.
+- [Register the system](/reference/system-registration/) — Create an installation.

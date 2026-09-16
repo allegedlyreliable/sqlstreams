@@ -1,0 +1,122 @@
+---
+group: stream
+title: Stream commands
+description: "CLI syntax, flags, and output for stream reads, maintenance, rename, and destruction."
+slop: high
+---
+
+```sh
+sqlstreams stream get payments.requested
+```
+
+Inspects or administers registered streams. Connection and output flags are
+[global CLI options](/reference/cli/#connection-and-global-flags). Create and
+configure application streams through [Register](/reference/stream-registration/).
+
+## Read streams
+
+```text
+sqlstreams stream list [--quiet]
+sqlstreams stream get <name> [--quiet]
+sqlstreams stream health <name>
+sqlstreams stream config get <name> [key]
+```
+
+| Command | Output | Empty or absent result |
+| --- | --- | --- |
+| `list` | Registrations ordered by name. JSON is an array of [stream objects](/reference/stream-object/). Quiet prints names only. | Empty list exits `0`, with JSON `[]`. |
+| `get` | One registration. Quiet suppresses output. | Absent stream exits `1`, with JSON `null`. |
+| `health` | [Payload-version retirement evidence](/reference/stream-version-health/), as a table or JSON array. | Empty stream gives `[]` and exits `0`. Absence exits `1`. |
+| `config get` | Config keys with compiled defaults and current values. Optional key selects one. | Absent stream exits `1`. Unknown key exits `2`. |
+
+Quiet and JSON output cannot be combined. Health exits `0` when the read
+succeeds even if a payload version is not safe to retire.
+
+### Config keys
+
+```sh
+sqlstreams stream config get payments.requested retention_ttl
+```
+
+| Key | Value |
+| --- | --- |
+| `retention_ttl` | Retention duration, or `forever` for zero. |
+| `allow_drop_past_committed` | Boolean. |
+| `idempotency_key_ttl` | Idempotency retention duration. |
+| `empty_compaction_head_ttl` | Empty compaction-head cleanup duration. |
+| `delivery_log_mode` | `off`, `failures`, or `all`. |
+
+This command reads configuration. It cannot change it. `PartitionSize` is
+shown by `stream get` because it is fixed at stream creation. JSON config
+output contains `stream`, `stream_id`, and `keys`, each with `key`, `default`,
+and `value` strings.
+
+## Read keyed messages
+
+```text
+sqlstreams stream key messages <stream> <key> [--limit 20]
+sqlstreams stream key compaction-head <stream> <key>
+```
+
+```sh
+sqlstreams stream key messages payments.requested order-123 --limit 10
+```
+
+Messages returns newest ids first, including superseded messages still
+retained. Limit must be positive. An empty list exits `0`. Compaction-head
+returns the key's current message and exits `1` when no head exists.
+JSON uses [stored message fields](/reference/stored-message/) with raw JSON payloads.
+
+## Maintenance
+
+```text
+sqlstreams stream janitor status <name>
+sqlstreams stream janitor suspend <name>
+sqlstreams stream janitor unsuspend <name>
+sqlstreams stream vacuum status <name>
+sqlstreams stream vacuum suspend <name>
+sqlstreams stream vacuum unsuspend <name>
+```
+
+```sh
+sqlstreams stream janitor status payments.requested
+```
+
+Status reads the worker snapshot. JSON formats `unclaimed_for` as a duration
+string. Suspend and unsuspend return `stream`, `worker`, and `suspended` in
+JSON. A suspended status is a successful read, not an exit failure.
+See [maintenance operations](/reference/maintenance/) for effective timing.
+
+## Rename
+
+```sh
+sqlstreams stream rename payments.requested payments.pending
+```
+
+Changes the registered name and preserves its id and data. JSON returns the
+renamed stream object. An absent source or occupied destination exits `1`.
+Using the same old and new name is a usage error. Update application
+[declarations and handles](/reference/rename-stream/) to use the new name.
+
+## Destroy
+
+```text
+sqlstreams stream destroy <name> [--force] [--yes]
+```
+
+| Flag | Default | Effect |
+| --- | --- | --- |
+| `--force` | `false` | Permit deleting a stream that still contains messages. |
+| `--yes`, `-y` | `false` | Skip interactive name confirmation. Required for non-interactive and JSON use. |
+
+Destruction is permanent and can make partial progress before an error.
+The command does not stop application producers or consumers.
+See [Delete a stream](/reference/destroy-stream/) for guards and effects.
+Successful JSON includes `stream`, `stream_id`, and `destroyed: true`.
+Absence exits `1`.
+
+## Related topics
+
+- [SQLStreams CLI](/reference/cli/) — Connection, output, and exit status.
+- [The stream object](/reference/stream-object/) — Registration fields.
+- [Schema migrations](/reference/schema-migrations/#cli) — Stream database version commands.

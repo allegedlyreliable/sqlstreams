@@ -1,0 +1,102 @@
+---
+group: producer
+title: Produce a batch of messages
+description: "ProduceBatch: produce an explicit set of messages in one transaction."
+slop: high
+---
+
+import ThreadAside from '../../../components/thread-aside/thread-aside.svelte';
+
+```go title="ProducerInstance[T].ProduceBatch"
+ProduceBatch(ctx context.Context, items ...*ProduceItem[T]) ([]*ProduceResult[T], error)
+```
+
+Produces all items in one transaction and returns after commit. Results
+follow argument order. This explicit batch has its own transaction and does
+not combine with concurrent `Produce` calls or other explicit batches.
+
+## Example
+
+Use a [registered producer](/reference/producer-registration/) for the
+`payments.requested` stream and the [example payload](/reference/consumer-group/#example-payload).
+
+```go
+first, err := sqlstreams.NewProduceItem(&PaymentRequestedV1{OrderId: "order-123"}, nil)
+if err != nil {
+	return err
+}
+second, err := sqlstreams.NewProduceItem(&PaymentRequestedV1{OrderId: "order-124"}, nil)
+if err != nil {
+	return err
+}
+results, err := producer.ProduceBatch(ctx, first, second)
+if err != nil {
+	return err
+}
+for _, result := range results {
+	fmt.Println(result.Id, result.Duplicate)
+}
+```
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `ctx` | `context.Context` | Yes | Controls the batch operation. A failure at commit can leave its outcome uncertain. |
+| `items` | `...*ProduceItem[T]` | Yes | At least one non-`nil` item with a non-`nil`, JSON-encodable payload and `SchemaVersion` of at least `1`. Caller-supplied idempotency keys are forbidden. |
+
+### NewProduceItem
+
+```go title="sqlstreams.NewProduceItem"
+NewProduceItem[T Versioned](message *T, options *ProduceOptions) (*ProduceItem[T], error)
+```
+
+Pairs a non-`nil` payload with its options. `nil` options use an empty options
+value. It rejects a caller-supplied `IdempotencyKey`. Other option validation
+and producer-default resolution happen when `ProduceBatch` runs.
+
+### ProduceItem
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `Message` | `*T` | Payload to produce. |
+| `Options` | [`ProduceOptions`](/reference/produce/#produceoptions) | Per-message options. Producer message defaults fill unset fields. |
+
+`NewProduceItem` retains the payload pointer and copies the options struct.
+Treat the item and its nested values as immutable while producing.
+
+## Returns
+
+| Condition | Return value |
+| --- | --- |
+| Batch succeeds | `(results, nil)`, one [`ProduceResult`](/reference/produce/#produceresult) per item in argument order. |
+| Batch fails | `(nil, err)`. An item-specific error includes its zero-based index as `item N: ...`. |
+
+## Batch limits and retries
+
+`Batch.AttemptTimeout` bounds each transaction attempt. Automatic-batch
+`MaxSize` does not split an explicit batch. All its messages commit together
+or roll back together.
+
+<ThreadAside label="NOTE" title="Retrying an uncertain commit">
+
+Internal retries reuse generated keys. Calling `ProduceBatch` again generates
+new keys, so retrying after a lost commit confirmation can produce the batch
+again. Use individual `Produce` calls with stable idempotency keys when retries
+must remain protected across calls.
+
+</ThreadAside>
+
+## Errors
+
+| Error | When |
+| --- | --- |
+| Validation error | Items are empty, an item is `nil`, an item sets `IdempotencyKey`, or resolved options or schema versions are invalid. |
+| `ErrPayloadNotEncodable` | An item's payload cannot be encoded as JSON. |
+| Partition creation error | The required message partition cannot be created. |
+| Database or context error | A batch attempt fails or its commit cannot be confirmed. |
+
+## Related topics
+
+- [Produce a message](/reference/produce/) — Automatic batching and caller-supplied idempotency keys.
+- [Register a producer](/reference/producer-registration/) — Batch attempt timeout.

@@ -1,0 +1,95 @@
+---
+group: producer
+title: Produce a message from database work
+description: "ProduceFunc: build a payload inside the transaction that produces it."
+slop: high
+---
+
+import ThreadAside from '../../../components/thread-aside/thread-aside.svelte';
+
+```go title="ProducerInstance[T].ProduceFunc"
+ProduceFunc(ctx context.Context, producerFunc ProducerFunc[T], options *ProduceOptions) (*ProduceResult[T], error)
+```
+
+Opens a transaction, calls `producerFunc`, and produces the returned payload
+in that transaction. Database writes made through the supplied `tx` commit
+with the message. This call does not use automatic batching.
+
+## Example
+
+Use a [registered producer](/reference/producer-registration/) for the
+`payments.requested` stream and the [example payload](/reference/consumer-group/#example-payload).
+The application owns an `orders` table with an `id text PRIMARY KEY` column.
+
+```go
+result, err := producer.ProduceFunc(ctx,
+	func(ctx context.Context, tx sqlstreams.Tx) (*PaymentRequestedV1, error) {
+		if _, err := tx.Exec(ctx,
+			`INSERT INTO orders (id) VALUES ($1) ON CONFLICT DO NOTHING`, "order-123"); err != nil {
+			return nil, err
+		}
+		return &PaymentRequestedV1{OrderId: "order-123"}, nil
+	}, &sqlstreams.ProduceOptions{IdempotencyKey: "payment-request:order-123"})
+if err != nil {
+	return err
+}
+fmt.Println(result.Id, result.Duplicate)
+```
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `ctx` | `context.Context` | Yes | Controls the transaction and retries. A commit failure can leave the outcome uncertain. |
+| `producerFunc` | `ProducerFunc[T]` | Yes | Returns a non-`nil`, JSON-encodable payload with `SchemaVersion` at least `1`, or an error. Use its tx for database work. |
+| `options` | [`*ProduceOptions`](/reference/produce/#produceoptions) | No | `nil` uses producer defaults. A stable `IdempotencyKey` deduplicates message inserts across calls. |
+
+### ProducerFunc
+
+```go
+type ProducerFunc[T Versioned] func(ctx context.Context, tx Tx) (*T, error)
+```
+
+Returning an error rolls back that attempt. SQLStreams owns transaction
+completion. Do not commit or roll back the supplied transaction yourself.
+
+## Returns
+
+| Condition | Return value |
+| --- | --- |
+| Transaction commits a new message | `(result, nil)` with its id. |
+| Idempotency key already exists | `(result, nil)` with `Id == 0` and `Duplicate == true`. |
+| Operation fails | `(nil, err)`. |
+
+The [`ProduceResult`](/reference/produce/#produceresult) contains this call's
+payload, including when the message is a duplicate.
+
+## Callback retries
+
+The callback can run again during transient-error or missing-partition
+recovery. Keep its database writes safe to repeat and use the supplied `tx`.
+Calls to external services do not roll back with the transaction.
+
+<ThreadAside label="NOTE" title="The callback runs before deduplication">
+
+An existing `IdempotencyKey` skips the message insert, not `producerFunc`.
+The callback still runs and its writes may commit. The example's order insert
+uses its primary key to make repeating that application write harmless.
+
+</ThreadAside>
+
+## Errors
+
+| Error | When |
+| --- | --- |
+| Validation error | `producerFunc` is `nil`, the returned payload version is invalid, or options are invalid. |
+| Callback error | `producerFunc` returns an error. |
+| `ErrPayloadNotEncodable` | The returned payload cannot be encoded as JSON. |
+| Partition creation error | The message's covering partition cannot be created. |
+| Database or context error | The transaction fails, retries are exhausted, or commit cannot be confirmed. |
+
+## Related topics
+
+- [Produce a message](/reference/produce/) — Options, idempotency, and result fields.
+- [Register a producer](/reference/producer-registration/) — Defaults and slow-call logging.
+- [Produce messages in a database transaction](/guides/transactional-produce/) — A complete example that saves a user and requests a welcome email.

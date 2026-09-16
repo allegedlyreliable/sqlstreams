@@ -1,0 +1,118 @@
+---
+group: producer
+title: Produce within a transaction
+description: "ProduceInTx and ProduceFuncInTx: produce using a transaction whose commit the caller controls."
+slop: high
+---
+
+import ThreadAside from '../../../components/thread-aside/thread-aside.svelte';
+
+```go title="ProducerInstance[T]"
+ProduceInTx(ctx context.Context, tx Tx, message *T, options *ProduceOptions) (*ProduceResult[T], error)
+ProduceFuncInTx(ctx context.Context, tx Tx, producerFunc ProducerFunc[T], options *ProduceOptions) (*ProduceResult[T], error)
+```
+
+`ProduceInTx` inserts a supplied payload into an existing transaction.
+`ProduceFuncInTx` first runs your callback in that transaction to build the
+payload. Neither method commits the transaction. The message becomes visible
+when your application commits it.
+
+## Example
+
+Use an initialized `client`, a registered `producer` for the `payments.requested` stream,
+and the [example payload](/reference/consumer-group/#example-payload).
+
+```go
+err := client.InTransaction(ctx, func(ctx context.Context, tx sqlstreams.Tx) error {
+	_, err := producer.ProduceInTx(ctx, tx, &PaymentRequestedV1{OrderId: "order-123"},
+		&sqlstreams.ProduceOptions{IdempotencyKey: "payment-request:order-123"})
+	return err
+})
+if err != nil {
+	return err
+}
+```
+
+Place application writes before `ProduceInTx` inside the callback. All writes
+through `tx` and the message commit together.
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `ctx` | `context.Context` | Yes | Controls this call's database statements. |
+| `tx` | [`Tx`](/reference/transactions/#tx-and-querier) | Yes | An open transaction on the database containing this stream. The caller controls its completion. |
+| `message` | `*T` | `ProduceInTx` | A non-`nil`, JSON-encodable payload with `SchemaVersion` at least `1`. |
+| `producerFunc` | [`ProducerFunc[T]`](/reference/produce-func/#producerfunc) | `ProduceFuncInTx` | A non-`nil` callback returning the payload from work performed through the supplied tx. |
+| `options` | [`*ProduceOptions`](/reference/produce/#produceoptions) | No | `nil` uses producer defaults. Stable idempotency keys deduplicate message inserts across retries. |
+
+## ProduceFuncInTx
+
+Use this variant when the payload depends on database work. The application
+owns an `orders` table with an `id text PRIMARY KEY` column in this example.
+
+```go
+err := client.InTransaction(ctx, func(ctx context.Context, tx sqlstreams.Tx) error {
+	_, err := producer.ProduceFuncInTx(ctx, tx,
+		func(ctx context.Context, tx sqlstreams.Tx) (*PaymentRequestedV1, error) {
+			if _, err := tx.Exec(ctx,
+				`INSERT INTO orders (id) VALUES ($1) ON CONFLICT DO NOTHING`, "order-123"); err != nil {
+				return nil, err
+			}
+			return &PaymentRequestedV1{OrderId: "order-123"}, nil
+		}, &sqlstreams.ProduceOptions{IdempotencyKey: "payment-request:order-123"})
+	return err
+})
+if err != nil {
+	return err
+}
+```
+
+Missing-partition recovery can rerun `producerFunc` within a savepoint. It does
+not rerun earlier work in the outer transaction. The callback runs before
+message deduplication, including when the idempotency key already exists.
+
+## Returns
+
+| Condition | Return value |
+| --- | --- |
+| Message inserted in tx | `(result, nil)` with its allocated id. Commit is still pending. |
+| Idempotency key already exists | `(result, nil)` with `Id == 0` and `Duplicate == true`. |
+| Call fails | `(nil, err)`. The caller must handle transaction failure. |
+
+Result fields follow [`ProduceResult`](/reference/produce/#produceresult).
+
+## Transaction lifetime
+
+Neither method retries a transient failure of the outer transaction.
+`Client.InTransaction` also calls its callback only once. Keep work following
+the insert short because an open produce transaction can delay consumer claims.
+
+Idempotency and compaction-key locks remain held until the transaction ends.
+When writing several compacted keys, use a consistent key order across
+transactions to avoid deadlocks. A deadlock aborts a transaction and must be
+handled by its caller.
+
+<ThreadAside label="NOTE" title="A returned id is not a committed message">
+
+Do not report that the message was produced from inside the callback. Wait for
+`InTransaction` to return successfully. A commit error can leave the caller
+uncertain even when the earlier produce call returned an id.
+
+</ThreadAside>
+
+## Errors
+
+| Error | When |
+| --- | --- |
+| Validation error | tx or `producerFunc` is `nil`, or options or payload schema version are invalid. |
+| Callback error | `producerFunc` returns an error. |
+| `ErrPayloadNotEncodable` | JSON encoding rejects the payload. |
+| Partition creation error | The message's covering partition cannot be created. |
+| Database or context error | A statement fails or is interrupted. |
+
+## Related topics
+
+- [Run a database transaction](/reference/transactions/) — Transaction ownership and failure handling.
+- [Produce a message from database work](/reference/produce-func/) — Let the producer own the transaction.
+- [Produce messages in a database transaction](/guides/transactional-produce/) — A complete example of saving application data with its message.

@@ -1,0 +1,84 @@
+---
+group: stream
+title: Delete a stream
+description: "Destroy: permanently delete a stream, its messages, and its consumer groups."
+slop: high
+---
+
+import ThreadAside from '../../../components/thread-aside/thread-aside.svelte';
+
+```go title="StreamHandle[T].Destroy"
+Destroy(ctx context.Context, options *DestroyOptions) error
+```
+
+Permanently deletes the stream, its messages, consumer groups, and associated
+stream tables. The default guard refuses deletion while the message log
+contains any messages, including messages already processed by every group.
+
+## Example
+
+Delete the empty `payments.requested` stream using an initialized `client`
+created with `ClientConfig.AllowDestroy` enabled. Stop applications using
+the stream before deletion.
+
+```go
+payments := client.Stream[sqlstreams.RawPayload]("payments.requested")
+if err := payments.Destroy(ctx, nil); err != nil {
+	return err
+}
+```
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `ctx` | `context.Context` | Yes | Cancellation or its deadline interrupts deletion. Partitions removed by earlier steps remain deleted. |
+| `options` | `*DestroyOptions` | No | `nil` retains the empty-stream guard. |
+
+### DestroyOptions
+
+| Field | Type | Default | Description |
+| --- | --- | --- | --- |
+| `Force` | `bool` | `false` | Allows deletion while messages remain. Does not bypass `ClientConfig.AllowDestroy` or stop running applications. |
+
+## Returns
+
+| Condition | Return value |
+| --- | --- |
+| Deletion succeeds | `nil`. |
+| Deletion is refused or fails | A non-`nil` error. |
+
+<ThreadAside label="NOTE" title="Deletion can complete partially">
+
+Message partitions are removed before the final table and registration
+cleanup. An error does not imply that the stream's data is intact. Stop
+producers before retrying a deletion interrupted by new partition creation.
+
+</ThreadAside>
+
+## CLI
+
+```sh
+sqlstreams stream destroy payments.requested --yes
+```
+
+`--yes` skips the confirmation prompt. Add `--force` to delete a nonempty
+stream. Without `--yes`, an interactive terminal requires typing the stream
+name. Noninteractive execution and `--output json` require `--yes`.
+
+## Errors
+
+| Error | When |
+| --- | --- |
+| `ErrDestroyDisabled` | The client was created without `AllowDestroy`. |
+| Validation error | The stream name is empty. |
+| `ErrReservedStreamName` | The name starts with `__system.`. |
+| `ErrStreamNotFound` | The stream is absent. |
+| `ErrStreamNotEmpty` | Messages remain and `Force` is `false`. |
+| `ErrStreamPartitionsRemain` | Partition removal cannot finish, for example while producers create new partitions. |
+| Database or context error | A deletion step fails or is interrupted. |
+
+## Related topics
+
+- [Retrieve a stream](/reference/get-stream/) — Inspect the current registration.
+- [Delete a consumer group](/reference/destroy-consumer/) — Delete one group's progress while retaining the stream.

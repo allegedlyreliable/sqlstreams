@@ -1,7 +1,7 @@
 ---
 group: consumer
 title: Stop a consumer gracefully
-description: Connect shutdown signals, let active handlers finish, and verify that the database pool closes after Consume returns.
+description: Connect shutdown signals, let active consumer handlers finish, and verify that the database pool closes after Consume returns.
 slop: medium
 ---
 
@@ -23,7 +23,7 @@ stream. This guide keeps that stream and the `email-sender` consumer group.
 
 ## 1. Connect shutdown to the consumer's lifetime
 
-Replace `cmd/consume/main.go` with this complete example. The handler simulates three seconds
+Replace `cmd/consume/main.go` with this complete example. The consumer handler simulates three seconds
 of work and prints the message id. It does not send an email.
 
 ```go title="cmd/consume/main.go"
@@ -136,7 +136,7 @@ Start the consumer:
 go run ./cmd/consume
 ```
 
-As soon as you see `started message`, press **Ctrl-C once**. The handler
+As soon as you see `started message`, press **Ctrl-C once**. The consumer handler
 should finish its simulated work before `Consume` returns and the pool
 closes.
 
@@ -153,27 +153,27 @@ database pool closed
 time=2026-09-14T20:45:23.728-04:00 level=INFO msg="graceful shutdown complete"
 ```
 
-## 3. Use the handler's context for its work
+## 3. Use the consumer handler's context for its work
 
 When replacing the simulated wait with database calls or HTTP requests,
-pass the handler's `ctx` to those operations. Keep `sessionCtx` for the
+pass the consumer handler's `ctx` to those operations. Keep `sessionCtx` for the
 consumer session. The two contexts have different jobs.
 
-Cancelling `sessionCtx` starts shutdown. A handler already running gets time
+Cancelling `sessionCtx` starts shutdown. A consumer handler already running gets time
 to finish under its own timeout. If that timeout expires, its `ctx` is
-cancelled and the handler should return promptly. The timer example selects
+cancelled and the consumer handler should return promptly. The timer example selects
 on `ctx.Done()` so it can return without completing the wait.
 
 Go cannot forcibly stop application code that ignores cancellation. Check
-that your database and HTTP calls use the handler's context before relying
+that your database and HTTP calls use the consumer handler's context before relying
 on graceful shutdown in your application.
 
 <ThreadAside label="NOTE" title="Allow time to stop in a deployment">
 
 A deployment can interrupt this sequence if it kills the process while a
-handler is still finishing. Keep `ShutdownTimeout` unset for the derived
+consumer handler is still finishing. Keep `ShutdownTimeout` unset for the derived
 drain budget, and configure your deployment to allow that wait plus cleanup
-time. The [ShutdownTimeout reference](/reference/consumer-session-options/#shutdowntimeout)
+time. The [ShutdownTimeout reference](/reference/consume/#shutdowntimeout)
 gives the calculation.
 
 </ThreadAside>
@@ -181,7 +181,7 @@ gives the calculation.
 ## Related topics
 
 - [Consumer groups](/concepts/consumer-groups/#a-message-can-run-again) — Why
-  processing can repeat after a handler succeeds.
+  processing can repeat after a consumer handler succeeds.
 - [Consumer leases](/concepts/consumer-leases/) — When unfinished work becomes
   available for another instance to claim.
 - [Consumer stopped log](/reference/consumer-stopped-log/) — Inspect the

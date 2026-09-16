@@ -1,0 +1,91 @@
+---
+group: consumer
+title: Read consumer bindings
+description: "Binding.Get and System.Bindings: inspect effective routing declarations and waiting changes."
+slop: high
+---
+
+```go title="BindingHandle.Get"
+Get(ctx context.Context) (*Binding, error)
+```
+
+```go title="SystemHandle.Bindings"
+Bindings(ctx context.Context) ([]*Binding, error)
+```
+
+`Get` reads a consumer group's effective binding declaration. `System.Bindings`
+lists effective declarations and outstanding declarations waiting to replace
+them, ordered by stream and group.
+
+## Example
+
+Inspect the `charge-cards` group on the `payments.requested` stream with an initialized
+`client`. `RawPayload` is sufficient for this configuration read.
+
+```go
+payments := client.Stream[sqlstreams.RawPayload]("payments.requested")
+binding, err := payments.Consumer("charge-cards").Binding().Get(ctx)
+if err != nil {
+	return err
+}
+if binding != nil {
+	fmt.Println(binding.Status, binding.Patterns)
+}
+```
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `ctx` | `context.Context` | Yes | Cancellation or its deadline interrupts the database read. |
+
+## Returns
+
+| Operation and condition | Return value |
+| --- | --- |
+| `Get` finds an effective declaration | `(binding, nil)`. |
+| `Get` finds no stream, group, or binding declaration | `(nil, nil)`. A group that never declared bindings reads the whole stream. |
+| `Bindings` finds declarations | `(bindings, nil)`, ordered by stream and group. |
+| `Bindings` finds none | `(nil, nil)`. |
+| Read fails | A `nil` result and non-`nil` error. |
+
+### Binding
+
+| Field | Type | JSON name | Description |
+| --- | --- | --- | --- |
+| `ConsumerGroupName` | `string` | `consumer_group` | The group declaring the binding set. |
+| `StreamName` | `string` | `stream` | The group's stream. |
+| `Status` | `BindingOutcome` | `status` | The outcome of the declaration attempt. |
+| `Patterns` | `[]string` | `patterns` | The complete routing pattern set. An empty set means the whole stream. |
+| `DeclaredBy` | `string` | `declared_by` | Identity of the declaring process. |
+| `DeclaredAt` | `time.Time` | `declared_at` | When the declaration was made. |
+| `AttemptedAt` | `time.Time` | `attempted_at` | When this declarer last attempted to install the set. |
+
+### BindingOutcome
+
+| Constant | Value | Meaning |
+| --- | --- | --- |
+| `BindingInstalled` | `"installed"` | The declaration became effective. |
+| `BindingJoined` | `"joined"` | The declaration matched the effective set. |
+| `BindingWaiting` | `"waiting"` | A different set remained in use by a live instance. |
+
+## CLI
+
+```sh
+sqlstreams consumer binding get payments.requested charge-cards
+sqlstreams system binding list
+```
+
+Both commands support `--output json`.
+
+## Errors
+
+| Error | When |
+| --- | --- |
+| Validation error | `Get` receives an empty stream or group name. |
+| Database or context error | The read fails or is interrupted. |
+
+## Related topics
+
+- [Register a consumer group](/reference/consumer-registration/) — Declare binding patterns and change routing.
+- [Produce options](/reference/produce/#produceoptions) — Assign routing keys to messages.

@@ -1,0 +1,56 @@
+---
+group: schedule
+title: The schedule object
+description: "Schedule: stored expression, payload, settings, and scheduled times."
+slop: high
+---
+
+```go title="sqlstreams.Schedule"
+type Schedule struct {
+	Id              int64             `json:"schedule_id"`
+	SystemId        int64             `json:"system_id"`
+	StreamId        int64             `json:"stream_id"`
+	Name            string            `json:"schedule"`
+	Expression      string            `json:"expression"`
+	SchemaVersion   int               `json:"schema_version"`
+	Concurrency     ConcurrencyPolicy `json:"concurrency"`
+	Timeout         time.Duration     `json:"timeout"`
+	Suspended       bool              `json:"suspended"`
+	Payload         json.RawMessage   `json:"payload"`
+	Metadata        json.RawMessage   `json:"metadata"`
+	NextScheduledAt time.Time         `json:"next_scheduled_at"`
+	LastScheduledAt *time.Time        `json:"last_scheduled_at"`
+}
+```
+
+A schedule stores a payload to produce repeatedly into one stream.
+
+## Fields
+
+| Field | Type | JSON name | Description |
+| --- | --- | --- | --- |
+| `Id` | `int64` | `schedule_id` | Schedule id. |
+| `SystemId` | `int64` | `system_id` | Owning SQLStreams installation. |
+| `StreamId` | `int64` | `stream_id` | Target stream for produced messages. |
+| `Name` | `string` | `schedule` | Registration name, also used as each message's routing key and message key. |
+| `Expression` | `string` | `expression` | Stored cron expression or descriptor. |
+| `SchemaVersion` | `int` | `schema_version` | Version attached to the stored payload when produced. |
+| `Concurrency` | `ConcurrencyPolicy` | `concurrency` | Requested concurrency policy for automatically produced messages. |
+| `Timeout` | `time.Duration` | `timeout` | Requested consumer handler timeout for each message. Consumer group bounds still apply. |
+| `Suspended` | `bool` | `suspended` | Whether automatic production is suspended. An explicit `Run` can still produce. |
+| `Payload` | `json.RawMessage` | `payload` | JSON payload reused on every run. |
+| `Metadata` | `json.RawMessage` | `metadata` | Registration metadata. Defaults to `{}`. |
+| `NextScheduledAt` | `time.Time` | `next_scheduled_at` | Scheduled time awaiting automatic production. It remains stored while suspended. |
+| `LastScheduledAt` | `*time.Time` | `last_scheduled_at` | Scheduled time of the last automatic produce, rather than its completion time. `nil` before the first automatic produce. Explicit `Run` does not update it. |
+
+Go JSON encoding represents `Timeout` in nanoseconds. The CLI formats it as a duration string.
+
+## Related topics
+
+- [Register a schedule](/reference/schedule-registration/) — Expression, payload, and settings.
+- [Retrieve a schedule](/reference/get-schedule/) — Read the current object.
+- [List schedules](/reference/list-schedules/) — Find registrations.
+- [Suspend a schedule](/reference/suspend-schedule/) — Pause or resume automatic production.
+- [Run a schedule now](/reference/run-schedule/) — `Produce` outside its expression.
+- [Read schedule message outcomes](/reference/schedule-messages/) — Outcomes by consumer group.
+- [Delete a schedule](/reference/destroy-schedule/) — Remove its registration.

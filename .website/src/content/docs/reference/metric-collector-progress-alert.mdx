@@ -1,0 +1,104 @@
+---
+group: system
+title: Collector progress alert (SQL0101)
+description: "metrics_collector_progress: missing completed collections while manager leases continue."
+slop: high
+---
+
+```text title="Alert name"
+metrics_collector_progress
+```
+
+Reports that metrics collection has not completed within the allowed age
+while the system manager remains active. It checks collector completion
+separately from the collector's own work, so partial collections cannot
+keep the alert healthy.
+
+## Definition
+
+| Property | Value |
+| --- | --- |
+| Code | `SQL0101` |
+| Severity | `warn` |
+| Owner | System. |
+| Evidence | Latest retained `sqlstreams.metrics.collector.completed_timestamp` measurement and retained system-manager lease intervals. |
+| Unhealthy condition | Completion is absent or at least `MaximumAge` old, with current manager lease coverage. |
+| Default `MaximumAge` | Greater of `2m` and three times the collector's declared `PollRate`. |
+| Default activation | `2m` of established unhealthy time with continuous manager lease coverage. |
+| Default evaluation schedule | `@every 1m`. |
+| Active reminders | Every `4h` by default. |
+
+## Example
+
+Using an initialized `client`, evaluate collector progress:
+
+```go
+snapshot, err := client.System().Alerts().MetricCollectorProgress().Snapshot(ctx)
+if err != nil {
+	return err
+}
+fmt.Println(snapshot.State, snapshot.MaximumAge)
+```
+
+`Snapshot` does not write or resolve a report. Use `Latest` or `History` on
+the same selector to read retained reports. See [Read alerts](/reference/read-alerts/)
+for their returns, fields, and errors.
+
+## Configuration
+
+Set [`SystemConfig.MetricCollectorProgressAlert`](/reference/system-registration/#metriccollectorprogressalertconfig)
+when registering the system. `MaximumAge` resolves during evaluation from
+the registered collector's poll rate unless explicitly set.
+
+`PendingDuration` requires a continuous manager lease span. `DisablePending`
+removes the pending delay but still requires current manager coverage.
+There is no `MaximumGap` setting for this alert. Queued checks retain their
+policy, while `Snapshot` reads the current schedule declaration.
+
+## Evaluation and resolution
+
+| Evidence | Result |
+| --- | --- |
+| Valid completion younger than `MaximumAge` | Healthy. Resolve an active report. |
+| Missing or old completion, with enough continuous manager coverage after it became unhealthy | Active. Write a report or a due reminder. |
+| Current coverage exists but the unhealthy span is too short | Pending. Leave the report unchanged. |
+| No current manager lease coverage | Insufficient evidence. Leave the report unchanged. |
+| Malformed or future completion evidence | Insufficient evidence with `EvidenceInvalid` set. Leave the report unchanged. |
+
+A valid completion must have the declared gauge name and seconds unit, with
+a positive integer Unix timestamp no later than database evaluation time.
+
+When a completion exists, unhealthy time starts after its `MaximumAge` has
+elapsed. Time before continuous manager coverage does not count. Touching
+or overlapping manager leases preserve coverage across instances.
+
+This alert does not detect a completely stopped installation. Without a
+manager, its scheduled check cannot run. Use external availability monitoring
+for that failure.
+
+## Reported data
+
+Active [Alert reports](/reference/read-alerts/#alert) add:
+
+| Data key | Type | Meaning |
+| --- | --- | --- |
+| `completed_at` | Timestamp | Last completed pass, or the zero time when none is retained. |
+| `maximum_age` | Number | Effective allowed age in nanoseconds. |
+
+The report message distinguishes an overdue completion from no retained
+completion. Resolved reports do not retain the active-report data fields.
+
+## CLI
+
+```sh
+sqlstreams alert latest metrics_collector_progress
+```
+
+This is a system-owned alert, so no stream flag is needed. No retained report
+exits with status `1`. See [alert commands](/reference/alert-cli/).
+
+## Related topics
+
+- [System metrics](/reference/system-metrics/#collector-completion) — The collector completion measurement.
+- [Run the system manager](/reference/manager/) — Worker lifecycle.
+- [Worker is not running](/troubleshooting/worker-not-running/) — Inspect worker state and failures.

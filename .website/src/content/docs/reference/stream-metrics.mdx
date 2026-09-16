@@ -1,0 +1,101 @@
+---
+group: stream
+title: Stream metrics
+description: "Snapshot and metric selectors: partitions, compaction state, and consumer groups."
+slop: medium
+---
+
+```go title="StreamMetricsHandle"
+// Read the stream's current state and its consumer groups.
+Snapshot(ctx context.Context) (*StreamSnapshot, error)
+
+// List the built-in metrics and their definitions.
+Definitions() []MetricDefinition
+
+// Select a metric to read with Latest or History.
+Compacted() *MetricHandle
+Partitions() *MetricHandle
+UnclaimedWorkers() *MetricHandle
+```
+
+`Snapshot` reads current state directly from the database. The three selectors provide
+access to measurements saved by the metrics collector. `Definitions` and
+the selectors perform no I/O themselves.
+
+## Example
+
+Using an initialized `client`, inspect the `payments.requested` stream:
+
+```go
+metrics := client.Stream[sqlstreams.RawPayload]("payments.requested").Metrics()
+snapshot, err := metrics.Snapshot(ctx)
+if err != nil {
+	return err
+}
+fmt.Println(snapshot.Partitions, snapshot.CompactionRowsWithoutHead)
+```
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `ctx` | `context.Context` | For `Snapshot` | Cancellation or its deadline interrupts the database reads. |
+
+## Returns
+
+| Condition | Return value |
+| --- | --- |
+| `Snapshot` succeeds | `(snapshot, nil)`. `Groups` is empty when no consumer groups are registered. |
+| Stream is absent | `(nil, ErrStreamNotFound)`. |
+| Stream or group read fails | `(nil, err)`. |
+
+### StreamSnapshot
+
+| Field | Type | JSON name | Description |
+| --- | --- | --- | --- |
+| `StreamId` | `int64` | `stream_id` | Registered stream id. |
+| `Partitions` | `int64` | `partitions` | Direct partitions of the stream's message log. |
+| `Compacted` | `bool` | `compacted` | Whether any compaction-head row currently points to a message. |
+| `CompactionRowsWithoutHead` | `int64` | `compaction_rows_without_head` | Compaction-head rows whose message pointer is null. |
+| `OldestCompactionRowWithoutHeadAge` | `time.Duration` | `oldest_compaction_row_without_head_age` | Age since the oldest empty row's last update. `0` when no empty rows exist. |
+| `Groups` | `[]ConsumerGroupSnapshot` | `groups` | [Consumer group snapshots](/reference/consumer-metrics/#consumergroupsnapshot), ordered by group name. |
+
+## Collected series
+
+Call `Latest(ctx)` or `History(ctx, limit)` on a selector to read retained
+measurements. All three series are gauges with the `stream` attribute.
+
+| Selector | Wire name | Code | Unit | Value |
+| --- | --- | --- | --- | --- |
+| `Compacted()` | `sqlstreams.stream.state.compacted` | `SQL0079` | None | `1` when any compaction-head row points to a message, otherwise `0`. It is not a permanent flag that compaction was ever used. |
+| `Partitions()` | `sqlstreams.stream.state.partitions` | `SQL0098` | `{partition}` | Message-log partition count. Metadata includes compaction state. |
+| `UnclaimedWorkers()` | `sqlstreams.stream.workers.unclaimed` | `SQL0099` | `{worker}` | Workers owned by this stream or its consumer groups with no live instance and a nonzero target. Metadata identifies the workers. |
+
+These readings depend on the [metrics collector](/reference/read-metrics/#collection-and-retention).
+Check each measurement's `At` for freshness. `Definitions` lists these three
+built-ins in SQL code order.
+
+## CLI
+
+```sh
+sqlstreams metric latest sqlstreams.stream.state.partitions \
+  --attribute stream=payments.requested
+```
+
+Reads collected partition counts. [Metric commands](/reference/metric-cli/)
+provide history and filtering. The Go `Snapshot` API reads current state.
+
+## Errors
+
+| Error | When |
+| --- | --- |
+| Validation error | The stream name is empty. |
+| `ErrStreamNotFound` | The stream is not registered. |
+| `ErrConsumerNotFound` | A group's cursor disappears while building its snapshot. |
+| Database, decoding, or context error | A required source read fails. |
+
+## Related topics
+
+- [Consumer metrics](/reference/consumer-metrics/) — Fields within each group snapshot.
+- [Read metric measurements](/reference/read-metrics/) — Collected values, units, and freshness.
+- [Read payload version health](/reference/stream-version-health/) — Payload-version presence and unresolved messages.

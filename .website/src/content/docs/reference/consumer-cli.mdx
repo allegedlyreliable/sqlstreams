@@ -1,0 +1,202 @@
+---
+group: consumer
+title: Consumer commands
+description: "sqlstreams consumer: list, get, worker list, binding get, and destroy."
+slop: high
+---
+
+import ThreadAside from '../../../components/thread-aside/thread-aside.svelte';
+
+```sh
+sqlstreams consumer --help
+```
+
+Inspects or deletes consumer-group registrations. Use
+[Consume](/reference/consume/) in an application to process messages.
+
+## Connection and output
+
+[Global CLI options](/reference/cli/#connection-and-global-flags) define
+connection flags, output formats, and error output. Command-specific results
+and exit statuses are listed below.
+
+## consumer list
+
+```sh
+sqlstreams consumer list payments.requested
+```
+
+Lists groups registered on the `payments.requested` stream, ordered by name.
+
+### Arguments and flags
+
+| Argument or flag | Required / default | Description |
+| --- | --- | --- |
+| `stream` | Required | Stream name. |
+| `--quiet`, `-q` | `false` | Prints names only, one per line. Cannot be combined with `--output json`. |
+
+### Output
+
+| Condition | Text | JSON | Exit |
+| --- | --- | --- | --- |
+| Groups exist | Name and id table, followed by a count. | Array of [consumer objects](/reference/consumer-group/). | `0` |
+| Stream has no groups | `no consumers registered`. Quiet mode prints nothing. | `[]` | `0` |
+| Stream is absent or the read fails | Diagnostic on stderr. | Diagnostic on stderr. | `1` |
+
+## consumer get
+
+```sh
+sqlstreams consumer get payments.requested charge-cards
+```
+
+Reads the `charge-cards` group's registration on the `payments.requested` stream.
+
+### Arguments and flags
+
+| Argument or flag | Required / default | Description |
+| --- | --- | --- |
+| `stream` | Required | Stream name. |
+| `consumer` | Required | Group name on that stream. |
+| `--quiet`, `-q` | `false` | Suppresses result output. Exit status reports presence. Failure diagnostics still appear on stderr. Cannot be combined with `--output json`. |
+
+### Output
+
+| Condition | Text | JSON | Exit |
+| --- | --- | --- | --- |
+| Group is registered | Registration details. | [Consumer object](/reference/consumer-group/). | `0` |
+| Stream or group is absent | Absence message. | `null` | `1` |
+| Read fails | Diagnostic on stderr. | Diagnostic on stderr. | `1` |
+
+<ThreadAside label="NOTE" title="Running instances">
+
+A group can remain registered when no instances are running. This command
+reports registration, not current instance activity.
+
+</ThreadAside>
+
+## consumer worker list
+
+```sh
+sqlstreams consumer worker list payments.requested charge-cards message.timeout
+```
+
+Reads configuration values stored for the group's workers.
+
+### Arguments
+
+| Argument | Required | Description |
+| --- | --- | --- |
+| `stream` | Yes | Stream name. |
+| `consumer` | Yes | Group name on that stream. |
+| `key` | No | Stored key or dotted prefix. For example, `message` selects all stored message-option fields. Omit to list all keys. |
+
+### Output
+
+| Condition | Text | JSON | Exit |
+| --- | --- | --- | --- |
+| Matching keys exist | Key, worker name, and formatted value table. | Document described below. | `0` |
+| No configuration is declared | Group identity and a no-configuration message. | Document with `keys: []`. | `0` |
+| Configuration exists but the requested key has no match | Diagnostic on stderr. | Diagnostic on stderr. | `1` |
+| Stream or group is absent, or the read fails | Diagnostic on stderr. | Diagnostic on stderr. | `1` |
+
+The JSON document contains these fields:
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `stream` | string | Stream name. |
+| `consumer` | string | Group name. |
+| `keys` | array | Matching entries, ordered by key and worker name. Each entry has the fields below. |
+
+| Entry field | Type | Description |
+| --- | --- | --- |
+| `key` | string | Stored configuration key. |
+| `worker` | string | Worker whose configuration supplied the value. |
+| `value` | string | Formatted stored value. Empty for an absent or zero value in this display. |
+
+<ThreadAside label="NOTE" title="Stored settings and effective defaults">
+
+Stored configuration can omit fields that use defaults. An empty value here
+does not establish the effective runtime setting. These are group settings.
+[`ConsumeOptions`](/reference/consume/#consumeoptions) applies to one `Consume`
+call and is not stored here.
+
+</ThreadAside>
+
+## consumer binding get
+
+```sh
+sqlstreams consumer binding get payments.requested charge-cards --output json
+```
+
+Reads the group's newest installed routing-key binding declaration.
+It does not update the group's bindings.
+
+### Arguments
+
+| Argument | Required | Description |
+| --- | --- | --- |
+| `stream` | Yes | Stream name. |
+| `consumer` | Yes | Group name on that stream. |
+
+### Output
+
+| Condition | Text | JSON | Exit |
+| --- | --- | --- | --- |
+| Installed declaration exists | Binding details. | Binding object with fields below. | `0` |
+| Registered group has no binding declaration | Message stating that the group receives the whole stream. | `null` | `0` |
+| Stream or group is absent, or the read fails | Diagnostic on stderr. | Diagnostic on stderr. | `1` |
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `consumer_group` | string | Group name. |
+| `stream` | string | Stream name. |
+| `status` | string | `installed` for the effective declaration. |
+| `patterns` | array of strings | Routing-key patterns. An empty set selects the whole stream. |
+| `declared_by` | string | Identity of the declaring process. |
+| `declared_at` | timestamp | When the process registered this declaration. |
+| `attempted_at` | timestamp | The declaration's latest installation attempt. |
+
+See [Register's behavior](/reference/consumer-registration/#behavior) for
+when changed bindings can be installed.
+
+## consumer destroy
+
+```sh
+sqlstreams consumer destroy payments.requested charge-cards --yes
+```
+
+Permanently deletes the group and its cursor, bindings, leases, exception
+rows, processing history, workers, and schedules. The stream and its messages remain.
+
+### Arguments and flags
+
+| Argument or flag | Required / default | Description |
+| --- | --- | --- |
+| `stream` | Required | Stream name. |
+| `consumer` | Required | Group name on that stream. |
+| `--yes`, `-y` | `false` | Skips typing the group name to confirm. Required for noninteractive use and `--output json`. |
+| `--force` | `false` | Bypasses checks for live instances and remaining exception rows. |
+
+### Output
+
+| Condition | Text | JSON | Exit |
+| --- | --- | --- | --- |
+| Deletion succeeds | Deletion confirmation. | Object containing `stream`, `consumer`, and `destroyed: true`. | `0` |
+| Typed confirmation does not match | Aborted message. | JSON requires `--yes`. | `1` |
+| Resource is absent, deletion is refused, or database operation fails | Diagnostic on stderr. | Diagnostic on stderr. | `1` |
+| Noninteractive or JSON use without `--yes` | Diagnostic on stderr. | Diagnostic on stderr. | `2` |
+
+<ThreadAside label="NOTE" title="Forcing deletion">
+
+`--force` deletes the shared registration while instances may still be
+running and discards exception rows, including dead messages. It does not
+perform graceful shutdown. See [Destroy](/reference/destroy-consumer/)
+for deletion guards and effects.
+
+</ThreadAside>
+
+## Related topics
+
+- [The consumer group object](/reference/consumer-group/) — Group identity and stored configuration.
+- [Consumer metrics](/reference/consumer-metrics/) — Inspect progress and outstanding work.
+- [Messages are not being claimed](/troubleshooting/messages-not-claimed/) — Investigate repeated claim failures.

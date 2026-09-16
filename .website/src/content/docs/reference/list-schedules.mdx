@@ -1,0 +1,65 @@
+---
+group: schedule
+title: List schedules
+description: "Schedulers: list registered schedules in name order."
+slop: high
+---
+
+```go title="Client.Schedulers"
+Schedulers(ctx context.Context) ([]*Schedule, error)
+```
+
+Lists every schedule in the client's installation, ordered by name. The list
+includes suspended schedules and SQLStreams' built-in schedules.
+
+## Example
+
+Using an initialized `client`:
+
+```go
+schedules, err := client.Schedulers(ctx)
+if err != nil {
+	return err
+}
+for _, schedule := range schedules {
+	fmt.Println(schedule.Name, schedule.Expression, schedule.Suspended)
+}
+```
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `ctx` | `context.Context` | Yes | Cancellation or its deadline interrupts the database read. |
+
+## Returns
+
+| Condition | Return value |
+| --- | --- |
+| Schedules exist | `(schedules, nil)`, containing [schedule objects](/reference/schedule-object/). |
+| No schedules exist | `(nil, nil)`. |
+| Read fails, including absent schedule tables | `(nil, err)`. |
+
+There is no pagination or stream filter.
+
+## CLI
+
+```sh
+sqlstreams scheduler list
+```
+
+Prints registered schedules. A successful read exits with status `0`,
+including an empty list. See [schedule commands](/reference/schedule-cli/#read-schedules)
+for output formats and flags.
+
+## Errors
+
+| Error | When |
+| --- | --- |
+| Database or decoding error | A registration cannot be read or decoded. |
+| Context cancellation or deadline error | The read is interrupted. |
+
+## Related topics
+
+- [The schedule object](/reference/schedule-object/) — Returned fields.
+- [Retrieve a schedule](/reference/get-schedule/) — Read one registration by name.

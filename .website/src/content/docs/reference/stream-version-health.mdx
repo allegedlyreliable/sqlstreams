@@ -1,0 +1,90 @@
+---
+group: stream
+title: Read payload version health
+description: "Health: inspect retained payload versions, compaction heads, and consumer progress."
+slop: high
+---
+
+```go title="StreamHandle[T].Health"
+Health(ctx context.Context) ([]*StreamVersionHealth, error)
+```
+
+Reads each payload version still present in a stream and reports whether
+compaction heads or consumer progress prevent retiring it. It does not retire
+a version or delete messages.
+
+## Example
+
+Inspect the `payments.requested` stream using an initialized `client`.
+
+```go
+payments := client.Stream[sqlstreams.RawPayload]("payments.requested")
+versions, err := payments.Health(ctx)
+if err != nil {
+	return err
+}
+for _, version := range versions {
+	fmt.Println(version.Version, version.Safe, version.Reason)
+}
+```
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `ctx` | `context.Context` | Yes | Cancellation or its deadline interrupts the database reads. |
+
+## Returns
+
+| Condition | Return value |
+| --- | --- |
+| Retained messages exist | `(versions, nil)`, containing [StreamVersionHealth objects](#streamversionhealth). |
+| Stream has no retained messages | `(versions, nil)`, where `len(versions) == 0`. |
+| Stream is absent or read fails | `(nil, err)`. |
+
+### StreamVersionHealth
+
+| Field | Type | JSON name | Description |
+| --- | --- | --- | --- |
+| `Stream` | [`*Stream`](/reference/stream-object/) | `stream` | The stream being inspected. |
+| `Version` | `int` | `version` | Payload schema version. |
+| `Messages` | `int64` | `messages` | Retained message count at this version. |
+| `CompactionHeads` | `int64` | `compaction_heads` | Current compaction heads pointing to this version. |
+| `Groups` | [`[]ConsumerGroupSchemaVersionLag`](#consumergroupschemaversionlag) | `groups` | Consumer progress for this version. |
+| `Safe` | `bool` | `safe` | `true` when no compaction heads remain and every group's unread and unresolved counts are zero. |
+| `Reason` | `string` | `reason` | Human-readable explanation of the verdict. |
+
+### ConsumerGroupSchemaVersionLag
+
+| Field | Type | JSON name | Description |
+| --- | --- | --- | --- |
+| `ConsumerGroup` | `string` | `group` | Consumer group name. |
+| `Unconsumed` | `int64` | `unconsumed` | Messages at this version beyond the group's committed position. |
+| `UnresolvedExceptions` | `int64` | `unresolved_exceptions` | Exceptions at this version still ready, inflight, or deferred. |
+
+`Safe` describes the observed database state. It does not prevent a producer
+from producing another message at the old version afterward.
+
+## CLI
+
+```sh
+sqlstreams stream health payments.requested
+```
+
+Prints counts, group progress, and the retirement verdict for each version.
+`--output json` prints an array of version verdicts without the Go object's
+nested `Stream` field. A successful read exits with status `0`, even when a
+version is not safe to retire.
+
+## Errors
+
+| Error | When |
+| --- | --- |
+| Validation error | The stream name is empty. |
+| `ErrStreamNotFound` | The stream is absent. |
+| Database or context error | A read fails or is interrupted. |
+
+## Related topics
+
+- [Payload versions and raw JSON](/reference/message-payload/) — Payload version declarations.
+- [Migrate database schemas](/reference/schema-migrations/) — Database versions, which are separate from payload versions.

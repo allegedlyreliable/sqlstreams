@@ -3,10 +3,9 @@
 
 	type Props = {
 		docCount: number;
-		codeCount: number;
 	};
 
-	let { docCount, codeCount }: Props = $props();
+	let { docCount }: Props = $props();
 </script>
 
 <div class="board-stats">
@@ -14,11 +13,6 @@
 		<span class="stats-line">
 			<a href="/whats-new/">{docCount} documents</a>
 		</span>
-		{#if codeCount > 0}
-			<span class="stats-line">
-				<a href="/boards/troubleshooting/">{codeCount} diagnostic codes</a>
-			</span>
-		{/if}
 	</div>
 	<div class="legend">
 		<span class="legend-row">

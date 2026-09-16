@@ -1,0 +1,62 @@
+---
+group: stream
+title: List streams
+description: "Streams: read all registered streams in name order."
+slop: high
+---
+
+```go title="Client.Streams"
+Streams(ctx context.Context) ([]*Stream, error)
+```
+
+Returns every registered stream in the client's SQLStreams system, ordered
+by name. The result includes built-in system streams and has no pagination.
+
+## Example
+
+Use an initialized `client`.
+
+```go
+streams, err := client.Streams(ctx)
+if err != nil {
+	return err
+}
+for _, stream := range streams {
+	fmt.Println(stream.Id, stream.Name)
+}
+```
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `ctx` | `context.Context` | Yes | Cancelling this context or reaching its deadline interrupts the database read. |
+
+## Returns
+
+| Condition | Return value |
+| --- | --- |
+| Streams are registered | `(streams, nil)`, containing [stream objects](/reference/stream-object/) in name order. |
+| No streams or installation exists | `(nil, nil)`. Ranging over the slice is safe. |
+| Read fails | `(nil, err)`. |
+
+## CLI
+
+```sh
+sqlstreams stream list
+```
+
+Prints stream names and ids. An empty list is successful.
+See [stream commands](/reference/stream-cli/#read-streams) for output formats and flags.
+
+## Errors
+
+| Error | When |
+| --- | --- |
+| Read error | The database read fails or stored settings cannot be decoded. |
+| Context cancellation or deadline error | The read is interrupted by its context. |
+
+## Related topics
+
+- [Retrieve a stream](/reference/get-stream/) — Look up one stream by name.
+- [The stream object](/reference/stream-object/) — Returned fields.

@@ -1,0 +1,84 @@
+---
+group: producer
+title: Register a producer
+description: "Producer.Register: create an instance with message defaults and batching settings."
+slop: high
+---
+
+```go title="ProducerHandle[T].Register"
+Register(ctx context.Context, cfg *ProducerConfig) (*ProducerInstance[T], error)
+```
+
+Creates a producer instance for an existing stream. Each call creates an
+independent instance and automatic batch queue. Producer settings live in
+the process and are not stored as a registration row.
+
+## Example
+
+Use an initialized `client`, the registered `payments.requested` stream,
+and the [example payload](/reference/consumer-group/#example-payload).
+
+```go
+payments := client.Stream[PaymentRequestedV1]("payments.requested")
+producer, err := payments.Producer().Register(ctx, nil)
+if err != nil {
+	return err
+}
+result, err := producer.Produce(ctx, &PaymentRequestedV1{OrderId: "order-123"}, nil)
+if err != nil {
+	return err
+}
+fmt.Println(result.Id, result.Duplicate)
+```
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `ctx` | `context.Context` | Yes | Cancellation or its deadline interrupts registration's database reads. Later produce calls use their own contexts. |
+| `cfg` | `*ProducerConfig` | No | `nil` uses defaults. `Register` fills defaults and retains the supplied configuration. Do not mutate it while the instance is in use. |
+
+### ProducerConfig
+
+| Field | Type | Default | Description |
+| --- | --- | --- | --- |
+| `Message` | [`*MessageOptions`](/reference/consumer-registration/#messageoptions) | `nil` | Producer defaults for fields left unset by a produce call. Fields unset in both remain unset for the consumer to resolve. |
+| `Batch` | [`BatcherConfig`](#batcherconfig) | Nested defaults | Automatic batching for concurrent `Produce` calls on this instance. |
+| `SlowProduceThreshold` | `time.Duration` | `0` | Calls exceeding a positive threshold emit `SQL0038` with their duration. Zero disables warnings. Must be nonnegative. |
+
+### BatcherConfig
+
+| Field | Type | Default | Description |
+| --- | --- | --- | --- |
+| `MaxSize` | `int` | `100` | Maximum messages in an automatic batch. Must be at least `1`. |
+| `ConcurrencyLimit` | `int` | `4` | Maximum automatic batch transactions this instance can run concurrently. Each transaction needs a pool connection. Must be at least `1`. |
+| `AttemptTimeout` | `time.Duration` | `10s` | Time allowed for one batch transaction attempt. Also applies to `ProduceBatch`. Must be positive. |
+| `ShutdownGrace` | `time.Duration` | `15s` | How long a cancelled `Produce` call already in the batch queue waits for its outcome. A positive value must exceed `AttemptTimeout`. A negative value abandons the wait immediately. |
+
+Zero selects the default for every `Batch` field. Automatic batching applies
+to `Produce` calls without a caller-supplied idempotency key. `ProduceBatch`,
+`ProduceFunc`, `ProduceInTx`, and `ProduceFuncInTx` do not share this queue.
+
+## Returns
+
+| Condition | Return value |
+| --- | --- |
+| Registration succeeds | `(producer, nil)`, where `producer` is a `*ProducerInstance[T]`. |
+| Registration fails | `(nil, err)`. |
+
+The instance resolves the stream id at registration. Reuse it across produce
+calls to share its batch queue.
+
+## Errors
+
+| Error | When |
+| --- | --- |
+| Validation error | The stream name is empty or configuration is invalid. |
+| `ErrStreamNotFound` | The stream has not been registered. |
+| Schema compatibility error | The system or stream schema is incompatible with this build. |
+| Database or context error | Registration reads fail or are interrupted. |
+
+## Related topics
+
+- [Register a stream](/reference/stream-registration/) — Create the producer's target stream.
+- [Message options](/reference/consumer-registration/#messageoptions) — Requested processing options and consumer bounds.

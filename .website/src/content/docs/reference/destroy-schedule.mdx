@@ -1,0 +1,69 @@
+---
+group: schedule
+title: Delete a schedule
+description: "Destroy: permanently remove a schedule's registration."
+slop: high
+---
+
+```go title="SchedulerHandle.Destroy"
+Destroy(ctx context.Context) error
+```
+
+Deletes the schedule and its scheduled-time cursor. Already produced messages
+remain in the target stream and can still be processed. The client must have
+`ClientConfig.AllowDestroy` enabled.
+
+## Example
+
+Using a `client` configured with `AllowDestroy: true`, delete the
+`payment-reminder` schedule:
+
+```go
+if err := client.Scheduler("payment-reminder").Destroy(ctx); err != nil {
+	return err
+}
+```
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `ctx` | `context.Context` | Yes | Cancellation or its deadline interrupts the database delete. |
+
+## Returns
+
+| Condition | Return value |
+| --- | --- |
+| Schedule is deleted | `nil`. |
+| Destruction is disabled | `ErrDestroyDisabled`, before lookup. |
+| Schedule is absent | `ErrScheduleNotFound`. |
+| Delete fails | `err`. |
+
+A later `Register` call can recreate the name. Remove its declaration from
+application startup if the schedule should stay deleted. There is no force
+option or requirement to empty the target stream.
+
+## CLI
+
+```sh
+sqlstreams scheduler destroy payment-reminder --yes
+```
+
+Without `--yes`, an interactive terminal must confirm by typing the schedule
+name. Non-interactive use and `--output json` require `--yes`.
+Success exits with status `0`. An absent schedule exits with status `1`.
+JSON output contains `schedule`, `schedule_id`, and `destroyed: true`.
+
+## Errors
+
+| Error | When |
+| --- | --- |
+| `ErrDestroyDisabled` | The client does not permit destruction. |
+| Validation error | The schedule name is empty. |
+| `ErrScheduleNotFound` | The schedule is absent or another caller deletes it first. |
+| Database or context error | The delete cannot complete. |
+
+## Related topics
+
+- [Suspend a schedule](/reference/suspend-schedule/) — Pause automatic production without removing its registration.
+- [Create a client](/reference/client/) — Enable administrative destruction.

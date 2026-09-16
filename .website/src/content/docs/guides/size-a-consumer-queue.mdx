@@ -7,12 +7,12 @@ slop: medium
 
 import ThreadAside from '../../../components/thread-aside/thread-aside.svelte';
 
-A consumer can claim messages ahead of the handler so work is ready when it
+A consumer can claim messages ahead of the consumer handler so work is ready when it
 finishes processing. A larger queue keeps more claimed messages ready
 locally, but those messages spend lease time waiting.
 
 Start small, run the workload you expect, and increase capacity only when
-it improves processing. Aim for a queue that keeps handlers supplied without
+it improves processing. Aim for a queue that keeps consumer handlers supplied without
 making messages wait too long to start.
 
 This example continues the [Quickstart](/quickstart/), using the
@@ -32,7 +32,7 @@ return consumer.Consume(ctx, receiveEmail, &sqlstreams.ConsumeOptions{
 ```
 
 These settings give the consumer one message per new claim, one place in
-its waiting queue, and one handler at a time for those messages. The small
+its waiting queue, and one consumer handler at a time for those messages. The small
 batch requires more claims for the same amount of work, but gives you a
 starting point with little waiting inside each claim.
 
@@ -64,24 +64,24 @@ This checks that the example runs with your selected options.
 
 ## 3. Adjust the setting that limits progress
 
-Use your real handler and a representative message rate, including expected
+Use your real consumer handler and a representative message rate, including expected
 bursts. Keep that workload the same between runs. After editing the options,
 stop the consumer with Ctrl-C and wait for it to exit, then run it again.
 Options take effect on the next `Consume` call.
 
-**When handlers are busy and work keeps accumulating**, try increasing
+**When consumer handlers are busy and work keeps accumulating**, try increasing
 `MessageConcurrency` from 1 to 2 while leaving the batch and queue at 1.
-Do this when handlers can run independently and the service they call has
+Do this when consumer handlers can run independently and the service they call has
 capacity for more simultaneous requests. A larger queue alone cannot make
-those handlers finish faster.
+those consumer handlers finish faster.
 
-**When handlers finish quickly but sit idle between claims while work remains**,
+**When consumer handlers finish quickly but sit idle between claims while work remains**,
 try increasing `BatchLimit` and `QueueSize` from 1 to 4, keeping concurrency at the value
 from your previous run. This lets each new claim bring in more messages and
 keeps them ready for processing. It also gives later messages more work to
 wait behind.
 
-Keep a change when the consumer keeps up better without slower handlers,
+Keep a change when the consumer keeps up better without slower consumer handlers,
 more failures, or [SQL0105](/troubleshooting/queued-message-cannot-start/),
 which means a queued message has too little lease time left to start.
 Otherwise, return to the previous settings.
@@ -94,7 +94,7 @@ failed messages still need processing.
 
 Increase `QueueMargin` when the waiting is
 intentional and acceptable. A longer margin also makes other instances wait
-longer to reclaim work after a crash. Raising the handler timeout does not
+longer to reclaim work after a crash. Raising the consumer handler timeout does not
 add queue waiting time. [Consumer leases](/concepts/consumer-leases/)
 explains the tradeoff.
 
@@ -102,7 +102,7 @@ explains the tradeoff.
 
 ## Related topics
 
-- [Consumer session options](/reference/consumer-session-options/) — Exact
+- [Consume options](/reference/consume/#consumeoptions) — Exact
   defaults and requirements for batching, queueing, and concurrency.
 - [Queued message cannot start](/troubleshooting/queued-message-cannot-start/) —
   Investigate SQL0105 and recover affected work.

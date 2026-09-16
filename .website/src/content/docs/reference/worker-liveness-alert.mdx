@@ -1,0 +1,167 @@
+---
+group: stream
+title: Worker liveness alert (SQL0096)
+description: Worker liveness evidence, activation settings, reported fields, and resolution.
+slop: high
+---
+
+import ThreadAside from '../../../components/thread-aside/thread-aside.svelte';
+
+```text title="Alert name"
+worker_liveness
+```
+
+Reports worker rows without a live instance on a stream, including workers
+owned by its consumer groups. The alert belongs to the stream.
+
+## Definition
+
+| Property | Value |
+| --- | --- |
+| Code | `SQL0096` |
+| Severity | `warn` |
+| Owner | Stream. |
+| Evidence | Retained `sqlstreams.stream.workers.unclaimed` measurements and their worker details. |
+| Unhealthy condition | At least one unclaimed worker. |
+| Default activation | Consecutive unhealthy samples spanning `2m`. |
+| Default evaluation schedule | `@every 1m`. |
+| Active reminders | Every `4h` by default while the condition remains active. |
+
+## Read the latest report
+
+```go title="AlertHandle.Latest"
+Latest(ctx context.Context) (*Alert, error)
+```
+
+Read the latest retained report for the `payments.requested` stream using
+an initialized `client` and the [example payload](/reference/consumer-group/#example-payload).
+Cancelling `ctx` or reaching its deadline interrupts the database reads.
+
+```go
+payments := client.Stream[PaymentRequestedV1]("payments.requested")
+report, err := payments.Alerts().WorkerLiveness().Latest(ctx)
+if err != nil {
+	return err
+}
+if report == nil {
+	return errors.New("no retained worker liveness report for payments.requested")
+}
+fmt.Println(report.Status, report.At)
+```
+
+| Condition | Return value |
+| --- | --- |
+| A retained report exists | `(report, nil)`. Its status can be active or resolved. |
+| Stream exists but no report is retained | `(nil, nil)`. |
+| Stream is absent or the read fails | `(nil, err)`. See [Errors](#errors). |
+
+<ThreadAside label="NOTE" title="Stream ownership">
+
+Use `payments.Alerts()` to read this alert. A report can name workers owned
+by the `charge-cards` group while still belonging to the `payments.requested`
+stream. There is no separate worker-liveness alert for each consumer instance.
+
+</ThreadAside>
+
+## Configuration
+
+Set `SystemConfig.WorkerLivenessAlert` when registering the system. `nil` and
+unset fields use the defaults below. These settings control checks for all
+streams in that system.
+
+### WorkerLivenessAlertConfig
+
+| Field | Type | Default | Description |
+| --- | --- | --- | --- |
+| `ScheduleExpression` | `string` | `@every 1m` | Schedule for evaluating the alert. Must be a valid supported schedule expression. |
+| `PendingDuration` | `time.Duration` | `2m` | Required span of consecutive unhealthy samples. Positive after defaults. |
+| `MaximumGap` | `time.Duration` | `2m` | Maximum permitted gap between samples and maximum age of the newest sample. Positive after defaults. |
+| `DisablePending` | `bool` | `false` | Allows activation from fresh unhealthy evidence without waiting for the pending span. |
+
+Queued checks retain the policy they were produced with.
+
+The active reminder interval belongs to the alert worker's `RepeatInterval`
+setting and is not a field of `WorkerLivenessAlertConfig`.
+
+## Evaluation and resolution
+
+| Evidence | Result |
+| --- | --- |
+| Consecutive unhealthy samples cover `PendingDuration`, with acceptable gaps and age | Activate the alert. |
+| Fresh unhealthy evidence with `DisablePending` enabled | Activate without waiting for the pending span. |
+| Fresh healthy evidence | Resolve an active alert. |
+| Missing, stale, or invalid evidence | Do not change the recorded alert state. |
+
+For the `payments.requested` stream, samples can show a worker owned by
+`charge-cards` without a live instance. With the defaults, those unhealthy
+observations must span at least two minutes, with no gap or newest-sample
+age greater than two minutes. Waiting two minutes without new samples does
+not satisfy the requirement.
+
+Evidence must meet these conditions:
+
+- The measurement has the expected metric name, gauge kind, and worker unit.
+- The count is a finite, nonnegative integer.
+- Worker details account for the count.
+- Each listed worker has a name, belongs to the evaluated stream, and has a
+  nonzero target instance count.
+
+<ThreadAside label="NOTE" title="Retained state and current health">
+
+An active report can remain stored after evidence becomes stale. Its presence
+does not prove the condition still holds now. A missing report also does not
+prove that workers are healthy. Use the report's time and available evidence
+when interpreting its state.
+
+</ThreadAside>
+
+## Reported fields
+
+Reports use the shared [Alert fields](/reference/read-alerts/#alert).
+The owner identifies the stream, with `group_id: 0`.
+
+### Data
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `unclaimed_count` | integer | Number of unclaimed worker rows in the finding. |
+| `workers` | array | Corresponding worker details from the same stored sample. |
+
+Active reports include this evidence. Resolved reports have no `Data` value.
+
+Each `workers` entry has these fields:
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `worker` | string | Worker name. |
+| `owner` | string | Stream or consumer-group name owning the worker. |
+| `owner_kind` | string | Kind of resource that owns the worker. |
+| `target_instances` | integer | Declared instance target for the worker. |
+
+Active and resolved reports share the same alert identity. A later resolved
+report replaces the active report as the latest retained value.
+
+## CLI
+
+```sh
+sqlstreams alert latest worker_liveness --stream payments.requested
+```
+
+Prints the latest report and exits with status `0` when one is retained.
+No retained report prints an absence message and exits with status `1`.
+See [alert commands](/reference/alert-cli/) for output formats and flags.
+
+## Errors
+
+| Error | When |
+| --- | --- |
+| `ErrStreamNotFound` | `Latest` is called for a stream that is not registered. |
+| `ErrNotRegistered` | System alert storage is not registered. |
+| Database error | The retained alert cannot be read. |
+| Context cancellation or deadline error | The database operation is interrupted by its context. |
+
+## Related topics
+
+- [Worker is not running](/troubleshooting/worker-not-running/) — Inspect worker ownership, suspension, and failures.
+- [Background managers and workers](/concepts/background-managers-and-workers/) — How managers start workers and replace expired claims.
+- [Stream metrics](/reference/stream-metrics/) — Read the unclaimed-worker measurement used by this alert.

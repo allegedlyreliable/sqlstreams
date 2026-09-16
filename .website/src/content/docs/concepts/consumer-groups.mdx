@@ -50,8 +50,8 @@ export const sharedWork = await layoutResources([
   caption="Two instances share one group's work. These ranges are one possible pair of claims, not permanent assignments."
 />
 
-Adding an instance adds another worker to the `charge-cards` group. It does
-not give that instance its own pass through every message.
+An additional instance shares the `charge-cards` group's work. It does not
+get its own pass through every message.
 
 The group is the shared identity stored in Postgres. An instance is a running
 consumer that claims and processes work under that identity.
@@ -111,17 +111,17 @@ A crash can occur between those two writes.
 
 1. Instance A claims ids 1–2 for the `charge-cards` group and calls the payment
    provider for id 1. The provider accepts the charge.
-2. The handler returns `nil`, reporting success to the consumer. Before
+2. The consumer handler returns `nil`, reporting success to the consumer. Before
    SQLStreams records completion in Postgres, A crashes. The charge has
    already happened.
 3. A's lease on message ids 1–2 eventually expires. On a later claim, instance B can
    reclaim the unresolved work, including id 1.
-4. B runs the handler for id 1 again. Without application-level
+4. B runs the consumer handler for id 1 again. Without application-level
    deduplication, it can charge the card again.
 
 export const repeatedProcessing = await layoutResources([
     { id: 'provider', title: 'Payment provider', width: 300, lines: ['Charge recorded for message 1'] },
-    { id: 'A', title: 'Instance A', width: 300, lines: ['Handler returns nil, then A crashes', 'Completion not recorded'] },
+    { id: 'A', title: 'Instance A', width: 300, lines: ['Consumer handler returns nil', 'A crashes before recording completion'] },
     { id: 'lease', title: 'Lease: message range 1–2', width: 300, lines: ['Lease expires', 'Unresolved work can be reclaimed'] },
     { id: 'B', title: 'Instance B', width: 300, lines: ['Reclaims and runs message 1 again', 'The first charge still exists'] },
   ], [
@@ -133,7 +133,7 @@ export const repeatedProcessing = await layoutResources([
 <Diagram
   graph={repeatedProcessing}
   description="For message 1 in the charge-cards group, the provider records the charge, but instance A crashes before SQLStreams records completion. After lease expiry and reclaim, instance B can run the same message again."
-  caption="The handler can succeed before SQLStreams records completion."
+  caption="The consumer handler can succeed before SQLStreams records completion."
 />
 
 For this payment, both attempts need the same payment-provider idempotency
@@ -147,5 +147,5 @@ happened.
 
 - [Consumer leases](/concepts/consumer-leases/) — How long claimed work can
   wait and run.
-- [Consume reference](/reference/consume/#results-and-failures) — How handler
-  results affect retries, delays, and terminal failures.
+- [Retries and failed messages](/concepts/retries-and-failed-messages/) — How returned errors lead to retries or permanent failure.
+- [Make message processing safe to repeat](/guides/side-effects-and-retries/) — Prevent a repeated message from applying a database change twice.

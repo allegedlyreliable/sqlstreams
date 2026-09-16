@@ -21,16 +21,16 @@
 	name="Subsections"
 	args={{
 		sections: [
-			{ id: 'go-api', title: 'Go API', rows },
+			{ id: 'consumer-groups', title: 'Consumer groups', rows },
 			{
-				id: 'configuration',
-				title: 'Configuration',
+				id: 'messages',
+				title: 'Messages',
 				rows: [
 					{
 						metadata: null,
 						lastUpdatedDate: '2026-09-14',
-						title: 'Consumer group settings',
-						href: '/reference/consumer-group-settings/',
+						title: 'Message metadata',
+						href: '/reference/message-metadata/',
 					},
 				],
 			},

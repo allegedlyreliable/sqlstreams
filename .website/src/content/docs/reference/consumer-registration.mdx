@@ -1,0 +1,190 @@
+---
+group: consumer
+title: Register a consumer group
+description: "Register: declare a consumer group, configure its messages, and obtain a consumer instance."
+slop: medium
+---
+
+import ThreadAside from '../../../components/thread-aside/thread-aside.svelte';
+
+```go title="ConsumerHandle[T].Register"
+Register(ctx context.Context, cfg *ConsumerConfig) (*ConsumerInstance[T], error)
+```
+
+Registers a consumer group on an existing stream. Saves the message settings
+shared by the group's instances, including timeouts, retries, and routing-key
+bindings.
+
+## Example
+
+Register the `charge-cards` group on the existing `payments.requested` stream
+with a default message timeout of 10 seconds. This example uses an initialized
+`client` and the [PaymentRequestedV1 payload](/reference/consumer-group/#example-payload).
+
+```go
+payments := client.Stream[PaymentRequestedV1]("payments.requested")
+chargeCards := payments.Consumer("charge-cards")
+consumer, err := chargeCards.Register(ctx, &sqlstreams.ConsumerConfig{
+	Message: &sqlstreams.MessageOptions{
+		Timeout: 10 * time.Second,
+	},
+})
+if err != nil {
+	return err
+}
+```
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `ctx` | `context.Context` | Yes | Cancelling this context or reaching its deadline interrupts registration's database operations. The later `Consume` call uses its own context to control processing and shutdown. |
+| `cfg` | `*ConsumerConfig` | No | Group settings. `nil` uses defaults. `Register` fills defaults in the supplied configuration, so use separate configurations for concurrent registrations. |
+
+- The stream's database schema must be supported by this library build.
+- `T.SchemaVersion()` must be at least 1.
+- `T` must match the message payloads this instance will process.
+- `RawPayload` cannot register a consumer.
+
+### ConsumerConfig
+
+These settings belong to the group and are shared across its instances.
+Queue capacity, processing concurrency, and shutdown settings belong to
+[Consume's options](/reference/consume/#consumeoptions).
+
+Unset fields select the defaults below, except where noted. Changes to an
+existing group's settings follow the [update timing](#behavior) below.
+
+| Field | Type | Default | Description |
+| --- | --- | --- | --- |
+| `Message` | [`*MessageOptions`](#messageoptions) | See `MessageOptions` | Defaults for options the produced message left unset. |
+| `MessageMin` | [`*MessageOptions`](#messageoptions) | `nil` | Minimum values for numeric message options. Positive bounds raise lower values. `Concurrency` must be unset. |
+| `MessageMax` | [`*MessageOptions`](#messageoptions) | `Message`'s values | Maximum values for numeric message options. Unset fields inherit from `Message`. Positive bounds lower higher values. `Concurrency` must be unset. |
+| `ConcurrencyOverride` | `ConcurrencyPolicy` | `""` | Overrides the produced message's concurrency policy when set. Accepts `ConcurrencyParallel`, `ConcurrencyExclusive`, or `ConcurrencyOrdered`. |
+| `Start` | [`CursorPosition`](#cursorposition) | `Beginning()` | Starting position for a new group. Ignored when the group already has a cursor. |
+| `Bindings` | `[]string` | `nil` | Routing-key patterns selecting the group's messages. `nil` selects the whole stream. Each registration declares the full set, replacing the prior set when it can be installed. |
+| `ExceptionInitialBackoff` | `time.Duration` | `5s` | Initial wait before a newly recorded exception can run. Positive after defaults. |
+| `MaxRangeReclaims` | `int` | `3` | Limit on reclaiming the same range of messages after lease expiry. When the reclaim count reaches this limit, its messages move to exception processing. At least 1. |
+
+### MessageOptions
+
+Used by `Message`, `MessageMin`, and `MessageMax`. The defaults below apply to
+`Message`. `MessageMin` has no bounds unless supplied, and unset `MessageMax`
+fields inherit from `Message`.
+
+| Field | Type | Default | Description |
+| --- | --- | --- | --- |
+| `Concurrency` | `ConcurrencyPolicy` | `""` | Must be unset in `MessageMin` and `MessageMax`. Effective concurrency follows the precedence below. |
+| `Timeout` | `time.Duration` | `30s` | How long a message's consumer handler may run. Must be positive after defaults. |
+| `Retry` | [`*RetryPolicy`](#retrypolicy) | See `RetryPolicy` | Limits failed attempts and consumer handler-requested later runs, and sets retry delays. |
+| `ScheduledAt` | `time.Time` | Zero value | The scheduled time represented by a message, set by its schedule producer. This is not a consumer setting. |
+
+SQLStreams fills unset produced fields from `Message`, then
+applies positive bounds from `MessageMin` and `MessageMax`.
+
+For `Timeout`, `MaxRetries`, `BaseDelay`, `MaxDelay`, and `Exponent`, the
+minimum must not exceed the group default, and the default must not exceed
+the maximum.
+
+Concurrency uses `ConcurrencyOverride`, the produced message's policy,
+`Message.Concurrency`, or parallel, in that order.
+
+For the `charge-cards` group, setting `Message.Timeout` to `10s` and
+`MessageMax.Timeout` to `30s` gives these results:
+
+| Produced message's timeout | Effective timeout |
+| --- | --- |
+| Unset | `10s`, from the group's default. |
+| `20s` | `20s`, within the group's bounds. |
+| `60s` | `30s`, limited by the group's maximum. |
+
+[Message metadata](/reference/message-metadata/) exposes the resolved options
+used for each invocation.
+
+### RetryPolicy
+
+Used by `MessageOptions.Retry`. `nil` and zero fields select these message
+retry defaults, except `MaxDelays`, where zero means unlimited.
+
+| Field | Type | Default | Description |
+| --- | --- | --- | --- |
+| `MaxRetries` | `int` | `3` | At least 1. Limits retries after the initial failed attempt. Set 1 to allow one retry. |
+| `MaxDelays` | `int` | `0` | Nonnegative. Caps consumer handler-requested later runs. Zero means unlimited. These runs have a separate count from failed attempts. |
+| `BaseDelay` | `time.Duration` | `1s` | Positive after defaults. First delay in the retry curve. |
+| `MaxDelay` | `time.Duration` | `5m` | At least `BaseDelay`. Caps delays in the retry curve. |
+| `Exponent` | `int` | `2` | At least 1. Multiplier for exponential backoff. |
+
+The retry curve is `BaseDelay * Exponent^attempt`, capped at `MaxDelay`, with
+a zero-based attempt. The first recorded exception uses
+`ExceptionInitialBackoff`, and later retries use this curve.
+
+### CursorPosition
+
+Used by `Start`. Prefer `sqlstreams.Beginning()` or `sqlstreams.Head()` to
+construct the position.
+
+| Field | Type | Default | Description |
+| --- | --- | --- | --- |
+| `Kind` | `CursorPositionKind` | `CursorPositionBeginning` | `Beginning()` starts at the oldest retained message. `Head()` uses `CursorPositionHead` and starts after the current maximum message id. |
+
+With `Head()`, a transaction that commits later with a lower message id is
+skipped by the new group.
+
+## Returns
+
+| Condition | Return value |
+| --- | --- |
+| Registration succeeds | `(consumer, nil)`, where `consumer` is a new `*ConsumerInstance[T]`. |
+| Registration fails | `(nil, err)`. See [Errors](#errors). |
+
+<ThreadAside label="NOTE" title="Start processing separately">
+
+Each successful registration returns an independent instance. Call
+[Consume](/reference/consume/) on that instance to start processing messages.
+
+</ThreadAside>
+
+Use [Get](/reference/get-consumer/) to read the stored
+[consumer group object](/reference/consumer-group/).
+
+## Behavior
+
+Registering `charge-cards` again on the `payments.requested` stream preserves
+its position in the stream and updates its settings.
+
+Active instances reread shared settings at
+[`ConsumeOptions.ConfigRefreshInterval`](/reference/consume/#consumeoptions).
+Updating registration does not immediately change every running instance.
+Editing the Go configuration after `Register` returns does not update the
+stored settings. Call `Register` again to save a change.
+
+Keep settings and bindings consistent across instances of the same group.
+If a live instance still declares different bindings, `Register` can return
+successfully before the new set is installed. `Consume` waits and retries that
+declaration before processing messages.
+
+## Errors
+
+| Error | When |
+| --- | --- |
+| `ErrStreamNotFound` | The stream is not registered. |
+| Validation error | A name is empty, the payload version is invalid, or configuration is invalid. |
+| `ErrSchemaOlderThanBuild` | The system or stream database schema is older than this library build requires. |
+| `ErrSchemaNewerThanBuild` | The system or stream database schema requires a newer library build. |
+| Database error | A registration read or write fails. |
+| Context cancellation or deadline error | Registration I/O is interrupted by its context. |
+
+<ThreadAside label="NOTE" title="Registration can partially succeed">
+
+`Register` writes the group, its settings, and its bindings in separate steps.
+If a later step fails, earlier writes can remain. An error does not mean
+the group was never created or its settings were left unchanged.
+
+</ThreadAside>
+
+## Related topics
+
+- [Consumer groups](/concepts/consumer-groups/) — How a shared group differs from separate groups.
+- [Retries and failed messages](/concepts/retries-and-failed-messages/) — How retry settings affect failed work.
+- [Ordering and concurrency](/concepts/ordering/) — Choose how messages with the same key may run.
+- [Consume messages](/reference/consume/) — Start the instance and configure its queue and concurrency.

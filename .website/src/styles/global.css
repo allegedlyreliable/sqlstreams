@@ -589,6 +589,14 @@
 		font-weight: 600;
 	}
 
+	.thread-body :where(td code) {
+		white-space: nowrap;
+	}
+
+	.thread-body :where(th, td):where(:nth-child(n + 4):last-child) {
+		min-width: 32ch;
+	}
+
 	.thread-body :where(tbody tr:nth-child(odd)) {
 		background: var(--color-row-stripe-a);
 	}

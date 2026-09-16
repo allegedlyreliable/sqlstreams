@@ -1,0 +1,76 @@
+---
+group: system
+title: Alert commands
+description: "CLI syntax for retained alert reports, owner selection, history, and output."
+slop: high
+---
+
+```sh
+sqlstreams alert latest partition_count --stream payments.requested
+```
+
+Reads recorded alerts, including resolved reports. These commands do not
+run a check or evaluate current evidence. Use the Go [Snapshot API](/reference/read-alerts/)
+for an on-demand evaluation.
+
+## List reports
+
+```text
+sqlstreams alert list [--stream <name>] [--consumer <group>] [--quiet]
+```
+
+Lists one retained report per alert name and owner. Without owner flags,
+lists reports across the installation.
+
+| Flag | Default | Effect |
+| --- | --- | --- |
+| `--stream` | All owners | Only reports owned by this stream. |
+| `--consumer` | No group filter | Only reports owned by this group. Requires `--stream`. |
+| `--quiet`, `-q` | `false` | Print alert name and owner, one pair per line. Cannot be combined with JSON output. |
+
+JSON returns an array of [Alert objects](/reference/read-alerts/#alert).
+A successful empty list exits `0`, with JSON `[]`. A requested owner that
+is absent exits `1`.
+
+## Latest and history
+
+```text
+sqlstreams alert latest <name> [--stream <name>] [--consumer <group>]
+sqlstreams alert history <name> [--stream <name>] [--consumer <group>] [--limit 10]
+```
+
+```sh
+sqlstreams alert history worker_liveness --stream payments.requested --limit 5
+sqlstreams alert latest metrics_collector_progress
+```
+
+These commands select one owner. With no owner flags, they select the system.
+`--stream` selects a stream, and `--stream` plus `--consumer` selects a group.
+`history`'s positive limit defaults to `10` and returns newest message ids first.
+
+| Result | `latest` JSON | `history` JSON | Exit status |
+| --- | --- | --- | --- |
+| Retained report found | One Alert object. | Array of Alert objects. | `0` |
+| Owner exists but no report is retained | `null`. | `[]`. | `1` |
+| Owner is absent or a database read fails | Error document on stderr. | Error document on stderr. | `1` |
+| Invalid owner flags or limit | Usage error on stderr. | Usage error on stderr. | `2` |
+
+A resolved report still counts as found. No report does not establish health.
+
+## Built-in owners
+
+| Alert name | Required owner selection |
+| --- | --- |
+| `partition_count` | `--stream`. |
+| `compaction_read_cost` | `--stream`. |
+| `worker_liveness` | `--stream`, even when the report identifies consumer-group workers. |
+| `metrics_collector_progress` | No owner flags. |
+
+There are no built-in group-owned alerts. Selecting the wrong existing
+owner can therefore return no report even when another owner has an active alert.
+
+## Related topics
+
+- [SQLStreams CLI](/reference/cli/) — Connection, output, and errors.
+- [Read alerts](/reference/read-alerts/) — Retained reports versus evaluations.
+- [Errors and diagnostics](/reference/diagnostics/#cli) — Offline alert definitions.

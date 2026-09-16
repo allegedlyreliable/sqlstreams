@@ -1,0 +1,114 @@
+---
+group: stream
+title: Register a stream
+description: "Register: create a stream or replace its mutable settings."
+slop: high
+---
+
+import ThreadAside from '../../../components/thread-aside/thread-aside.svelte';
+
+```go title="StreamHandle[T].Register"
+Register(ctx context.Context, cfg *StreamConfig) (*Stream, error)
+```
+
+Creates the named stream and its tables, or applies the supplied settings to
+an existing stream. On an empty installation, it first registers the system
+with defaults. An existing system keeps its configuration.
+
+## Example
+
+Register the `payments.requested` stream using an initialized `client` and
+the [example payload](/reference/consumer-group/#example-payload).
+
+```go
+payments := client.Stream[PaymentRequestedV1]("payments.requested")
+stream, err := payments.Register(ctx, &sqlstreams.StreamConfig{
+	RetentionTTL: 30 * 24 * time.Hour,
+})
+if err != nil {
+	return err
+}
+fmt.Println(stream.Id, stream.Name)
+```
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `ctx` | `context.Context` | Yes | Cancellation or its deadline interrupts registration. Earlier registration steps may already have completed. |
+| `cfg` | `*StreamConfig` | No | The full declaration. `nil` uses defaults. `Register` fills defaults in the supplied struct and its nested structs. |
+
+### StreamConfig
+
+| Field | Type | Default | Description |
+| --- | --- | --- | --- |
+| `PartitionSize` | `int64` | `1_000_000` | Message-id interval per partition. Must be at least `2`. Cannot change after registration. |
+| `RetentionTTL` | `time.Duration` | `0` | Minimum age for retention cleanup. Zero keeps messages indefinitely through this retention policy. Must be nonnegative. |
+| `AllowDropPastCommitted` | `bool` | `false` | Allows retention to remove messages before every consumer group has recorded them as resolved. |
+| `IdempotencyKeyTTL` | `time.Duration` | `24h` | Retention for keys that deduplicate produce retries. Zero selects the default. Must be nonnegative. |
+| `EmptyCompactionHeadTTL` | `time.Duration` | `1h` | Idle time before cleanup of a compaction-head row without a current message. Zero selects the default. Must be positive after defaults. |
+| `DeliveryLogMode` | [`DeliveryLogMode`](/reference/stream-object/#deliverylogmode) | `DeliveryLogModeFailures` | Which outcomes write the per-attempt log. An empty value selects the default. |
+| `Janitor` | [`*JanitorConfig`](#janitorconfig) | Nested defaults | Retention cleanup settings. A new stream's janitor starts active. |
+| `Vacuum` | [`*VacuumConfig`](#vacuumconfig) | Nested defaults | Idempotency-key table vacuum settings. A new stream's vacuum starts suspended. |
+
+### JanitorConfig
+
+| Field | Type | Default | Description |
+| --- | --- | --- | --- |
+| `PollRate` | `time.Duration` | `5s` | Delay between cleanup passes, with scheduling jitter. Must be positive. |
+| `SweepBatchSize` | `int` | `1000` | Maximum rows deleted per transaction. Must be positive. |
+| `CleanupTimeout` | `time.Duration` | `5s` | Time allowed for each cleanup operation, including retries. Must be positive. |
+| `PartialSweepGracePeriod` | `time.Duration` | `0` | Additional retention before partial message cleanup. Must be nonnegative. |
+
+### VacuumConfig
+
+| Field | Type | Default | Description |
+| --- | --- | --- | --- |
+| `PollRate` | `time.Duration` | `2m` | Delay after each vacuum request, with scheduling jitter. Must be positive. |
+| `VacuumTimeout` | `time.Duration` | `1m` | Time allowed for a request, including retries. Must be positive. |
+
+Zero selects the default for positive fields in both nested structs.
+
+## Returns
+
+| Condition | Return value |
+| --- | --- |
+| Registration succeeds | `(stream, nil)`, where `stream` is the [stream object](/reference/stream-object/). |
+| Registration fails | `(nil, err)`. |
+
+## Repeated registration
+
+Every call applies the declaration after defaults. Omitted mutable fields
+therefore return to their defaults. Different applications declaring different
+settings for the same stream overwrite each other's settings. A stored stream
+setting change emits `SQL0061`.
+
+Registration preserves the stream id, messages, consumer groups, and maintenance
+suspension and instance targets. Maintenance configuration changes apply to
+newly claimed instances. Mutating `cfg` after `Register` returns does not update
+the stored declaration.
+
+<ThreadAside label="NOTE" title="Partial registration">
+
+Registration spans multiple database operations. A failure can leave the system,
+stream, or maintenance declarations partially created. Retrying the same
+declaration resumes registration.
+
+</ThreadAside>
+
+## Errors
+
+| Error | When |
+| --- | --- |
+| Validation error | The name does not match `^[a-z0-9._-]+$`, or a configuration field is invalid. |
+| `ErrReservedStreamName` | The name starts with `__system.`. |
+| `ErrStreamConfigMismatch` | An existing stream has a different `PartitionSize`. |
+| Schema compatibility error | The system or stream schema is incompatible with this library build. |
+| `ErrStreamDeclarationInterrupted` | The stream declaration disappears during registration. |
+| Database or context error | A registration operation fails or is interrupted. |
+
+## Related topics
+
+- [The stream object](/reference/stream-object/) — Returned identity and stored settings.
+- [Register a consumer group](/reference/consumer-registration/) — Declare a group on the stream.
+- [Message retention](/concepts/streams-and-messages/#retention-controls-when-cleanup-is-allowed) — How age and consumer progress determine when cleanup is allowed.

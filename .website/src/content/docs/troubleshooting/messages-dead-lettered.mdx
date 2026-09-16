@@ -1,0 +1,64 @@
+---
+group: consumer
+title: Messages are dead-lettered (SQL0028–SQL0031)
+description: Inspect recorded failures and decide how to handle work that will no longer retry.
+slop: high
+---
+
+```text title="Warning"
+level=WARN msg="messages dead-lettered -- unrecoverable, will not be retried" code=SQL0028 group_id={group_id} stream_id={stream_id} dead_count={dead_count}
+level=WARN msg="message dead-lettered -- unrecoverable, will not be retried" code=SQL0029 group_id={group_id} stream_id={stream_id} message_id={message_id}
+level=WARN msg="exception dead-lettered -- unrecoverable, will not be retried" code=SQL0030 group_id={group_id} stream_id={stream_id} message_id={message_id} attempts={attempts}
+level=WARN msg="crash-loop kill backstop fired -- exceptions marked dead" code=SQL0031 group_id={group_id} stream_id={stream_id} dead_count={dead_count}
+```
+
+The affected consumer group has marked work dead. Automatic retries have
+stopped for those exception rows.
+
+## Inspect the recorded failures
+
+```sql
+SELECT exception.message_id, exception.attempts, exception.delays,
+    exception.last_error, exception.updated_at,
+    message.schema_version, message.payload
+FROM {schema}.exception_queue_{stream_id} AS exception
+LEFT JOIN {schema}.message_log_{stream_id} AS message
+    ON message.id = exception.message_id
+WHERE exception.consumer_group_id = {group_id}
+    AND exception.status = 'dead'
+ORDER BY exception.updated_at DESC
+LIMIT 20;
+```
+
+| Result | Action |
+| --- | --- |
+| Dead rows with payloads | Read `last_error` and follow the correction below. |
+| `payload` is null because the message row is absent | Check retention and the original application record. The exception row alone cannot recover a removed payload. |
+| No rows | Check the warning's stream and group ids. Dead rows may have been cleaned up since the warning. |
+
+## Address the failure
+
+1. **Fix the failure recorded in `last_error`.** A `Terminal` result means the
+   consumer handler rejected the work as unrecoverable. Fix that input or
+   its validation. For ordinary errors, fix the failing operation before
+   allowing the application to submit more equivalent work.
+
+   If the error contains `hard timeout` or `killed: crash-loop hit max attempts`,
+   investigate [consumer handler timeouts](/troubleshooting/consumer-handler-exceeds-timeout/)
+   and process restarts first. Increasing retries does not fix a crashing
+   or non-returning consumer handler.
+
+2. **If the work still needs to run, check its application effects first.**
+   A failed attempt may have completed an external effect before recording
+   failed. Submit a new message through the application's normal producer
+   only when repeating those effects is safe. It gets a new id and can be
+   received by every matching group.
+
+Changing timeout or retry settings does not reactivate dead rows.
+SQLStreams does not expose a dead-letter redrive operation.
+
+## Related topics
+
+- [Retries and failed messages](/concepts/retries-and-failed-messages/) — Why retries stop.
+- [Consumer handler results](/reference/consume/#message-results) — Success, retry, delay, and terminal outcomes.
+- [Retry policy](/reference/consumer-registration/#retrypolicy) — Retry limits and backoff settings.

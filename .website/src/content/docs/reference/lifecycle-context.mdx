@@ -1,0 +1,58 @@
+---
+group: client
+title: Create a shutdown context
+description: "LifecycleContext: cancel on SIGINT or SIGTERM and force exit on a second signal."
+slop: high
+---
+
+```go title="sqlstreams.LifecycleContext"
+LifecycleContext(log Logger) (context.Context, context.CancelFunc)
+```
+
+Creates an application context cancelled by the first SIGINT or SIGTERM.
+A second signal while shutdown is in progress exits immediately with status
+`128 + signal number`.
+
+## Example
+
+Use a registered `consumer` for the `charge-cards` group on the `payments.requested` stream
+and the [example payload](/reference/consumer-group/#example-payload).
+
+```go
+ctx, stop := sqlstreams.LifecycleContext(nil)
+defer stop()
+
+err := consumer.Consume(ctx,
+	func(ctx context.Context, payment *PaymentRequestedV1) error {
+		fmt.Println(payment.OrderId)
+		return nil
+	}, nil)
+if err != nil {
+	return err
+}
+```
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `log` | [`Logger`](/reference/client/#logger) | No | Logger for shutdown messages. `nil` uses text output to stderr at info level. |
+
+## Returns
+
+| Value | Meaning |
+| --- | --- |
+| `context.Context` | A context derived from context.Background and cancelled by the first signal or stop call. |
+| `context.CancelFunc` | Unregisters signal notifications and cancels the context. Call it when application work has stopped. |
+
+Pass the context to blocking operations such as `Consume`, Manager.Run, or
+`SchedulerInstance.Schedule`. Their cancellation behavior determines how work
+drains. `LifecycleContext` itself does not wait for application goroutines.
+
+Keep the signal listener installed while graceful shutdown runs if
+the second-signal force-exit behavior is needed.
+
+## Related topics
+
+- [Stop a consumer gracefully](/guides/stop-a-consumer/) — Use the context in a consumer application.
+- [Consume messages](/reference/consume/) — Shutdown and cancellation behavior.

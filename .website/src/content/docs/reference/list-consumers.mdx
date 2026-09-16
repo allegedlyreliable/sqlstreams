@@ -1,0 +1,78 @@
+---
+group: consumer
+title: List consumer groups
+description: "Consumers: list a stream's registered consumer groups in name order."
+slop: high
+---
+
+import ThreadAside from '../../../components/thread-aside/thread-aside.svelte';
+
+```go title="StreamHandle[T].Consumers"
+Consumers(ctx context.Context) ([]*Consumer, error)
+```
+
+Lists the consumer groups registered on a stream, ordered by name. Reading
+the list does not create groups, change their settings, or advance their
+positions in the stream.
+
+## Example
+
+List groups on the `payments.requested` stream using an initialized `client`
+and the [example payload](/reference/consumer-group/#example-payload).
+
+```go
+payments := client.Stream[PaymentRequestedV1]("payments.requested")
+groups, err := payments.Consumers(ctx)
+if err != nil {
+	return err
+}
+for _, group := range groups {
+	fmt.Println(group.Name)
+}
+```
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `ctx` | `context.Context` | Yes | Cancelling this context or reaching its deadline interrupts the database read. |
+
+## Returns
+
+| Condition | Return value |
+| --- | --- |
+| Stream has registered groups | `(groups, nil)`, where `groups` contains [consumer group objects](/reference/consumer-group/) ordered by name. |
+| Stream has no groups | `(groups, nil)`, where `len(groups) == 0`. |
+| Read fails, including a missing stream | `(nil, err)`. See [Errors](#errors). |
+
+<ThreadAside label="NOTE" title="Running instances">
+
+The list includes registered groups even when none of their instances are
+running. Registration alone does not establish current activity.
+
+</ThreadAside>
+
+## CLI
+
+```sh
+sqlstreams consumer list payments.requested
+```
+
+Prints group names and ids, ordered by name, and exits with status `0`.
+An existing stream with no groups prints `no consumers registered` and also
+exits with status `0`. See [consumer list](/reference/consumer-cli/#consumer-list)
+for output formats and flags.
+
+## Errors
+
+| Error | When |
+| --- | --- |
+| `ErrStreamNotFound` | The stream is not registered. |
+| Validation error | The stream name is empty. |
+| Database error | The groups cannot be read. |
+| Context cancellation or deadline error | The read is interrupted by its context. |
+
+## Related topics
+
+- [The consumer group object](/reference/consumer-group/) — Returned fields.
+- [Retrieve a consumer group](/reference/get-consumer/) — Look up one group by name.

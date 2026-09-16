@@ -1,0 +1,74 @@
+---
+group: consumer
+title: Lease is repeatedly reclaimed (SQL0026–SQL0027)
+description: Inspect a reclaimed range and fix repeated expiry or quarantine.
+slop: high
+---
+
+```text title="Warning"
+level=WARN msg="lease reclaimed from expired worker" code=SQL0026 group_id={group_id} stream_id={stream_id} low={low} high={high} reclaims={reclaims}
+level=WARN msg="range quarantined after max reclaims -- messages written as 'ready' exceptions" code=SQL0027 group_id={group_id} stream_id={stream_id} low={low} high={high} reclaims={reclaims}
+```
+
+A range's lease expired before its completion was recorded. Another instance
+can claim it, including messages whose consumer handlers already returned.
+`SQL0027` moves the range into independent ready exceptions after the reclaim cap.
+
+## Inspect the affected range
+
+```sql
+SELECT message.id, lease.low, lease.high, lease.expires_at, lease.reclaims,
+    exception.status, exception.last_error
+FROM {schema}.message_log_{stream_id} AS message
+LEFT JOIN {schema}.claim_lease_{stream_id} AS lease
+    ON lease.consumer_group_id = {group_id}
+    AND message.id > lease.low AND message.id <= lease.high
+LEFT JOIN {schema}.exception_queue_{stream_id} AS exception
+    ON exception.consumer_group_id = {group_id}
+    AND exception.message_id = message.id
+WHERE message.id > {low} AND message.id <= {high}
+ORDER BY message.id;
+```
+
+| Result | Action |
+| --- | --- |
+| Lease exists with growing `reclaims` across warnings | Follow the recurring-expiry steps below. |
+| `status` is `ready`, `inflight`, or `deferred` | Exception processing now owns the retry. Read `last_error` and address that failure. |
+| `status` is `dead` | Follow [dead-letter handling](/troubleshooting/messages-dead-lettered/). |
+| Message exists without a lease or exception | Check the application's result. Absence of both rows does not prove success. |
+| No messages | Check stream id and range bounds. Retention may have removed the range. |
+
+## Fix recurring expiry
+
+1. **Check whether the original process stopped.** Match the warning's stream
+   and group with the application's restart history and `SQL0041` stopped log.
+   For planned stops, [stop gracefully](/guides/stop-a-consumer/) and allow
+   the process to finish before its supervisor force-stops it.
+
+2. **If the process stayed running, inspect its nearby failure evidence.**
+   `SQL0105` means messages waited too long in the instance's local queue
+   before their consumer handlers could start. Follow
+   [queue-delay correction](/troubleshooting/queued-message-cannot-start/).
+   Hard-timeout failures need [consumer handler cancellation fixes](/troubleshooting/consumer-handler-exceeds-timeout/).
+   `SQL0019` needs [commit-confirmation investigation](/troubleshooting/commit-confirmation-lost/).
+
+3. **If none of those identifies the delay, enable dispatch timing.** Set
+   `ConsumeOptions.SlowDispatchThreshold` to the longest expected consumer
+   handler duration, then stop gracefully and restart. Look for:
+
+   ```text
+   level=WARN msg="delivery dispatch exceeded the duration threshold" code=SQL0039 group={group} stream_id={stream_id} message_id={message_id} attempt={attempt} duration={duration} threshold={threshold}
+   ```
+
+   Use `message_id` and `duration` to identify slow work before increasing
+   lease budgets.
+
+Increasing `MaxRangeReclaims` only postpones quarantine. It does not give a
+claim more time to finish. `SQL0003` means a previous owner tried to record
+work after another instance had taken its lease.
+
+## Related topics
+
+- [Consumer leases](/concepts/consumer-leases/) — How expiry makes claimed work available again.
+- [Make message processing safe to repeat](/guides/side-effects-and-retries/) — Prevent repeated application changes.
+- [Consume options](/reference/consume/#consumeoptions) — Queue, timing, and reclaim settings.

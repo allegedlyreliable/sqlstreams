@@ -1,0 +1,68 @@
+---
+group: stream
+title: List messages for a key
+description: "Key.Messages: read a key's retained messages in descending id order."
+slop: high
+---
+
+```go title="KeyHandle[T].Messages"
+Messages(ctx context.Context, limit int) ([]*StoredMessage[T], error)
+```
+
+Reads retained messages with the selected `MessageKey`, newest id first.
+Results include uncompacted messages and older compacted messages that
+remain in the log. The read does not filter by payload schema version.
+
+## Example
+
+Inspect the `order-123` message key on the `payments.requested` stream
+using an initialized `client`. `RawPayload` preserves JSON from any version.
+
+```go
+payments := client.Stream[sqlstreams.RawPayload]("payments.requested")
+messages, err := payments.Key("order-123").Messages(ctx, 20)
+if err != nil {
+	return err
+}
+for _, message := range messages {
+	fmt.Println(message.Id, string(*message.Message))
+}
+```
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `ctx` | `context.Context` | Yes | Cancellation or its deadline interrupts the read. |
+| `limit` | `int` | Yes | Maximum messages to return. Must be positive. There is no default in the Go API. |
+
+## Returns
+
+| Condition | Return value |
+| --- | --- |
+| Matching retained messages exist | `(messages, nil)`, containing [stored messages](/reference/stored-message/) in descending id order. |
+| No matching messages remain | `(messages, nil)`, where `len(messages) == 0`. |
+| Stream is absent or read fails | `(nil, err)`. |
+
+## CLI
+
+```sh
+sqlstreams stream key messages payments.requested order-123 --limit 20
+```
+
+The CLI defaults to a limit of `20`. `--output json` prints an array of stored
+messages, or `[]` when no matching messages remain.
+
+## Errors
+
+| Error | When |
+| --- | --- |
+| Validation error | A stream name or message key is empty, or limit is not positive. |
+| `ErrStreamNotFound` | The stream is not registered. |
+| JSON decoding error | A stored payload cannot be decoded into T. |
+| Database or context error | The read fails or is interrupted. |
+
+## Related topics
+
+- [The stored message object](/reference/stored-message/) — Returned payload and metadata.
+- [Produce options](/reference/produce/#produceoptions) — Assign message keys and enable compaction.

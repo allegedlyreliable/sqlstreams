@@ -1,0 +1,64 @@
+---
+group: system
+title: Retrieve the system
+description: "System.Get: read the installation's identity and timestamps."
+slop: high
+---
+
+```go title="SystemHandle.Get"
+Get(ctx context.Context) (*System, error)
+```
+
+Reads the installation selected by the client's `Schema`. It does not create
+the installation or change its settings.
+
+## Example
+
+Use an initialized `client`.
+
+```go
+system, err := client.System().Get(ctx)
+if err != nil {
+	return err
+}
+if system == nil {
+	return errors.New("SQLStreams system is not registered")
+}
+fmt.Println(system.Id, system.CreatedAt)
+```
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `ctx` | `context.Context` | Yes | Cancellation or its deadline interrupts the database read. |
+
+## Returns
+
+| Condition | Return value |
+| --- | --- |
+| System is registered | `(system, nil)`, where system is the [system object](/reference/system-object/). |
+| System is absent | `(nil, nil)`. |
+| Read fails | `(nil, err)`. |
+
+## CLI
+
+```sh
+sqlstreams system get
+```
+
+Prints the system timestamps and exits with status `0` when registered.
+Absence exits with status `1`. See [system commands](/reference/system-cli/#retrieve)
+for output formats and flags.
+
+## Errors
+
+| Error | When |
+| --- | --- |
+| Database error | The system row cannot be read. |
+| Context cancellation or deadline error | The read is interrupted by its context. |
+
+## Related topics
+
+- [Register the system](/reference/system-registration/) — Create or redeclare the installation.
+- [The system object](/reference/system-object/) — Returned fields.

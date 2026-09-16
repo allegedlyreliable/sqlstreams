@@ -1,0 +1,61 @@
+---
+group: consumer
+title: Commit confirmation was lost (SQL0019)
+description: Inspect uncertain shutdown recording without replaying an already committed result.
+slop: high
+---
+
+import ThreadAside from '../../../components/thread-aside/thread-aside.svelte';
+
+```text title="Error · SQL0019"
+commit confirmation was lost
+```
+
+The database did not confirm a partial commit of consumer results during
+shutdown. Those writes may have committed. SQLStreams does not repeat that
+partial commit because doing so could record its outcomes twice.
+
+## Inspect the affected work
+
+Use `low` and `high` from the surrounding partial-commit warning:
+
+```text
+level=WARN msg="partial commit did not complete at shutdown -- range rides out lease expiry" group={group} stream_id={stream_id} low={low} high={high} error={error}
+```
+
+```sql
+SELECT message.id, exception.status, exception.attempts, exception.last_error,
+    lease.low, lease.high, lease.expires_at
+FROM {schema}.message_log_{stream_id} AS message
+LEFT JOIN {schema}.exception_queue_{stream_id} AS exception
+    ON exception.consumer_group_id = {group_id}
+    AND exception.message_id = message.id
+LEFT JOIN {schema}.claim_lease_{stream_id} AS lease
+    ON lease.consumer_group_id = {group_id}
+    AND message.id > lease.low AND message.id <= lease.high
+WHERE message.id > {low} AND message.id <= {high}
+ORDER BY message.id;
+```
+
+| Result | Action |
+| --- | --- |
+| Database read fails | Fix the connection or database failure shown by the error before restarting the consumer. |
+| Lease still covers a message | Keep a consumer instance running to reclaim the remaining work after expiry. Do not manually advance the cursor or delete the lease. |
+| `status` is `ready`, `inflight`, or `deferred` | Exception processing owns the retry. Read `last_error` for any continuing failure. |
+| `status` is `dead` | Follow [dead-letter handling](/troubleshooting/messages-dead-lettered/). |
+| Message exists with no lease or exception | Check the application's recorded result before resubmitting work. These missing rows do not prove success. |
+| No messages | Check stream id and bounds. Retention may have removed the messages. Consult the application's records. |
+
+<ThreadAside label="NOTE" title="An uncertain commit is not a failed effect">
+
+A consumer handler may already have completed an external effect even if
+its result cannot be confirmed. Make repeated processing safe before
+resubmitting the same business operation.
+
+</ThreadAside>
+
+## Related topics
+
+- [Make message processing safe to repeat](/guides/side-effects-and-retries/) — Protect application changes if processing runs again.
+- [Consumer leases](/concepts/consumer-leases/) — When unresolved work becomes available for reclaim.
+- [Stop a consumer gracefully](/guides/stop-a-consumer/) — Allow active work to finish during shutdown.

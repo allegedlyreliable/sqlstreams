@@ -11,14 +11,12 @@ import BoardStats from '../components/board-stats/board-stats.svelte';
 import JumpTo from '../components/jump-to/jump-to.svelte';
 import { jumpTargets } from './_board/navigation';
 import { boardRows, stickyRows } from './_board/rows';
-import { siteStats } from './_board/stats';
 import { siteThreads } from './_board/threads';
 
 const docs = await getCollection('docs');
 const threads = siteThreads(docs);
 const rows = boardRows(threads);
 const stickies = stickyRows(threads);
-const stats = siteStats(threads);
 const shell = await sandboxShell();
 ---
 
@@ -41,6 +39,6 @@ const shell = await sandboxShell();
 		<BoardRows client:idle rows={rows} />
 	</BoardSection>
 
-	<BoardStats docCount={stats.docCount} codeCount={stats.codeCount} />
+	<BoardStats docCount={threads.length} />
 	<JumpTo client:idle targets={jumpTargets} />
 </BoardLayout>

@@ -1,0 +1,86 @@
+---
+group: system
+title: Metric commands
+description: "CLI syntax for retained measurements, series filters, limits, and JSON output."
+slop: high
+---
+
+```sh
+sqlstreams metric latest sqlstreams.consumer.cursor.backlog \
+  --attribute stream=payments.requested --attribute group=charge-cards
+```
+
+Reads retained metric measurements. These commands do not collect a fresh
+database snapshot. Check each measurement's `at` for freshness.
+
+## List series
+
+```text
+sqlstreams metric list [--builtin | --user] [--quiet]
+```
+
+| Flag | Default | Effect |
+| --- | --- | --- |
+| `--builtin` | `false` | Only names starting with `sqlstreams.`. |
+| `--user` | `false` | Only other names. Cannot be combined with `--builtin`. |
+| `--quiet`, `-q` | `false` | Print series keys, one per line. Cannot be combined with JSON output. |
+
+With neither filter, lists all retained series. Output is a table of current
+measurements or a JSON array of [Measurement objects](/reference/read-metrics/#measurement).
+An empty list exits `0` with JSON `[]`.
+
+## Latest and history
+
+```text
+sqlstreams metric latest <name> [--attribute key=value] [--series-limit 10]
+sqlstreams metric history <name> [--attribute key=value] [--series-limit 10] [--limit 10]
+```
+
+```sh
+sqlstreams metric history sqlstreams.consumer.cursor.backlog \
+  --attribute stream=payments.requested --attribute group=charge-cards \
+  --limit 20 --output json
+```
+
+| Flag | Default | Effect |
+| --- | --- | --- |
+| `--attribute` | No filter | Repeatable key/value filters. All pairs must match. Repeating a key uses its last supplied value. |
+| `--series-limit` | `10` | Positive maximum attribute sets to display. |
+| `--limit` | `10` | `history` only. Positive maximum measurements per series, newest message id first. |
+
+Attribute filters are partial. Omitted attributes can vary across matching
+series, unlike the Go API's exact-series selector. An empty filter value
+also matches a missing attribute. Selection starts from currently retained
+series heads, then `history` reads each selected series.
+
+### JSON result
+
+| Field | Meaning |
+| --- | --- |
+| `name` | Requested metric name. |
+| `exists` | Whether any series matched before truncation. |
+| `kind` | Kind from the first matched series. Omitted when absent. |
+| `unit` | Unit from the first matched series. Omitted when empty or absent. |
+| `series` | Array of objects with `attributes` and `measurements`. `latest` still uses a one-element measurements array per series. |
+| `series_total` | Matching series count before the series limit. |
+
+No match returns `exists: false`, `series: []`, and `series_total: 0`, with
+exit status `1`. Truncation does not cause failure. Invalid filter syntax or
+nonpositive limits exit `2`.
+
+## Definitions
+
+```sh
+sqlstreams explain sqlstreams.consumer.cursor.backlog
+```
+
+Explain reads the built-in definition offline. Metric list reads recorded
+values, so it does not show definitions that have never been collected.
+Custom series have no built-in Explain definition.
+
+## Related topics
+
+- [SQLStreams CLI](/reference/cli/) — Connection and output options.
+- [Read metric measurements](/reference/read-metrics/) — Retention, freshness, and Go APIs.
+- [Consumer metrics](/reference/consumer-metrics/) — Metric names and interpretation.
+- [System metrics](/reference/system-metrics/) — Collector, worker, schedule, and alert series.

@@ -1,49 +1,35 @@
 ---
+group: system
 title: Supported PostgreSQL versions
-description: The PostgreSQL majors SQLStreams runs on, the minors each verification ran against, and what that promise covers.
+description: Supported server majors and the recorded verification matrix.
 slop: high
 ---
 
-SQLStreams runs on PostgreSQL 15, 16, 17, and 18. The supported set is the
-majors the PostgreSQL community still supports, so a major leaves the list in
-the first release after the community drops it. 14 reaches end of life in
-November 2026 and was never on the list; 15 follows in November 2027.
+| PostgreSQL major | Supported |
+| --- | --- |
+| 15 | Yes |
+| 16 | Yes |
+| 17 | Yes |
+| 18 | Yes |
 
-Any minor of a listed major is supported. The table records the minor a
-verification actually ran on, which is the evidence behind the row and
-nothing more.
+Any minor release of a listed major is supported. The recorded runs below
+identify tested minors rather than imposing a minimum minor version.
 
-Nothing in the SQL pins a floor. The features in use (`SKIP LOCKED`, range
-partitioning, `gen_random_uuid()`) all predate 15. The floor is the support
-window and nothing else.
+## Verification evidence
 
-## What is verified
+| Source | 15 | 16 | 17 | 18 | Recorded result |
+| --- | --- | --- | --- | --- | --- |
+| 15a2dde5, after v0.1.5 | 15.19 | 16.15 | 17.11 | 18.6 | On 2026-09-14, 103 integration tests in 9 packages passed on each major with the race detector. All four signal cases passed on 15.19 and 16.15. |
 
-Every push to main and every release tag runs the integration suite against
-each listed major with the race detector on. The suite's subject is the lock
-manager and MVCC: claims, leases, the snapshot fence, cursors, compaction,
-partitions. The signal cases (what a killed or signalled process leaves
-behind) run by hand on the oldest majors at a release checkpoint.
+## Scope
 
-| Source | 15 | 16 | 17 | 18 | Notes |
-| ------ | -- | -- | -- | -- | ----- |
-| 15a2dde5 (main, after v0.1.5) | 15.19 | 16.15 | 17.11 | 18.6 | 103 integration tests in 9 packages passed on each, race detector on, 2026-09-14. All four signal cases passed on 15.19 and 16.15. |
+| Compatibility question | Covered here |
+| --- | --- |
+| Has a PostgreSQL major-upgrade procedure been tested? | No. This matrix does not verify pg_upgrade or dump-and-restore procedures. |
+| Can a SQLStreams build use this installation's database schema? | Determined separately by SQLStreams migration versions and compatibility requirements. |
 
-A release adds its row at its checkpoint. The initial investigation before
-this table (the same four minors, 102 tests) ran on a snapshot that predates
-the current retry code and is not listed.
+## Related topics
 
-## What the promise covers
-
-Three different things get called compatibility here:
-
-- Server version, this page - the library's SQL runs correctly on each listed
-  major. That is the whole promise.
-- A PostgreSQL major upgrade - yours to run, with `pg_upgrade` or dump and
-  restore. SQLStreams's tables are plain tables and range partitions with no
-  extensions or custom types, so they move like any other table. Not tested
-  here.
-- A SQLStreams schema upgrade - the migration registry and its minimum
-  compatible version. See
-  [Upgrades & Migrations](/guides/migrations/) for the gate and the release
-  compatibility table.
+- [Migrate database schemas](/reference/schema-migrations/) — SQLStreams database schema versions.
+- [Create a PostgreSQL pool](/reference/pool/) — Connection configuration.
+- [Upgrading SQLStreams](/guides/migrations/) — Library and SQLStreams database upgrade procedure.

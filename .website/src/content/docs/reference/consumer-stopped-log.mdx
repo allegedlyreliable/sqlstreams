@@ -1,0 +1,82 @@
+---
+group: consumer
+title: Consumer stopped log (SQL0041)
+description: Emission, fields, and session counters in the consumer stopped summary.
+slop: high
+---
+
+import ThreadAside from '../../../components/thread-aside/thread-aside.svelte';
+
+```text title="Info · SQL0041"
+level=INFO msg="consumer stopped" code=SQL0041 group={group} stream_id={stream_id} duration={duration} claimed_count={claimed_count} success_count={success_count} superseded_count={superseded_count} ready_count={ready_count} deferred_count={deferred_count} dead_count={dead_count} reclaimed_count={reclaimed_count} quarantined_count={quarantined_count} abandoned_count={abandoned_count} lease_lost_count={lease_lost_count} help="metrics explained: sqlstreams explain SQL0041"
+```
+
+The `SQL0041` log summarizes one `Consume` session after its runners finish.
+It reports the session's duration and activity counters.
+
+## Emission
+
+| Property | Contract |
+| --- | --- |
+| Level | Info. |
+| Normal shutdown | Emitted after the session's runners return. |
+| Fatal runner error | Emitted after the session's runners return. `Consume` separately returns the error. |
+| Failure before runners start | Not emitted for input validation errors, a binding wait cancelled before startup, or runner construction failure. |
+| Suppression | Consumer warning suppression does not suppress Info. An external logger can filter or drop the record. |
+
+<ThreadAside label="NOTE" title="Enable Info logging">
+
+The default logger filters Info, so this summary is hidden unless the
+application's logger permits that level.
+
+</ThreadAside>
+
+## Fields
+
+Loggers can add shared attributes such as the database schema.
+
+| Field | Value or unit | Description |
+| --- | --- | --- |
+| `code` | `SQL0041` | Identifies this log definition. |
+| `group` | Group name | The consumer group this session processed. |
+| `stream_id` | Database id | The stream that owns the group. |
+| `duration` | Duration | Time from starting the session runners until they finish, including graceful shutdown. |
+| `claimed_count` | Messages | Messages claimed, including exception retries. |
+| `success_count` | Outcomes | Consumer handler calls that returned successfully, counted before database recording. |
+| `superseded_count` | Outcomes | Messages classified as superseded before database recording. |
+| `ready_count` | Outcomes | Exception rows written ready for retry. |
+| `deferred_count` | Outcomes | Messages deferred while waiting for their message key. Exception retries count deferral before recording. |
+| `dead_count` | Outcomes | Exception rows written dead. |
+| `reclaimed_count` | Leases | Expired leases reclaimed by the session. |
+| `quarantined_count` | Ranges | Ranges moved to individual exception processing when the reclaim count reaches its limit. |
+| `abandoned_count` | Goroutines | Consumer handlers abandoned after their allowed cancellation time. |
+| `lease_lost_count` | Commits | Outcome commits rejected because the lease was lost. |
+| `help` | `metrics explained: sqlstreams explain SQL0041` | Command for this log's definition. |
+
+Every counter is present, including zero values. Counters reset at the start
+of each `Consume` call and describe that session's activity.
+
+## Interpretation
+
+For the `charge-cards` group on the `payments.requested` stream, a session
+whose consumer handlers return successfully for message ids 1–4 can report
+`success_count=4`. Recording can still fail afterward. This counter does not
+count distinct external effects.
+
+[Cursor backlog](/reference/consumer-cursor-backlog/) measures shared group
+progress at an observation time. It does not reconcile with one instance's
+session totals.
+
+## CLI
+
+```sh
+sqlstreams explain SQL0041
+```
+
+Prints the log's definition and exits with status `0`. It does not retrieve
+past log records.
+
+## Related topics
+
+- [Stop a consumer gracefully](/guides/stop-a-consumer/) — Handle shutdown and wait for `Consume` to return.
+- [Consume messages](/reference/consume/) — Calling contract, shutdown options, and returned errors.

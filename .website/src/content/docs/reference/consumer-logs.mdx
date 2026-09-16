@@ -1,0 +1,104 @@
+---
+group: consumer
+title: Consumer logs
+description: "Consumer claim, processing, retry, and configuration events."
+slop: high
+---
+
+```sh
+sqlstreams explain SQL0105
+```
+
+Consumer events identify the affected stream and group through structured
+fields. Use the nested error or the linked procedure to investigate the
+failure. The [consumer stopped entry](/reference/consumer-stopped-log/)
+defines the final session summary separately.
+
+## Claims and lease time
+
+Range bounds use `(low, high]`: low is excluded, high is included.
+
+```text title="Log templates"
+level=WARN msg="could not claim messages -- the next claim waits one poll rate" code=SQL0108 group={group} stream_id={stream_id} worker={worker} delay={delay} error={error}
+level=WARN msg="queued message has insufficient lease time -- range waits for reclaim; successful handlers in the range can repeat" code=SQL0105 group={group} stream_id={stream_id} low={low} high={high} message_id={message_id} lease_remaining={lease_remaining} message_timeout={message_timeout} timeout_grace={timeout_grace} record_margin={record_margin}
+level=WARN msg="lease reclaimed from expired worker" code=SQL0026 group_id={group_id} stream_id={stream_id} low={low} high={high} reclaims={reclaims}
+level=WARN msg="range quarantined after max reclaims -- messages written as 'ready' exceptions" code=SQL0027 group_id={group_id} stream_id={stream_id} low={low} high={high} reclaims={reclaims}
+```
+
+| Code | Emission condition |
+| --- | --- |
+| `SQL0108` | A retryable claim failure remains after internal retries. The next claim waits one poll interval. |
+| `SQL0105` | A queued message cannot start with enough time for its consumer handler, timeout grace, and recording. Warns once when its range becomes stale. |
+| `SQL0026` | The reclaim transaction selects an expired range lease and increments its reclaim count. |
+| `SQL0027` | Reclaim count reaches `MaxRangeReclaims` and the transaction starts converting the range into ready exceptions. |
+
+Reclaim and quarantine warnings are emitted inside the transaction, before
+its commit. Use current lease or exception state to confirm the result.
+
+- [Messages are not being claimed](/troubleshooting/messages-not-claimed/) — Investigate recurring `SQL0108`.
+- [Queued message cannot start](/troubleshooting/queued-message-cannot-start/) — Investigate `SQL0105`.
+- [Lease is repeatedly reclaimed](/troubleshooting/lease-repeatedly-reclaimed/) — Reclaim and quarantine investigation.
+
+## Processing and dead letters
+
+```text title="Log templates"
+level=WARN msg="delivery dispatch exceeded the duration threshold" code=SQL0039 group={group} stream_id={stream_id} message_id={message_id} attempt={attempt} duration={duration} threshold={threshold}
+level=WARN msg="messages dead-lettered -- unrecoverable, will not be retried" code=SQL0028 group_id={group_id} stream_id={stream_id} dead_count={dead_count}
+level=WARN msg="message dead-lettered -- unrecoverable, will not be retried" code=SQL0029 group_id={group_id} stream_id={stream_id} message_id={message_id}
+level=WARN msg="exception dead-lettered -- unrecoverable, will not be retried" code=SQL0030 group_id={group_id} stream_id={stream_id} message_id={message_id} attempts={attempts}
+level=WARN msg="crash-loop kill backstop fired -- exceptions marked dead" code=SQL0031 group_id={group_id} stream_id={stream_id} dead_count={dead_count}
+```
+
+| Code | Emission condition |
+| --- | --- |
+| `SQL0039` | Dispatch exceeds a positive `SlowDispatchThreshold`, regardless of its result. Disabled when the threshold is zero. |
+| `SQL0028` | A range result commit writes one or more terminal outcomes. |
+| `SQL0029` | A message's terminal outcome is recorded. |
+| `SQL0030` | An exception's terminal outcome is recorded. |
+| `SQL0031` | Expired exception attempts reach the crash-loop backstop and are marked dead. |
+
+For `SQL0039`, `duration` starts when SQLStreams dispatches the message to
+its consumer handler. It ends when the consumer handler returns or SQLStreams
+stops waiting after the message timeout and cancellation grace. Queue waiting
+before dispatch and recording the result afterward are outside this duration.
+`SlowDispatchThreshold` controls the warning independently of the message timeout.
+
+`SQL0031` reports repeated exception claims that expired before their results
+were recorded.
+
+- [Consumer handler exceeds its timeout](/troubleshooting/consumer-handler-exceeds-timeout/) — Cancellation and slow-dispatch evidence.
+- [Messages are dead-lettered](/troubleshooting/messages-dead-lettered/) — Inspect terminal failures and exhausted retries.
+- [Commit confirmation was lost](/troubleshooting/commit-confirmation-lost/) — Investigate `SQL0019` from result recording.
+
+## Configuration
+
+```text title="Log templates"
+level=WARN msg="stored message options outside this consumer's bounds -- clamped" code=SQL0032 stored={stored} clamped={clamped}
+level=WARN msg="could not refresh group config -- the last copy stays in use" code=SQL0060 group={group} stream_id={stream_id} worker={worker} error={error}
+```
+
+| Code | Emission condition |
+| --- | --- |
+| `SQL0032` | Stored options are adjusted to the consumer group's bounds. |
+| `SQL0060` | A running instance cannot read its worker's current configuration. |
+
+`SQL0032` does not reject the message. Read [message defaults and bounds](/reference/consumer-registration/)
+for resolution rules. `SQL0060` retains the last usable configuration until
+a later refresh succeeds.
+
+## Suppression and context
+
+A consumer instance suppresses repeated Warn/Error messages for one minute.
+Different message ids do not create separate suppression keys. The next
+emitted repeat can carry `suppressed_count`. Logger-bound fields can add
+session and worker context to the event fields above.
+
+[Errors and diagnostics](/reference/diagnostics/#logging) defines suppression,
+structured errors, and buffered diagnostic context. Offline Explain prints
+the full declared messages and their diagnostic queries.
+
+## Related topics
+
+- [Consume messages](/reference/consume/) — Options and returned results.
+- [Consumer stopped log](/reference/consumer-stopped-log/) — Final counts and stopping conditions.
+- [Consumer metrics](/reference/consumer-metrics/) — Shared state and session counters.

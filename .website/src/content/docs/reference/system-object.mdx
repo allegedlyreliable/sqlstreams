@@ -1,0 +1,40 @@
+---
+group: system
+title: The system object
+description: "System: the identity and timestamps of a SQLStreams installation."
+slop: high
+---
+
+```go title="sqlstreams.System"
+type System struct {
+	Id        int64     `json:"system_id"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+```
+
+Identifies the SQLStreams installation in the client's configured PostgreSQL
+schema. `System.Get` returns this object.
+
+## Fields
+
+| Field | Type | JSON name | Description |
+| --- | --- | --- | --- |
+| `Id` | `int64` | `system_id` | Installation id used by its streams and other owned resources. |
+| `CreatedAt` | `time.Time` | `created_at` | When the system row was created. |
+| `UpdatedAt` | `time.Time` | `updated_at` | The system row's stored update timestamp. |
+
+## Operations
+
+| Operation | Go API |
+| --- | --- |
+| Register the system | `client.System().Register(ctx, cfg)` |
+| Retrieve the system | `client.System().Get(ctx)` |
+| Read the migration version | `client.System().MigrationVersion(ctx)` |
+| Migrate the system | `client.System().Migrate(ctx, targetVersion)` |
+| Delete the system | `client.System().Destroy(ctx, options)` |
+
+## Related topics
+
+- [Create a client](/reference/client/) — Select the installation's schema.
+- [The stream object](/reference/stream-object/) — Streams owned by the system.

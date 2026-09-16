@@ -1,124 +1,297 @@
 ---
-title: Side Effects & Retries
-description: What the produce transaction doesn't cover — the email that can't be 'unsent', the ambiguous commit, and the retry loop only you can write.
-slop: high
+group: consumer
+title: Make message processing safe to repeat
+description: Prevent repeated reward requests from crediting a user's points more than once.
+slop: medium
 ---
 
-[Transactional produce](/guides/transactional-produce/) makes your
-statements and the message one `COMMIT` — both land or neither does.
-Two things stay outside that guarantee, and both are yours to handle:
-side effects, which are not statements and cannot roll back, and
-rerunning the closure, which only you know is safe.
+import ThreadAside from '../../../components/thread-aside/thread-aside.svelte';
 
-## Side effects don't roll back
+Suppose your application gives a user 10 reward points when they sign up.
+Crediting those points twice would give the user a larger reward than intended.
 
-Don't call `sendEmailConfirmation()` before the transaction is known
-to commit. If a later step fails and rolls back, the database will
-undo its half but that email can't be 'unsent'. The transaction covers
-your statements and the produced message; a plain function call inside
-the closure runs the moment it's reached, and no `ROLLBACK` reaches it.
+A producer's `IdempotencyKey` prevents repeated produce calls from storing
+duplicate messages. It does not prevent a consumer handler from processing
+the same stored message again.
 
-Here's [the multi-stream closure](/guides/transactional-produce/#several-streams-one-commit)
-with an email in the wrong place. Say `orderId` is `4127` and the
-customer is `jamie@example.com`:
+For example, a consumer handler processes message 1 and commits the 10 points
+to Postgres. Its process then crashes before SQLStreams records success.
+After the lease expires, another consumer instance can process **message 1
+again**. No second message was produced, so the producer's idempotency key
+cannot prevent the points from being added again.
 
-```go
-// ❌ the email fires whether or not the commit happens
-err := client.InTransaction(ctx, func(ctx context.Context, tx sqlstreams.Tx) error {
-	if _, err := tx.Exec(ctx, `UPDATE orders SET status = 'paid' WHERE id = $1`, orderId); err != nil {
+This guide records a reward's id and updates the user's points in one
+transaction. A repeated reward id skips the update. This makes the database
+change **idempotent**, meaning repeating the request has the same effect as
+applying it once.
+
+## Before you begin
+
+Use the Go project and running database from the [Quickstart](/quickstart/).
+Replace its producer and consumer with the examples below. They use a new
+`rewards.earned` stream and a `credit-rewards` consumer group.
+
+## 1. Create the reward tables
+
+Run this from the Quickstart project directory:
+
+```sh
+docker compose exec -T db psql -U username -d quickstart <<'SQL'
+CREATE TABLE reward_credits (
+    reward_id text PRIMARY KEY,
+    user_id text NOT NULL,
+    points integer NOT NULL
+);
+
+CREATE TABLE user_rewards (
+    user_id text PRIMARY KEY,
+    points integer NOT NULL
+);
+SQL
+```
+
+`reward_credits` records which rewards have been applied. Its primary key
+prevents two transactions from crediting the same reward. `user_rewards`
+stores each user's total points.
+
+## 2. Produce a reward request
+
+Replace `cmd/produce/main.go` with:
+
+```go title="cmd/produce/main.go"
+package main
+
+import (
+	"fmt"
+	"os"
+
+	sqlstreams "github.com/allegedlyreliable/sqlstreams/client"
+)
+
+type RewardEarned struct {
+	RewardId string `json:"reward_id"`
+	UserId   string `json:"user_id"`
+	Points   int    `json:"points"`
+}
+
+func (RewardEarned) SchemaVersion() int { return 1 }
+
+func main() {
+	if err := run(); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+}
+
+func run() error {
+	ctx, stop := sqlstreams.LifecycleContext(nil)
+	defer stop()
+
+	pool, err := sqlstreams.NewPostgresPool(ctx, "username", "password", "localhost", "quickstart", nil)
+	if err != nil {
+		return err
+	}
+	defer pool.Close()
+
+	client, err := sqlstreams.NewClient(ctx, pool, nil)
+	if err != nil {
 		return err
 	}
 
-	sendEmailConfirmation("jamie@example.com") // fires NOW, mid-transaction
+	rewards := client.Stream[RewardEarned]("rewards.earned")
+	if _, err := rewards.Register(ctx, nil); err != nil {
+		return err
+	}
+	producer, err := rewards.Producer().Register(ctx, nil)
+	if err != nil {
+		return err
+	}
 
-	_, err := receipts.ProduceInTx(ctx, tx, &ReceiptRequested{OrderId: orderId}, nil)
-	return err
-})
-```
-
-Walk the failure: the produce returns an error (a dropped connection
-is enough) -> `InTransaction` rolls back -> order 4127 is unpaid again
-and no receipt message exists -> Jamie is holding a "payment received"
-email for a payment the database says never happened.
-
-Moving the call below `InTransaction` fixes that, with one catch: it
-must sit behind the `nil` check. An error return doesn't confirm the
-rollback either — an ambiguous commit failure surfaces as-is (see
-[retries](#retries-are-yours-to-own)) — so on error the only safe
-move is still no email.
-
-```go
-err := client.InTransaction(ctx, func(ctx context.Context, tx sqlstreams.Tx) error {
-	// statements and produces only -- everything in here can roll back
-	_, err := tx.Exec(ctx, `UPDATE orders SET status = 'paid' WHERE id = $1`, orderId)
-	return err
-})
-if err != nil {
-	return err // maybe committed, maybe not -- still no email
-}
-sendEmailConfirmation("jamie@example.com") // the commit is known here
-```
-
-Now walk *this* failure: the process crashes after the commit, before
-the send. The payment is recorded, but the email never goes out. This is
-the [dual-write failure window](/why-sqlstreams/#one-commit-for-the-business-write-and-message):
-database first, side effect second.
-Make the email a message:
-
-```go
-_, err := emails.ProduceInTx(ctx, tx,
-	&EmailRequested{To: "jamie@example.com", Template: "payment-received"}, nil)
-```
-
-An `email-sender` consumer group calls `sendEmailConfirmation()` in
-its [consumerFunc](/guides/consumer-timeouts/) — the relay shape from
-the produce guide's external-systems note, pointed at your own mail
-provider. The request to send now commits atomically with the payment,
-a flaky provider gets retries, and a send that keeps failing is
-dead-lettered instead of vanishing with a crashed process.
-
-## Retries are yours to own
-
-`InTransaction` never retries your closure — a transient blip or an
-ambiguous commit failure surfaces to you as-is, because only you know
-what's safe to rerun. A retry must make both the business statements and
-the produced message safe to repeat. A stable `ProduceOptions.IdempotencyKey` deduplicates the
-message within its TTL; it does not undo or deduplicate other statements
-in your closure. Use a business operation id or an equivalent database
-constraint for those writes. Omitting `IdempotencyKey` mints a fresh key
-per call, so a naive rerun can produce a second message.
-
-```go
-// any stable string works as the key -- here the order id already is one
-produced, err := instance.Produce(ctx, &OrderCreated{OrderId: order.Id},
-	&sqlstreams.ProduceOptions{IdempotencyKey: "order-created-" + order.Id})
-if err != nil {
-	return err
-}
-if produced.Duplicate {
-	fmt.Println("an earlier attempt already landed -- nothing produced twice")
+	produced, err := producer.Produce(ctx, &RewardEarned{
+		RewardId: "signup:user-123",
+		UserId:   "user-123",
+		Points:   10,
+	}, nil)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("produced message id=%d\n", produced.Id)
+	return nil
 }
 ```
 
-`Duplicate == true` means an earlier call — or an earlier attempt of
-this one, after a commit whose outcome you never learned — already
-produced under the same key. The key is an opaque string: one that
-parses as a UUID is stored verbatim, anything else is hashed to a
-deterministic UUID first, so the same string always lands on the same
-claim row. If you mint keys yourself on a hot path, prefer UUIDv7
-strings — random-shaped keys cost extra WAL once the claim table is
-millions of rows deep. A caller-supplied key also locks that key for
-the length of the transaction it runs in, so keep transactions that
-reuse keys short. A caller-supplied key also takes the call
-out of batching: it runs in its own transaction, so a producer that
-keys every message has left the batch path under load.
+Keep `RewardId` unchanged when requesting the same reward again. A different
+reward needs a different id, even when it belongs to the same user.
 
-The claim lives for `StreamConfig.IdempotencyKeyTTL`, 24 hours by
-default, then the stream janitor sweeps it. A retry that arrives after
-that window is a new message, not a duplicate, and nothing logs it.
-Size the TTL to your upstream's retry horizon: a webhook provider
-that retries for three days needs a three-day TTL on that stream.
+<ThreadAside label="NOTE" title="Producer Idempotency Key">
 
-The key is an identifier and is logged as one: a duplicate publish narrates
-`idempotency_key` at Debug, and a produce failure line carries that
-narration. Build it from ids, not from the document's contents.
+Use the producer's `IdempotencyKey` to prevent duplicate messages. Consumer
+handlers still need duplicate protection because the same message can be
+processed again.
+
+This example omits the `IdempotencyKey` to demonstrate that protection.
+
+</ThreadAside>
+
+## 3. Record the reward and points together
+
+Replace `cmd/consume/main.go` with:
+
+```go title="cmd/consume/main.go"
+package main
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"os"
+
+	sqlstreams "github.com/allegedlyreliable/sqlstreams/client"
+)
+
+type RewardEarned struct {
+	RewardId string `json:"reward_id"`
+	UserId   string `json:"user_id"`
+	Points   int    `json:"points"`
+}
+
+func (RewardEarned) SchemaVersion() int { return 1 }
+
+func main() {
+	if err := run(); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+}
+
+func run() error {
+	ctx, stop := sqlstreams.LifecycleContext(nil)
+	defer stop()
+
+	pool, err := sqlstreams.NewPostgresPool(ctx, "username", "password", "localhost", "quickstart", nil)
+	if err != nil {
+		return err
+	}
+	defer pool.Close()
+
+	client, err := sqlstreams.NewClient(ctx, pool, nil)
+	if err != nil {
+		return err
+	}
+
+	rewards := client.Stream[RewardEarned]("rewards.earned")
+	registered, err := rewards.Get(ctx)
+	if err != nil {
+		return err
+	}
+	if registered == nil {
+		return errors.New("stream not registered -- run the producer first")
+	}
+	consumer, err := rewards.Consumer("credit-rewards").Register(ctx, nil)
+	if err != nil {
+		return err
+	}
+
+	return consumer.Consume(ctx, func(ctx context.Context, reward *RewardEarned) error {
+		err := client.InTransaction(ctx, func(ctx context.Context, tx sqlstreams.Tx) error {
+			inserted, err := tx.Exec(ctx,
+				`INSERT INTO reward_credits (reward_id, user_id, points)
+				 VALUES ($1, $2, $3) ON CONFLICT (reward_id) DO NOTHING`,
+				reward.RewardId, reward.UserId, reward.Points)
+			if err != nil {
+				return err
+			}
+			if inserted.RowsAffected() == 0 {
+				return nil
+			}
+
+			_, err = tx.Exec(ctx,
+				`INSERT INTO user_rewards (user_id, points) VALUES ($1, $2)
+				 ON CONFLICT (user_id) DO UPDATE
+				 SET points = user_rewards.points + EXCLUDED.points`,
+				reward.UserId, reward.Points)
+			return err
+		})
+		if err != nil {
+			return err
+		}
+		fmt.Printf("reward recorded: %s\n", reward.RewardId)
+		return nil
+	}, nil)
+}
+```
+
+So what does this `InTransaction` do?
+
+- **On new reward:** The insert into `reward_credits` adds a row, so
+  `RowsAffected()` is `1`. The code adds the points and commits both writes.
+- **Already credited:** The reward id exists, so the insert adds no row and
+  `RowsAffected()` is `0`. The code skips the points update and returns `nil`,
+  allowing SQLStreams to record success for this message.
+- **Points update fails:** Returning the error rolls back the transaction,
+  including the new reward record. A retry can then insert that record and
+  attempt the points update again.
+
+<ThreadAside label="NOTE" title="Keep both writes in the same transaction">
+
+Both writes must use the same `tx`. Otherwise, the reward record could
+commit without the points, causing later attempts to skip a reward that was
+never credited.
+
+</ThreadAside>
+
+## 4. Run the same reward twice
+
+Produce two messages requesting the same signup reward:
+
+```sh
+go run ./cmd/produce
+go run ./cmd/produce
+```
+
+These are separate messages with the same `RewardId`. This checks the
+application's duplicate protection without needing to crash a process.
+
+Start the consumer:
+
+```sh
+go run ./cmd/consume
+```
+
+The consumer prints this line for each message, including a duplicate whose
+reward was already recorded:
+
+```text
+reward recorded: signup:user-123
+```
+
+After both messages have been processed, press Ctrl-C once to stop the consumer.
+Check the points:
+
+```sh
+docker compose exec -T db psql -U username -d quickstart \
+  -c "SELECT user_id, points FROM user_rewards WHERE user_id = 'user-123';"
+```
+
+The result is `user-123` with **10 points**, rather than 20. Keep the reward
+records for as long as the same rewards may be requested again. Deleting a
+record allows that reward to add points again.
+
+<ThreadAside label="NOTE" title="External APIs need their own duplicate protection">
+
+This transaction protects database writes. For an email or payment API, pass
+an idempotency key supported by that provider. Saving a local record cannot
+make an external API call commit or roll back with your database.
+
+</ThreadAside>
+
+## Related topics
+
+- [Consumer groups](/concepts/consumer-groups/#a-message-can-run-again) — Why
+  a consumer handler can run again after completing its work.
+- [Run a database transaction](/reference/transactions/) — Commit and rollback
+  behavior of `InTransaction`.
+- [Consumer handler results](/reference/consume/#message-results) — How the
+  consumer handler reports success or asks SQLStreams to retry.
+- [Produce messages in a database transaction](/guides/transactional-produce/) —
+  Save an application change and its message together.

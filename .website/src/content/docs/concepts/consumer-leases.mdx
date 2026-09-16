@@ -11,18 +11,18 @@ import { layoutResources } from '../../../components/diagram/layout';
 import { queueDiagram } from '../../../components/queue-card/diagram';
 
 A consumer instance can claim messages before it is ready to process them.
-Those messages wait in the instance's local queue while earlier handlers run.
+Those messages wait in the instance's local queue while earlier consumer handlers run.
 Other instances in the same [consumer group](/concepts/consumer-groups/) need
 to know which work is still claimed and when they can take it over if the
 instance stops.
 
 A **lease** gives an instance temporary ownership of a claimed range of
 message ids. Its expiration time is set when the work is claimed. Waiting
-in the queue uses part of that time, even though the handler has not started.
+in the queue uses part of that time, even though the consumer handler has not started.
 
 Suppose the `payments.requested` stream contains messages with ids 1–4.
 Consumer instance A claims all four for the `charge-cards` group. Those ids
-form one claimed range with one lease. A runs one handler at a time, so
+form one claimed range with one lease. A runs one consumer handler at a time, so
 messages 2–4 wait while it processes message 1.
 
 <Diagram
@@ -42,7 +42,7 @@ deadline it had when A claimed it. Some of its available time has already
 been spent waiting.
 
 Before starting message 2, A checks how much lease time remains. It needs
-enough time for the handler to use its full allowed timeout and for SQLStreams
+enough time for the consumer handler to use its full allowed timeout and for SQLStreams
 to record the result afterward. If too little time remains, A leaves the
 message unprocessed even though the lease has not expired. A still owns the
 claimed messages, but it can no longer start processing the next one.
@@ -54,10 +54,10 @@ last by adding time for four things. In this example:
 
 - **Waiting in the queue: 15 seconds.** This allows a message to wait while
   A processes earlier messages.
-- **Running the handler: 30 seconds.** This is the longest handler timeout
+- **Running the consumer handler: 30 seconds.** This is the longest consumer handler timeout
   the group permits. Each message in this example is configured to use that
-  timeout, though its handler can finish sooner.
-- **Responding to cancellation: 1 second.** If a handler reaches its timeout,
+  timeout, though its consumer handler can finish sooner.
+- **Responding to cancellation: 1 second.** If a consumer handler reaches its timeout,
   SQLStreams cancels its context and gives it this extra time to return.
 - **Recording the result: 2 seconds.** This leaves time to save the processing
   result in the database.
@@ -66,23 +66,23 @@ Together, these give A a lease lasting **48 seconds from the claim**.
 All four messages share that deadline. Starting the next message does not
 restart the lease clock.
 
-These are illustrative settings. The [session options](/reference/consumer-session-options/)
+These are illustrative settings. The [session options](/reference/consume/#consumeoptions)
 name the allowances `QueueMargin`, `TimeoutGrace`, and `RecordMargin`.
-The timeout ceiling belongs to the [group's message settings](/reference/consumer-group-settings/#message-settings).
+The timeout ceiling belongs to the [group's message settings](/reference/consumer-registration/#messageoptions).
 
 ## A queued message can become too late to start
 
-Before calling a handler, A checks that the remaining lease covers that
+Before calling a consumer handler, A checks that the remaining lease covers that
 message's timeout, the cancellation grace, and the recording allowance.
 In this example, each message needs **33 seconds remaining** to start:
 30 seconds to run, 1 second of grace, and 2 seconds to record.
 
-Suppose the handlers for messages 1 and 2 each return successfully after 10 seconds.
+Suppose the consumer handlers for messages 1 and 2 each return successfully after 10 seconds.
 Message 1 starts with 48 seconds remaining. Message 2 starts with 38 seconds
 remaining. By the time A reaches message 3, only 28 seconds remain.
 
 Message 3 cannot start. The check reserves its full allowed timeout, even
-though the previous two handlers finished sooner.
+though the previous two consumer handlers finished sooner.
 
 export const queueWaiting = await layoutResources([
     {
@@ -118,10 +118,10 @@ message 3 ran and exceeded its timeout.
 A's lease on message ids 1–4 continues toward its original expiration time.
 After it expires, consumer instance B in the `charge-cards` group can
 reclaim the unfinished range on a later claim. Expiry makes recovery
-possible. It does not start B's handler at that instant.
+possible. It does not start B's consumer handler at that instant.
 
 In normal processing, SQLStreams records the claimed range's results
-together, after every message in it has a result. A's handlers for
+together, after every message in it has a result. A's consumer handlers for
 messages 1 and 2 returned, but messages 3 and 4 did not finish. The range's
 completion has not been recorded, so B can process messages 1 and 2 again
 as well as the remaining messages.
@@ -135,15 +135,15 @@ explains why repeated processing needs application-level deduplication.
 Reclaiming unfinished work means a message can be processed more than once.
 SQLStreams provides at-least-once processing, with no exactly-once guarantee.
 
-Leave comfortable headroom in handler timeouts for slower processing, and
+Leave comfortable headroom in consumer handler timeouts for slower processing, and
 in `QueueMargin` for time spent waiting. This helps keep repeated processing
 caused by insufficient lease time rare.
 
 </ThreadAside>
 
-Lease expiry also does not forcibly stop application code. A handler must
+Lease expiry also does not forcibly stop application code. A consumer handler must
 respect cancellation of its context. After its timeout and cancellation
-grace, SQLStreams stops waiting for it, but a handler that ignores
+grace, SQLStreams stops waiting for it, but a consumer handler that ignores
 cancellation can keep running.
 
 ## More waiting time also means slower crash recovery
@@ -158,12 +158,13 @@ also moves the lease's expiration further into the future. If A crashes
 just after a claim, B must wait longer before it can reclaim that work.
 
 Increasing a message's timeout and the group's timeout ceiling together
-adds time both to the lease and to the requirement for starting a handler.
+adds time both to the lease and to the requirement for starting a consumer handler.
 It does not add queue waiting allowance.
 
 ## Related topics
 
 - [Size a consumer queue](/guides/size-a-consumer-queue/) — Apply these timing
-  tradeoffs to batch size, queue size, and handler concurrency.
+  tradeoffs to batch size, queue size, and consumer handler concurrency.
 - [Queued message cannot start](/troubleshooting/queued-message-cannot-start/) —
-  Investigate SQL0105 and check that processing recovers.
+  Investigate SQL0105 and insufficient lease time.
+- [Make message processing safe to repeat](/guides/side-effects-and-retries/) — Protect application changes when another instance reclaims the work.

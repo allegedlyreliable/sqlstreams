@@ -1,0 +1,106 @@
+---
+group: system
+title: Migrate database schemas
+description: "Migrate, MigrationVersion, and MigrateStreams: inspect and change SQLStreams table versions."
+slop: high
+---
+
+```go title="SystemHandle and StreamHandle[T]"
+MigrationVersion(ctx context.Context) (int64, error)
+Migrate(ctx context.Context, targetVersion int64) error
+```
+
+```go title="SystemHandle"
+MigrateStreams(ctx context.Context, targetVersion int64) error
+```
+
+`MigrationVersion` reads the installed database schema version. `Migrate`
+changes the selected system or stream to the target version. `MigrateStreams`
+applies the target to every registered stream. A payload's `SchemaVersion`
+is separate from these database versions.
+
+## Example
+
+Use an initialized `client` and a registered `payments.requested` stream.
+The current build contains only the version `1` baseline, so migrating an
+already registered stream to `1` makes no changes.
+
+```go
+payments := client.Stream[sqlstreams.RawPayload]("payments.requested")
+version, err := payments.MigrationVersion(ctx)
+if err != nil {
+	return err
+}
+fmt.Println(version)
+if err := payments.Migrate(ctx, 1); err != nil {
+	return err
+}
+```
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `ctx` | `context.Context` | Yes | Controls database reads, lock acquisition, and migration work. |
+| `targetVersion` | `int64` | Migrate and `MigrateStreams` | A version from `1` through the highest version compiled into the applicable registry. |
+
+## Returns
+
+| Operation and condition | Return value |
+| --- | --- |
+| `MigrationVersion` succeeds | `(version, nil)`. |
+| `MigrationVersion` fails | `(0, err)`. |
+| Target already equals the current version | `nil`, with no migration steps run. |
+| Migrate completes every required step | `nil`. |
+| `MigrateStreams` completes all streams, or no streams are registered | `nil`. |
+| One or more streams fail during `MigrateStreams` | A joined error naming failed streams. Other streams are still attempted. |
+| A single migration fails | A non-`nil` error identifying the failed step. |
+
+## Scope and partial completion
+
+The target determines direction in the Go API. A higher target runs upward
+steps. A lower target runs downward steps from the compiled registry.
+Migration work is serialized through the installation's migration lock.
+
+The whole migration is not one transaction. Completed steps remain applied
+if a later step fails. Steps declared to run outside a transaction can also
+leave partial effects. Registration creates the baseline and does not replace
+an explicit upgrade of existing tables.
+
+## CLI
+
+```sh
+sqlstreams migrate versions
+sqlstreams migrate status
+sqlstreams migrate system up --target-version 1
+sqlstreams migrate streams up --target-version 1
+sqlstreams migrate stream up payments.requested --target-version 1
+```
+
+`versions` shows the CLI build's available system and stream versions.
+`status` compares them with the database. Each migration command requires an
+explicit target. Replace `up` with `down` for a downgrade. The CLI rejects
+targets that move in the opposite direction to the command.
+
+All commands support `--output json`. Successful migration output reports
+the target version and number of changed targets. An already-matching target
+has a count of zero.
+
+## Errors
+
+| Error | When |
+| --- | --- |
+| Validation error | The target lies outside this build's registry or a required stream name is invalid. |
+| `ErrNotRegistered` | A required system or migration baseline is absent. |
+| `ErrStreamNotFound` | A named stream is absent. |
+| `ErrSchemaNewerThanBuild` | The stored version is beyond this build's migration registry. |
+| `ErrStepLockTimeout` | A migration step cannot acquire a required database lock. |
+| Step validation or execution error | A migration's checks or SQL fail. |
+| Database or context error | Version reads, migration locking, or execution fail or are interrupted. |
+
+## Related topics
+
+- [Register the system](/reference/system-registration/) — Establish the installation baseline.
+- [Register a stream](/reference/stream-registration/) — Establish a stream baseline.
+- [Upgrading SQLStreams](/guides/migrations/) — Check compatibility, migrate the database, and deploy the new build.
+- [Migration lock timeout](/troubleshooting/migration-lock-timeout/) — Find and resolve a blocked migration.

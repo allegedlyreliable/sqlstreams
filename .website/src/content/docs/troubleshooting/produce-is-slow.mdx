@@ -1,0 +1,71 @@
+---
+group: producer
+title: Produce is slow (SQL0038)
+description: Separate partition-creation delays, blocked database work, and pool contention.
+slop: medium
+---
+
+```text title="Warning · SQL0038"
+level=WARN msg="produce exceeded the duration threshold" code=SQL0038 stream={stream} duration={duration} threshold={threshold}
+```
+
+The produce call exceeded `ProducerConfig.SlowProduceThreshold`.
+
+`duration` includes waiting in the producer's batch queue and writing to the
+database. For callback methods, it also includes your application's work
+to build the message.
+
+## Identify where the call stalled
+
+Run during the slowdown:
+
+```sql
+SELECT pid, application_name,
+    statement_timestamp() - query_start AS query_age,
+    wait_event_type, wait_event, pg_blocking_pids(pid) AS blocking_pids,
+    query
+FROM pg_stat_activity
+WHERE datname = current_database()
+    AND pid <> pg_backend_pid()
+    AND state <> 'idle'
+ORDER BY query_start;
+```
+
+| Result | Action |
+| --- | --- |
+| SQLStreams query has blocking pids | Find those sessions in the results. Have their owning application finish or roll back the blocking transactions. |
+| Partition creation coincides with `SQL0057` or `SQL0033` | Follow step 1 below. |
+| Queries run without blockers, or no relevant query appears | Check connection waiting and application callback work in steps 2–3. Local queue time is not visible in this query. |
+
+## Fix the recurring delay
+
+1. **If partition creation is on the insert path, read its accompanying error.**
+   `SQL0057` means the insert must create a covering partition. `SQL0033`'s
+   `error` explains why create-ahead failed. Resolve that database error
+   first.
+
+   If `SQL0056` continues during bursts, reduce producer pressure.
+
+2. **If calls wait without database activity, inspect the application's pool.**
+   From the process that owns `pool`, read:
+
+   ```go
+   stats := pool.Stat()
+   fmt.Println(stats.AcquiredConns(), stats.TotalConns(), stats.MaxConns())
+   ```
+
+   If all allowed connections stay acquired, shorten transactions and release
+   connections held by other work before increasing producer concurrency.
+   Each active batch transaction needs a connection.
+
+3. **If the pool has room, check work inside `ProduceFunc` or an outer transaction.**
+   Inspect database and service calls made by the callback that builds the
+   message. Move work that does not need the transaction outside it.
+   If another transaction holds the same compacted message key, finish that
+   transaction promptly to release the waiting produce call.
+
+## Related topics
+
+- [Producer logs](/reference/producer-logs/) — Timing and partition warning fields.
+- [Producer batching settings](/reference/producer-registration/#batcherconfig) — Batch size and flush timing.
+- [Produce within a transaction](/reference/produce-in-transaction/) — Transaction ownership and timing boundaries.

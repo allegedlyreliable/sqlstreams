@@ -1,0 +1,80 @@
+---
+group: consumer
+title: Retries and failed messages
+description: What happens after a consumer handler returns an error and when automatic retries stop.
+slop: medium
+---
+
+import ThreadAside from '../../../components/thread-aside/thread-aside.svelte';
+
+A consumer handler returns `nil` when it finishes successfully. When it
+returns an error, SQLStreams by default records the failure and retries the
+message later.
+
+A **retry** runs the consumer handler again with the same message payload.
+Retry settings control how long to wait before retrying and how many
+retries are allowed.
+
+## From failure to retry
+
+Suppose message 3 in the `payments.requested` stream requests a payment for
+order `order-103`. The `charge-cards` group attempts to process it, but its
+consumer handler cannot reach the payment provider.
+
+1. **The consumer handler returns an error.** SQLStreams saves an
+   **exception record** in Postgres for message 3 and the `charge-cards`
+   group.
+2. **Message 3 waits before retrying.** This wait is called **backoff**.
+   After the recorded time, a running instance in the same group can claim
+   message 3 and run the consumer handler again.
+3. **The retry's result is recorded.** If the provider has recovered, the
+   consumer handler can finish the payment and return `nil`.
+   SQLStreams then records success and removes the exception record.
+
+<ThreadAside label="NOTE" title="Retries can repeat completed work">
+
+A consumer handler may complete some work before returning an error.
+That work can run again during a retry. Application effects, such as charging
+a payment, need to be [safe to repeat](/concepts/consumer-groups/#a-message-can-run-again).
+
+</ThreadAside>
+
+## When retries stop
+
+Now suppose the provider stays unavailable and every attempt at message 3
+fails. With the default `MaxRetries` of `3`, SQLStreams allows three retries
+after the initial attempt:
+
+| Attempt | What happens after the error is recorded |
+| --- | --- |
+| Initial attempt | Wait for retry 1. |
+| Retry 1 | Wait for retry 2. |
+| Retry 2 | Wait for retry 3. |
+| Retry 3 | Mark message 3 dead for the `charge-cards` group. |
+
+**Dead** means automatic retries have stopped for this message in this
+group. SQLStreams records status `dead` and the last error. The logs call
+this **dead-lettered**.
+
+### Reject a message permanently
+
+Suppose `order-103` is cancelled before message 3 runs. The consumer handler
+checks the order's status and finds that the payment must no longer be made.
+Retrying the same payment would not help.
+
+Returning an ordinary error would ask SQLStreams to retry which is not ideal. 
+The consumer handler can instead wrap the cancellation error with `sqlstreams.Terminal(err)`
+to report a permanent failure. SQLStreams records that error and marks message
+3 dead for the `charge-cards` group, even if retries remain.
+
+## Related topics
+
+- [Consumer handler results](/reference/consume/#message-results) — Return
+  success, an error, a terminal failure, or a request to run later.
+- [Retry settings](/reference/consumer-registration/#consumerconfig) — Set
+  the initial wait, retry limit, and backoff policy.
+- [Consumer leases](/concepts/consumer-leases/) — What happens when an
+  instance stops before it can record a result.
+- [Messages are dead-lettered](/troubleshooting/messages-dead-lettered/) —
+  Investigate work that has stopped retrying.
+- [Make message processing safe to repeat](/guides/side-effects-and-retries/) — Keep repeated attempts from duplicating an application change.

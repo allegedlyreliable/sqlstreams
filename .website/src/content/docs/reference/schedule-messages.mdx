@@ -1,0 +1,121 @@
+---
+group: schedule
+title: Read schedule message outcomes
+description: "Status and Messages: inspect retained outcomes by consumer group."
+slop: high
+---
+
+import ThreadAside from '../../../components/thread-aside/thread-aside.svelte';
+
+```go title="SchedulerHandle"
+Status(ctx context.Context) ([]*ScheduleConsumerGroupSummary, error)
+Messages(ctx context.Context, limit int) ([]*ScheduleMessageStatus, error)
+```
+
+Status summarizes the schedule's retained messages for each matching consumer
+group. Messages reports individual outcomes, newest message id first, then
+consumer group name. Both read the schedule's current target stream.
+
+## Example
+
+Using an initialized `client`, inspect the `payment-reminder` schedule:
+
+```go
+messages, err := client.Scheduler("payment-reminder").Messages(ctx, 20)
+if err != nil {
+	return err
+}
+for _, message := range messages {
+	fmt.Println(message.MessageId, message.ConsumerGroup, message.Outcome)
+}
+```
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `ctx` | `context.Context` | Yes | Cancellation or its deadline interrupts the database reads. |
+| `limit` | `int` | For Messages | Positive number of newest messages to inspect. Each message can return several rows, one per matching group. |
+
+Groups match the schedule name through their current bindings. A group
+with no bindings receives every routing key. Results describe messages
+still present in the stream's message log, not lifetime history.
+
+## Returns
+
+| Condition | Return value |
+| --- | --- |
+| Status finds matching groups | `(summaries, nil)`, ordered by group name. A group with no retained messages has zero counts. |
+| Messages finds messages and matching groups | `(messages, nil)`, with one row per message and group. |
+| No matching groups, or Messages finds no messages | `(nil, nil)`. |
+| Schedule is absent | `(nil, ErrScheduleNotFound)`. |
+| Read fails | `(nil, err)`. |
+
+<ThreadAside label="NOTE" title="Success rows are required">
+  Use `DeliveryLogModeAll` on the target stream for accurate success reporting.
+  Other modes omit successes. These queries cannot infer them from consumer
+  progress and may classify a successfully processed message as pending or
+  superseded.
+</ThreadAside>
+
+### ScheduleConsumerGroupSummary
+
+| Field | Type | JSON name | Description |
+| --- | --- | --- | --- |
+| `ConsumerGroup` | `string` | `consumer_group` | Matching group name. |
+| `Ran` | `int64` | `ran_count` | Messages with a recorded success or failure, equal to `Succeeded + Failed`. |
+| `Succeeded` | `int64` | `succeeded_count` | Messages with any retained success row. |
+| `Superseded` | `int64` | `superseded_count` | Messages with neither success nor failure that are no longer the key's compaction head. |
+| `Failed` | `int64` | `failed_count` | Messages with a failure, expired, or killed row and no success row. |
+
+### ScheduleMessageStatus
+
+| Field | Type | JSON name | Description |
+| --- | --- | --- | --- |
+| `ConsumerGroup` | `string` | `consumer_group` | Matching group name. |
+| `MessageId` | `int64` | `message_id` | Produced message id. |
+| `ScheduledAt` | `time.Time` | `scheduled_at` | Occurrence the message was produced for. An explicit Run uses its call time. |
+| `ProducedAt` | `time.Time` | `produced_at` | Time the message was stored in the stream. |
+| `Outcome` | `ScheduleMessageOutcome` | `outcome` | Classification in the table below. |
+| `SupersededBy` | `*int64` | `superseded_by` | Next newer message in this result window when superseded, if available. Otherwise `nil`. |
+| `SupersededAt` | `*time.Time` | `superseded_at` | That newer message's production time, if available. Otherwise `nil`. |
+
+### ScheduleMessageOutcome
+
+The first matching condition wins:
+
+| Value | Condition |
+| --- | --- |
+| `"succeeded"` | A success row exists. |
+| `"failed"` | A failure, expired, or killed row exists, with no success. This does not mean retries are exhausted. |
+| `"superseded"` | Neither outcome above exists and the message is no longer the key's compaction head. |
+| `"deferred"` | The current head has a deferred row, without success or failure. |
+| `"pending"` | The current head has none of those recorded outcomes. |
+
+These are classifications of recorded history. They do not report whether a
+consumer handler is running now.
+
+## CLI
+
+```sh
+sqlstreams scheduler status payment-reminder
+sqlstreams scheduler messages payment-reminder --limit 20
+```
+
+Each command prints a table or, with `--output json`, an array of its returned
+objects. Empty results print `[]` in JSON and exit with status `0`.
+The messages limit defaults to `20`. An absent schedule exits with status `1`.
+
+## Errors
+
+| Error | When |
+| --- | --- |
+| Validation error | The schedule name is empty or the Messages limit is not positive. |
+| `ErrScheduleNotFound` | No schedule has that name. |
+| Database, decoding, or context error | The schedule, messages, bindings, or recorded outcomes cannot be read. |
+
+## Related topics
+
+- [Register a schedule](/reference/schedule-registration/) — Target stream and message settings.
+- [Register a stream](/reference/stream-registration/) — Configure retained outcome rows.
+- [Read consumer bindings](/reference/consumer-bindings/) — Inspect routing declarations.

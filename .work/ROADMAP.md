@@ -16,14 +16,15 @@ the item is removed.
 
 ## Now
 
-- **Documentation structure review** -- Four boards with explicit
-  purposes, original Quickstart and Why SQLStreams homepage stickies, group
-  discovery through article maps, and a complete Consumer example. Other legacy source files
-  remain, with their routes and search entries excluded.
-  Review the local website before extending coverage. Next migrations should
-  map producing/transactions, ordering/routing, retention/replay, operations,
-  and diagnostics across the same purposes; do not restore whole old boards.
-  Active review checkpoints are in TODO.md.
+- **Documentation expansion** -- Consumer subset review is complete.
+  The approved scope is six Concepts and five Guides, with a background
+  managers and workers concept replacing automatic producer batching and no
+  background-maintenance guide. Reference and Troubleshooting are complete
+  for now. TODO.md owns the exact list, boundaries, and progress. Create the
+  approved learning pages, one page per focused task and review cycle.
+  Finish with a complete Related topics,
+  terminology, navigation, and legacy URL pass. Additional Concepts or Guides
+  require user approval.
 
 - **manual review of cli**
 

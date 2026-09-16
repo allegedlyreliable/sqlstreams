@@ -1,0 +1,70 @@
+---
+group: consumer
+title: Consumer handler exceeds its timeout
+description: Distinguish slow processing from a consumer handler that ignores cancellation.
+slop: high
+---
+
+```text title="Recorded failure"
+hard timeout after {duration}, goroutine abandoned for message {message_id}
+```
+
+The consumer handler's timeout expired, and it did not return during the
+additional `TimeoutGrace` allowed for cancellation. SQLStreams stops waiting
+for that goroutine. It can still run while the message becomes eligible for retry.
+
+## Inspect the message's failure
+
+```sql
+SELECT message.id, message.options,
+    exception.status, exception.attempts, exception.last_error
+FROM {schema}.message_log_{stream_id} AS message
+LEFT JOIN {schema}.exception_queue_{stream_id} AS exception
+    ON exception.message_id = message.id
+    AND exception.consumer_group_id = {group_id}
+WHERE message.id = {message_id};
+```
+
+| Result | Action |
+| --- | --- |
+| `last_error` contains `hard timeout` | Fix cancellation handling in step 1. |
+| `last_error` reports a deadline or timed-out operation | Compare expected processing time with the effective timeout in step 2. |
+| `status` is `dead` | Also follow [dead-letter handling](/troubleshooting/messages-dead-lettered/). Configuration changes do not reactivate it. |
+| No row, or no recorded exception | Check the ids and the application's result. This read cannot prove an earlier attempt completed successfully. |
+
+## Correct the timeout
+
+1. **If a goroutine was abandoned, make the consumer handler return on cancellation.**
+   Pass its supplied `ctx` to database and HTTP operations. Check `ctx.Done()`
+   in waits or long loops. Do not replace that context with `context.Background()`.
+   Increase `ConsumeOptions.TimeoutGrace` only when a cancelled operation
+   needs a known, bounded time to return. Restart the instance after changing it.
+
+2. **If cancellation works but expected processing exceeds the deadline, inspect the effective timeout.**
+   Inside the consumer handler, [read message metadata](/reference/message-metadata/).
+   `metadata.Options.Timeout` includes the group's bounds. The message's stored
+   `options` above contains its request, which can be reduced by `MessageMax.Timeout`.
+
+   Increase the requested timeout and the group's ceiling as needed in the
+   [message configuration](/reference/consumer-registration/#messageoptions).
+   Re-register the group and restart affected instances. Larger ceilings
+   extend range leases and delay reclaim after a crash.
+
+3. **If the duration is unexpected, identify the slow operation before raising limits.**
+   Enable `ConsumeOptions.SlowDispatchThreshold` at your longest expected
+   consumer handler duration and restart. Look for:
+
+   ```text
+   level=WARN msg="delivery dispatch exceeded the duration threshold" code=SQL0039 group={group} stream_id={stream_id} message_id={message_id} attempt={attempt} duration={duration} threshold={threshold}
+   ```
+
+   `SQL0039` identifies the message, attempt, and time spent waiting for its
+   consumer handler, including any
+   cancellation grace. It excludes time in the message queue. Inspect the
+   operations in that consumer handler for that input.
+
+## Related topics
+
+- [Consumer leases](/concepts/consumer-leases/) — How deadlines and cancellation affect claimed work.
+- [Consume options](/reference/consume/#consumeoptions) — Processing and cancellation settings.
+- [Consumer metrics](/reference/consumer-metrics/#abandonedroutinesnapshot) — Inspect consumer handlers that outlive cancellation.

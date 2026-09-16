@@ -3,7 +3,6 @@ import type { BoardRowData, StickyRowData, ThreadRowData } from './model';
 import { boards, boardHref, stickyIds } from './navigation';
 import { type Board } from './model';
 import type { Thread } from './threads';
-import { codeMetadata } from './codes';
 
 export function boardRows(threads: Thread[]): BoardRowData[] {
 	return boards.map((board) => {
@@ -73,7 +72,7 @@ export function boardThreads(board: Board, threads: Thread[]): Thread[] {
 
 function toThreadRow(thread: Thread): ThreadRowData {
 	return {
-		metadata: codeMetadata(thread.entry),
+		metadata: null,
 		title: thread.title,
 		href: `/${thread.id}/`,
 		lastUpdatedDate: lastCommitDate(thread.filePath),

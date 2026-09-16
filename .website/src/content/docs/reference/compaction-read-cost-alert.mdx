@@ -1,0 +1,102 @@
+---
+group: stream
+title: Compaction read cost alert (SQL0095)
+description: "compaction_read_cost: high partition counts on a stream with retained compaction heads."
+slop: high
+---
+
+```text title="Alert name"
+compaction_read_cost
+```
+
+Reports a compacted stream whose partition count reaches its threshold.
+Replaying a key whose current message is in an old partition can require
+scanning many partitions. This alert uses partition count as an indicator
+of that cost, without timing replay queries.
+
+## Definition
+
+| Property | Value |
+| --- | --- |
+| Code | `SQL0095` |
+| Severity | `warn` |
+| Owner | Stream. |
+| Evidence | Retained `sqlstreams.stream.state.partitions` measurements and their compaction metadata. |
+| Unhealthy condition | The observation is compacted and its partition count is at least the threshold. |
+| Default threshold | `10,000` partitions. |
+| Default activation | Consecutive unhealthy samples spanning `2m`. |
+| Default evaluation schedule | `@every 1m`. |
+| Active reminders | Every `4h` by default while the condition remains active. |
+
+## Example
+
+Using an initialized `client` and the [example payload](/reference/consumer-group/#example-payload),
+evaluate the `payments.requested` stream:
+
+```go
+check := client.Stream[PaymentRequestedV1]("payments.requested").Alerts().CompactionReadCost()
+snapshot, err := check.Snapshot(ctx)
+if err != nil {
+	return err
+}
+fmt.Println(snapshot.State, snapshot.ObservedAt)
+```
+
+`Snapshot` does not write a report. Use `Latest` or `History` for retained
+reports, with the [shared return and error contracts](/reference/read-alerts/).
+
+## Configuration
+
+Set [`SystemConfig.CompactionReadCostAlert`](/reference/system-registration/#compactionreadcostalertconfig)
+when registering the system. It controls checks across all streams.
+`Threshold: 0` resolves to `10,000` partitions. Positive values specify a
+partition count, not a duration.
+
+`PendingDuration` and `MaximumGap` govern activation. `DisablePending` permits
+activation from fresh unhealthy evidence without the pending span.
+Queued checks retain their original policy. `Snapshot` uses the current
+schedule declaration.
+
+## Evaluation and resolution
+
+| Evidence | Result |
+| --- | --- |
+| Fresh valid observation is uncompacted, or partition count is below threshold | Healthy. Resolve an active report. |
+| Fresh compacted observation is at or above threshold for the required sample span | Active. Write a report or a due reminder. |
+| Fresh unhealthy evidence has not met the pending span | Pending. Leave the report unchanged. |
+| Missing, stale, or semantically invalid evidence | Insufficient evidence. Leave the report unchanged. |
+
+Partition counts must be nonnegative integers. The same measurement's
+metadata must declare `compaction_status` as `compacted` or `uncompacted`.
+Missing or unrecognized status is insufficient evidence. Malformed metadata
+JSON returns an evaluation error.
+
+Compacted means a compaction-head row points to a message at observation
+time. It does not mean compaction was ever used. The check uses database
+storage times for sample age and the consecutive unhealthy span.
+
+## Reported data
+
+Active [Alert reports](/reference/read-alerts/#alert) add:
+
+| Data key | Type | Meaning |
+| --- | --- | --- |
+| `partition_count` | Number | Observed message-log partition count. |
+| `threshold` | Number | Effective partition threshold. |
+
+Resolved reports do not retain these active-report data fields.
+
+## CLI
+
+```sh
+sqlstreams alert latest compaction_read_cost --stream payments.requested
+```
+
+Reads the retained report. No report exits with status `1`. See
+[alert commands](/reference/alert-cli/) for history and output options.
+
+## Related topics
+
+- [Stream metrics](/reference/stream-metrics/) — Partition counts and compaction state.
+- [Read compaction heads](/reference/compaction-head/) — Current messages for compacted keys.
+- [Register a stream](/reference/stream-registration/) — Retention and cleanup settings.

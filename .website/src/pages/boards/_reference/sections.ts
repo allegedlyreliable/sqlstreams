@@ -2,33 +2,146 @@ import type { ReferenceSection } from './model';
 
 export const sections: ReferenceSection[] = [
 	{
-		id: 'api',
-		title: 'API',
-		ids: ['reference/consumer-registration', 'reference/consume', 'reference/message-metadata'],
+		id: 'streams',
+		title: 'Streams',
+		ids: [
+			'reference/stream-object',
+			'reference/stream-registration',
+			'reference/get-stream',
+			'reference/list-streams',
+			'reference/rename-stream',
+			'reference/destroy-stream',
+		],
 	},
-	{ 
-    id: 'cli', 
-    title: 'CLI', 
-    ids: ['reference/consumer-cli'] 
-  },
 	{
-		id: 'configuration',
-		title: 'Configuration',
-		ids: ['reference/consumer-group-settings', 'reference/consumer-session-options'],
+		id: 'producers',
+		title: 'Producers',
+		ids: [
+			'reference/producer-registration',
+			'reference/produce',
+			'reference/produce-batch',
+			'reference/produce-func',
+			'reference/transactions',
+			'reference/produce-in-transaction',
+		],
+	},
+	{
+		id: 'client',
+		title: 'Client',
+		ids: [
+      'reference/pool', 
+      'reference/client', 
+      'reference/lifecycle-context',
+    ],
+	},
+	{
+		id: 'consumer-groups',
+		title: 'Consumer groups',
+		ids: [
+			'reference/consumer-group',
+			'reference/consumer-registration',
+			'reference/get-consumer',
+			'reference/list-consumers',
+			'reference/destroy-consumer',
+			'reference/consume',
+			'reference/consumer-bindings',
+			'reference/consumer-workers',
+		],
+	},
+	{
+		id: 'messages',
+		title: 'Messages',
+		ids: [
+			'reference/message-payload',
+			'reference/stored-message',
+			'reference/key-messages',
+			'reference/compaction-head',
+			'reference/message-metadata',
+		],
+	},
+	{
+		id: 'system',
+		title: 'System',
+		ids: [
+			'reference/system-object',
+			'reference/system-registration',
+			'reference/get-system',
+			'reference/destroy-system',
+			'reference/schema-migrations',
+			'reference/supported-postgresql-versions',
+			'reference/manager',
+		],
+	},
+	{
+		id: 'maintenance',
+		title: 'Maintenance',
+		ids: [
+      'reference/stream-version-health', 
+      'reference/maintenance'
+    ],
+	},
+	{
+		id: 'schedules',
+		title: 'Schedules',
+		ids: [
+			'reference/schedule-object',
+			'reference/schedule-registration',
+			'reference/get-schedule',
+			'reference/list-schedules',
+			'reference/suspend-schedule',
+			'reference/run-schedule',
+			'reference/schedule-messages',
+			'reference/destroy-schedule',
+		],
+	},
+	{
+		id: 'cli',
+		title: 'CLI',
+		ids: [
+			'reference/cli',
+			'reference/stream-cli',
+			'reference/consumer-cli',
+			'reference/system-cli',
+			'reference/schedule-cli',
+			'reference/manager-cli',
+			'reference/metric-cli',
+			'reference/alert-cli',
+		],
 	},
 	{
 		id: 'metrics',
 		title: 'Metrics',
-		ids: ['reference/consumer-cursor-backlog'],
+		ids: [
+			'reference/read-metrics',
+			'reference/consumer-metrics',
+			'reference/consumer-cursor-backlog',
+			'reference/stream-metrics',
+			'reference/system-metrics',
+			'reference/publish-metrics',
+			'reference/metrics-exporter',
+		],
 	},
-	{ 
-    id: 'logs', 
-    title: 'Logs', 
-    ids: ['reference/consumer-stopped-log'] 
-  },
-	{ 
-    id: 'alerts', 
-    title: 'Alerts', 
-    ids: ['reference/worker-liveness-alert'] 
-  },
+	{
+		id: 'logs',
+		title: 'Logs',
+		ids: [
+			'reference/diagnostics',
+			'reference/producer-logs',
+			'reference/consumer-logs',
+			'reference/consumer-stopped-log',
+			'reference/worker-logs',
+			'reference/system-logs',
+		],
+	},
+	{
+		id: 'alerts',
+		title: 'Alerts',
+		ids: [
+			'reference/read-alerts',
+			'reference/partition-count-alert',
+			'reference/compaction-read-cost-alert',
+			'reference/worker-liveness-alert',
+			'reference/metric-collector-progress-alert',
+		],
+	},
 ];

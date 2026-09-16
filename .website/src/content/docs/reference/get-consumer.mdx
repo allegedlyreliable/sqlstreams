@@ -1,0 +1,79 @@
+---
+group: consumer
+title: Retrieve a consumer group
+description: "Get: read a consumer group's registration, including its absence result."
+slop: medium
+---
+
+import ThreadAside from '../../../components/thread-aside/thread-aside.svelte';
+
+```go title="ConsumerHandle[T].Get"
+Get(ctx context.Context) (*Consumer, error)
+```
+
+Reads a consumer group's stored registration. If the group does not exist,
+`Get` does not create it. Reading an existing group does not update its
+settings or change which messages it will process next.
+
+## Example
+
+Read the `charge-cards` group on the `payments.requested` stream using an
+initialized `client` and the [example payload](/reference/consumer-group/#example-payload).
+
+```go
+payments := client.Stream[PaymentRequestedV1]("payments.requested")
+chargeCards := payments.Consumer("charge-cards")
+group, err := chargeCards.Get(ctx)
+if err != nil {
+	return err
+}
+if group == nil {
+	return errors.New("charge-cards is not registered on payments.requested")
+}
+fmt.Println(group.Id, group.Name)
+```
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `ctx` | `context.Context` | Yes | Cancelling this context or reaching its deadline interrupts the database read. |
+
+## Returns
+
+| Condition | Return value |
+| --- | --- |
+| Group is registered | `(group, nil)`, where `group` is the [consumer group object](/reference/consumer-group/). |
+| Stream or group is not registered | `(nil, nil)`. |
+| Read fails | `(nil, err)`. See [Errors](#errors). |
+
+<ThreadAside label="NOTE" title="Running instances">
+
+A group can remain registered when no instances are running. The returned
+object does not report whether any instance is currently running.
+
+</ThreadAside>
+
+## CLI
+
+```sh
+sqlstreams consumer get payments.requested charge-cards
+```
+
+Prints the group's registration and exits with status `0` when found.
+If the stream or group is absent, prints an absence message and exits with
+status `1`. See [consumer get](/reference/consumer-cli/#consumer-get) for
+output formats and flags.
+
+## Errors
+
+| Error | When |
+| --- | --- |
+| Validation error | The stream or group name is empty. |
+| Database error | The registration cannot be read. |
+| Context cancellation or deadline error | The read is interrupted by its context. |
+
+## Related topics
+
+- [The consumer group object](/reference/consumer-group/) — Returned identity and stored configuration.
+- [Consumer metrics](/reference/consumer-metrics/) — Inspect progress and outstanding work.

@@ -1,0 +1,50 @@
+---
+group: stream
+title: The stored message object
+description: "StoredMessage: a retained payload and its message-log fields."
+slop: high
+---
+
+```go title="sqlstreams.StoredMessage"
+type StoredMessage[T Versioned] struct {
+	Id             int64     `json:"message_id"`
+	Message        *T        `json:"message"`
+	CreatedAt      time.Time `json:"created_at"`
+	RoutingKey     string    `json:"routing_key"`
+	MessageKey     string    `json:"message_key"`
+	CompactionRank int64     `json:"compaction_rank"`
+}
+```
+
+Contains a retained message and its stored metadata. Key-message and
+compaction-head reads return this object. It does not report a consumer
+group's attempts, errors, or processing progress.
+
+## Fields
+
+| Field | Type | JSON name | Description |
+| --- | --- | --- | --- |
+| `Id` | `int64` | `message_id` | The message's stored id. |
+| `Message` | `*T` | `message` | The stored payload decoded into `T`. `RawPayload` preserves its JSON bytes. |
+| `CreatedAt` | `time.Time` | `created_at` | The message's stored creation timestamp. |
+| `RoutingKey` | `string` | `routing_key` | The produced routing key, or an empty string when absent. |
+| `MessageKey` | `string` | `message_key` | The produced message key, or an empty string when absent. |
+| `CompactionRank` | `int64` | `compaction_rank` | The stored compaction rank. Zero for an uncompacted message. |
+
+## Read operations
+
+| Operation | Return shape |
+| --- | --- |
+| `stream.Key(key).Messages(ctx, limit)` | A slice of retained messages for the key, newest id first. |
+| `stream.Key(key).CompactionHead(ctx)` | The current compacted message for the key. |
+| `stream.Key(key).LockCompactionHead(ctx, tx)` | The current compacted message while holding the key's row lock. |
+| `stream.CompactionHeads(ctx)` | Current compacted messages ordered by key. |
+
+These reads do not filter by the payload type's schema version. Choose
+[`RawPayload`](/reference/message-payload/#rawpayload) when inspecting mixed
+or unknown payload versions.
+
+## Related topics
+
+- [Payload versions and raw JSON](/reference/message-payload/) — Typed payloads and raw JSON.
+- [Read message metadata](/reference/message-metadata/) — Metadata supplied to a consumer handler.

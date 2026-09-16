@@ -1,0 +1,148 @@
+---
+group: system
+title: Read metric measurements
+description: "Definitions, Latest, and History: discover metrics and read retained series."
+slop: high
+---
+
+import ThreadAside from '../../../components/thread-aside/thread-aside.svelte';
+
+```go title="SystemMetricsHandle"
+// List built-in metric definitions.
+Definitions() []MetricDefinition
+
+// Read the newest measurement for every retained series.
+Latest(ctx context.Context) ([]*Measurement, error)
+
+// Select one series by name and its complete attribute set.
+Metric(name string, attributes map[string]string) *MetricHandle
+```
+
+```go title="MetricHandle"
+// Read the selected series' newest measurement.
+Latest(ctx context.Context) (*Measurement, error)
+
+// Read up to limit measurements from that series, newest first.
+History(ctx context.Context, limit int) ([]*Measurement, error)
+```
+
+Reads measurements retained on the `__system.metrics` stream. `Definitions`
+lists built-in metric metadata without database I/O. `Metric` selects one
+exact series by name and its complete attribute set, also without I/O.
+
+## Example
+
+Using an initialized `client`, read the latest cursor backlog recorded for
+the `charge-cards` group on the `payments.requested` stream:
+
+```go
+series := client.Stream[sqlstreams.RawPayload]("payments.requested").
+	Consumer("charge-cards").Metrics().CursorBacklog()
+measurement, err := series.Latest(ctx)
+if err != nil {
+	return err
+}
+if measurement != nil {
+	fmt.Println(measurement.Value, measurement.At)
+}
+```
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `ctx` | `context.Context` | For reads | Cancellation or its deadline interrupts database reads. |
+| `name` | `string` | For Metric | Exact wire name. This selector does not validate membership in `Definitions`. |
+| `attributes` | `map[string]string` | For Metric | Complete series identity. `nil` selects a series with no attributes. Partial filters are not supported by the Go selector. |
+| `limit` | `int` | For `History` | Positive maximum number of retained measurements, newest message id first. |
+
+Attribute key order does not matter. The selector constructs its identity
+when called. Later changes to the supplied map do not change the handle.
+
+## Returns
+
+| Condition | Return value |
+| --- | --- |
+| Series `Latest` finds a retained point | `(measurement, nil)`. |
+| Series `Latest` finds no retained point | `(nil, nil)`. |
+| `History` or system `Latest` succeeds | `(measurements, nil)`. An empty result is an empty slice. |
+| Metrics stream is not registered | `(nil, ErrNotRegistered)`. |
+| Read fails | `(nil, err)`. |
+
+`SystemMetricsHandle.Latest` includes built-in and custom series, ordered by the stored
+name-and-attributes key. `History` includes superseded measurements still
+retained in the stream. Neither operation filters out stale observations.
+
+<ThreadAside label="NOTE" title="Freshness and resource existence">
+
+Compare `Measurement.At` with your freshness requirement. A retained series
+can outlive its resource, and a new resource can exist before its first
+measurement. Use a stream or consumer group's `Snapshot(ctx)` to read current
+state and check that the resource exists.
+
+</ThreadAside>
+
+### Measurement
+
+| Field | Type | JSON name | Description |
+| --- | --- | --- | --- |
+| `Name` | `string` | `name` | Metric wire name. |
+| `Kind` | `MetricKind` | `kind` | `"gauge"` for a point-in-time value or `"counter"` for a cumulative total. |
+| `Value` | `float64` | `value` | Observation in the declared unit. Counter values are totals, not increments. |
+| `Unit` | `MetricUnit` | `unit` | Unit such as `"ms"`, `"s"`, or `"{message}"`. Empty means no unit. |
+| `Attributes` | `map[string]string` | `attributes` | Series identity beside Name. |
+| `At` | `time.Time` | `at` | Time of observation. |
+| `Metadata` | `json.RawMessage` | `metadata` | Optional observation details. Not part of series identity or exported labels. |
+
+### MetricDefinition
+
+| Field | Type | JSON name | Description |
+| --- | --- | --- | --- |
+| `Code` | `string` | `code` | Diagnostic code identifying the built-in metric. |
+| `Name` | `string` | `name` | Wire name carried by its measurements. |
+| `Kind` | `MetricKind` | `kind` | Gauge or counter. |
+| `Unit` | `MetricUnit` | `unit` | Declared unit. |
+| `Description` | `string` | `description` | Meaning of the observation. |
+| `Scope` | `MetricScope` | `scope` | System, stream, consumer group, consumer session, or exporter. |
+| `AttributeKeys` | `[]string` | `attribute_keys` | Complete attribute names required by the definition. |
+
+`Definitions` is ordered by SQL code and excludes custom metrics. Stream and
+consumer metrics handles also provide `Definitions`, filtered to their scope.
+Exporter definitions describe local export health and are not stored measurements.
+
+## Collection and retention
+
+The manager's collector writes database observations every `30s` by
+default, with jitter. Configure its rate through
+[`SystemConfig.MetricCollector`](/reference/system-registration/#metriccollectorworkerconfig).
+Consumer-session counters are recorded by the running consumer instance.
+
+The system metrics stream uses a `24h` retention setting. Cleanup operates
+on partitions, so it is not an exact per-measurement expiry. Compaction means
+metrics consumers may skip intermediate observations.
+
+## CLI
+
+```sh
+sqlstreams metric latest sqlstreams.consumer.cursor.backlog \
+  --attribute stream=payments.requested --attribute group=charge-cards
+```
+
+The CLI's attributes are partial filters and may match several series.
+No matching series exits with status `1`. See the [metric commands](/reference/metric-cli/)
+for history, limits, and output fields.
+
+## Errors
+
+| Error | When |
+| --- | --- |
+| Validation error | `History` has a nonpositive limit or the selected series key is empty. |
+| `ErrNotRegistered` | The metrics stream is absent. |
+| Database, decoding, or context error | Measurements cannot be read. |
+
+## Related topics
+
+- [Consumer metrics](/reference/consumer-metrics/) — Live group state and collected series.
+- [Stream metrics](/reference/stream-metrics/) — Stream state and group snapshots.
+- [System metrics](/reference/system-metrics/) — Worker, schedule, alert, and collector measurements.
+- [Produce metric measurements](/reference/publish-metrics/) — Add custom series.

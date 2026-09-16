@@ -1,0 +1,182 @@
+---
+group: consumer
+title: Consume messages
+description: "Consume: process messages for a consumer group, configure the instance, and stop it."
+slop: high
+---
+
+import ThreadAside from '../../../components/thread-aside/thread-aside.svelte';
+
+```go title="ConsumerInstance[T].Consume"
+Consume(ctx context.Context, consumerFunc ConsumerFunc[T], options *ConsumeOptions) error
+```
+
+Processes messages for a registered consumer group. Blocks until the session
+stops. Cancel `ctx` to begin graceful shutdown.
+
+## Example
+
+Run the `charge-cards` group on the `payments.requested` stream using an
+initialized `client` and the [example payload](/reference/consumer-group/#example-payload).
+This consumer handler prints each payment's order id.
+
+```go
+func run(client *sqlstreams.Client) error {
+	ctx, stop := sqlstreams.LifecycleContext(nil)
+	defer stop()
+
+	payments := client.Stream[PaymentRequestedV1]("payments.requested")
+	chargeCards := payments.Consumer("charge-cards")
+	consumer, err := chargeCards.Register(ctx, nil)
+	if err != nil {
+		return err
+	}
+	return consumer.Consume(ctx, printPayment, &sqlstreams.ConsumeOptions{
+		BatchLimit:         4,
+		QueueSize:          4,
+		MessageConcurrency: 1,
+	})
+}
+
+func printPayment(ctx context.Context, payment *PaymentRequestedV1) error {
+	fmt.Println(payment.OrderId)
+	return nil
+}
+```
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `ctx` | `context.Context` | Yes | Cancelling this context or reaching its deadline starts graceful shutdown. Must support cancellation unless `DisableGracefulShutdown` is enabled. `LifecycleContext(nil)` responds to shutdown signals. |
+| `consumerFunc` | `ConsumerFunc[T]` | Yes | Non-`nil` `func(context.Context, *T) error`. Receives the message's processing context and decoded payload. Use that context for cancellable operations. |
+| `options` | `*ConsumeOptions` | No | Options for this call. `nil` uses defaults. `Consume` copies the options before resolving them. |
+
+### ConsumeOptions
+
+These options apply to one `Consume` call and can differ across instances.
+They are not stored in the group's declaration. Changing the original
+struct does not reconfigure a running session.
+
+`nil` options and zero fields select defaults, except where noted. Negative
+counts and durations are invalid.
+
+| Field | Type | Default | Description |
+| --- | --- | --- | --- |
+| `BatchLimit` | `int` | `4` | Messages claimed per poll. At least 1. Reclaiming an earlier claim can retain that claim's size. |
+| `QueueSize` | `int` | Resolved `BatchLimit` | Claimed messages buffered before processing. Must be at least `BatchLimit`. Ordered waiting can retain messages outside this queue, so it is not a total memory limit. |
+| `MessageConcurrency` | `int` | `1` | Fresh-message processing concurrency in this instance. At least 1. Exception handling remains serial. Per-key ordering can further restrict concurrency. |
+| `ClaimPollRate` | `time.Duration` | `500ms` | Idle claim and exception polling interval. Positive after defaults. Not a processing-latency guarantee. |
+| `QueueMargin` | `time.Duration` | `15s` | Lease allowance for waiting before processing starts. Positive after defaults. |
+| `RecordMargin` | `time.Duration` | `2s` | Lease allowance for recording the outcome. Positive after defaults. |
+| `TimeoutGrace` | `time.Duration` | `100ms` | Time for a cancelled consumer handler to return before abandonment. Positive after defaults. |
+| `SlowDispatchThreshold` | `time.Duration` | `0` | Zero disables warnings. A dispatch exceeding a positive threshold emits `SQL0039`. |
+| `InstanceTTL` | `time.Duration` | `30s` | How long this instance's worker claims remain live without renewal. After expiry, another instance can claim them. Positive after defaults. |
+| `BindingRetryInterval` | `time.Duration` | `10s` | Retry interval while a live instance's different bindings prevent this declaration from being installed. Positive after defaults. |
+| `ConfigRefreshInterval` | `time.Duration` | `30s` | Interval for rereading shared group settings. Positive after defaults. |
+| `ShutdownTimeout` | `time.Duration` | `0` | Maximum time allowed for shutdown. Zero derives the [budget below](#shutdowntimeout). A positive value sets a fixed budget. |
+| `DisableGracefulShutdown` | `bool` | `false` | Permits a context with no cancellation. That call has no context-driven stop and runs no paired system manager. |
+
+<ThreadAside label="NOTE" title="Queue and batch size">
+
+To set `QueueSize` to 1, also set `BatchLimit` to 1. Setting only `QueueSize`
+to 1 fails validation against the default batch of 4.
+[Size a consumer queue](/guides/size-a-consumer-queue/) covers workload-based choices.
+
+</ThreadAside>
+
+### ShutdownTimeout
+
+| Setting | Shutdown budget |
+| --- | --- |
+| `0` | Current `MessageMax.Timeout + TimeoutGrace + RecordMargin`, calculated when shutdown starts. |
+| Positive duration | That duration, fixed for this call. |
+
+For the `charge-cards` group with a `30s` message timeout ceiling and default
+margins, the derived budget is `30s + 100ms + 2s = 32.1s`. A refreshed group
+ceiling changes this derived budget.
+
+`QueueMargin` is excluded because shutdown waits for in-flight processing
+and recording, rather than allowing more messages to wait in the queue.
+
+## Returns
+
+| Condition | Return value |
+| --- | --- |
+| Normal requested shutdown completes | `nil`. |
+| The session cannot start or stops with a fatal failure | A non-`nil` error. See [Errors](#errors). |
+
+### Message results
+
+The return value of `consumerFunc` determines the message's outcome. A
+message-processing error does not ordinarily become `Consume`'s returned error.
+
+| Consumer handler result | Outcome |
+| --- | --- |
+| `nil` | Processing succeeded. SQLStreams records success. |
+| Plain or transient error | Retry under the message's retry policy. |
+| `sqlstreams.Terminal(err)` or a permanent diagnostic error | Mark the message dead. |
+| `sqlstreams.Delay(duration)` | Request a later run without counting a failed attempt. |
+
+A `DelayedDelivery` error takes precedence when classifying a wrapped error.
+The group's [retry policy](/reference/consumer-registration/#retrypolicy)
+limits failed attempts and consumer handler-requested delays.
+[Message metadata](/reference/message-metadata/) provides the current counts
+and resolved options inside the consumer handler.
+
+## Behavior
+
+### Instances and bindings
+
+`Consume` reads the payload version declared by `T`. Instances using the same
+group share progress. The call can wait for an incompatible live binding
+declaration before it begins processing messages.
+
+Only one `Consume` call can run on an instance at a time. A new call is allowed
+after the previous call finishes.
+
+### System manager
+
+With a cancellable context, `Consume` also runs the system manager unless
+`ClientConfig.DisableManager` is set. A manager setup error stops the paired
+session. Errors from its running loop are logged and retried.
+The session's exit stops its paired manager.
+
+### Shutdown
+
+Cancellation stops new work and gives in-flight processing and recording
+up to [`ShutdownTimeout`](#shutdowntimeout) to finish.
+[Stop a consumer gracefully](/guides/stop-a-consumer/) shows how to handle
+cancellation in the application.
+
+<ThreadAside label="NOTE" title="Consumer handlers must respond to cancellation">
+
+Go cannot forcibly terminate a consumer handler goroutine. A consumer handler that ignores
+its context can continue after SQLStreams stops waiting for it. Work whose
+completion was not recorded can be processed again after lease expiry.
+
+</ThreadAside>
+
+### Inspecting settings
+
+The Info-level starting log reports resolved queue, concurrency, polling,
+and timing settings. Enable Info in the application's logger to see it.
+The printed shutdown timeout is calculated at startup and can later change
+when the timeout is derived. The [consumer worker list command](/reference/consumer-cli/#consumer-worker-list)
+shows stored group configuration, which excludes these per-call options.
+
+## Errors
+
+| Error | When |
+| --- | --- |
+| `ErrAlreadyConsuming` | Another `Consume` call is running on this instance. |
+| `ErrLifecycleContextNotCancellable` | The context cannot be cancelled and `DisableGracefulShutdown` is `false`. |
+| Validation error | The consumer handler is `nil` or options are invalid. |
+| Setup or runner error | Consumer setup, manager startup, or a session runner fails fatally. |
+
+## Related topics
+
+- [Size a consumer queue](/guides/size-a-consumer-queue/) — Tune batching, queue size, and concurrency.
+- [Stop a consumer gracefully](/guides/stop-a-consumer/) — Connect signals and let active consumer handlers finish.
+- [Make message processing safe to repeat](/guides/side-effects-and-retries/) — Prevent duplicate application effects.
+- [Consumer leases](/concepts/consumer-leases/) — How queue waiting, timeouts, and reclaim fit together.

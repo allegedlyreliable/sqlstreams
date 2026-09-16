@@ -1,0 +1,83 @@
+---
+group: consumer
+title: Queued message cannot start (SQL0105)
+description: Inspect the affected message and fix recurring queue delays.
+slop: medium
+---
+
+```text title="Warning · SQL0105"
+level=WARN msg="queued message has insufficient lease time -- range waits for reclaim; successful handlers in the range can repeat" code=SQL0105 group={group} stream_id={stream_id} low={low} high={high} message_id={message_id} lease_remaining={lease_remaining} message_timeout={message_timeout} timeout_grace={timeout_grace} record_margin={record_margin}
+```
+
+The message waited in the instance's local queue until too little lease
+time remained. The instance skips its consumer handler for this attempt.
+
+## Check the message's current state
+
+```sql
+SELECT
+    message.id,
+    message.payload,
+    lease.expires_at,
+    lease.expires_at - statement_timestamp() AS lease_remaining,
+    lease.reclaims,
+    exception.status,
+    exception.last_error
+FROM {schema}.consumer_group_config AS consumer
+LEFT JOIN {schema}.message_log_{stream_id} AS message ON message.id = {message_id}
+LEFT JOIN {schema}.claim_lease_{stream_id} AS lease
+    ON lease.consumer_group_id = consumer.id
+    AND {message_id} > lease.low AND {message_id} <= lease.high
+LEFT JOIN {schema}.exception_queue_{stream_id} AS exception
+    ON exception.consumer_group_id = consumer.id
+    AND exception.message_id = {message_id}
+WHERE consumer.stream_id = {stream_id}
+    AND consumer.name = '{group}';
+```
+
+| Result | Action |
+| --- | --- |
+| No row | Check the group name and stream id. No matching group was found. |
+| `id` is null | The message is absent from the stream's message log. Check the message id. |
+| `expires_at` has a value | Keep a consumer instance running to reclaim the work after expiry. |
+| `status` is `ready`, `inflight`, or `deferred` | Read `last_error` and address the failure or deferral. Exception processing now handles this message. |
+| `status` is `dead` | Read `last_error`. Automatic retries have stopped. Queue changes cannot restart this message. |
+| `id` has a value, but `expires_at` and `status` are null | Check the application's result to determine whether processing succeeded. |
+
+## Fix recurring queue delays
+
+1. **Enable duration warnings.** In the affected instance's `ConsumeOptions`,
+   set `SlowDispatchThreshold` to the longest duration you expect a consumer
+   handler to take. [Stop the instance gracefully](/guides/stop-a-consumer/)
+   and restart with the changed option.
+
+2. **Find slow consumer handlers.** Read `SQL0039` entries in that instance's logs:
+
+   ```text
+   level=WARN msg="delivery dispatch exceeded the duration threshold" code=SQL0039 group={group} stream_id={stream_id} message_id={message_id} attempt={attempt} duration={duration} threshold={threshold}
+   ```
+
+   Match the affected `group` and `stream_id`. Use `message_id` and `duration`
+   to identify calls that took longer than expected, then investigate the
+   operations inside those consumer handlers first.
+
+3. **If processing times are acceptable, claim less work ahead.** Set these
+   fields in `ConsumeOptions`, then stop gracefully and restart:
+
+   ```go
+   BatchLimit: 1,
+   QueueSize:  1,
+   ```
+
+   This reduces how many messages wait in the queue, at the cost of more
+   database claims. Existing claims keep their original range size.
+
+4. **If `SQL0105` continues on new claims, allow more queue time.** Increase
+   `QueueMargin` in `ConsumeOptions`, then stop gracefully and restart.
+   This also delays reclaim after a crash.
+
+## Related topics
+
+- [Consumer leases](/concepts/consumer-leases/) — How queue waiting uses the lease.
+- [Size a consumer queue](/guides/size-a-consumer-queue/) — Tune how much work the instance claims ahead.
+- [Consume options](/reference/consume/#consumeoptions) — Queue and timing defaults and limits.

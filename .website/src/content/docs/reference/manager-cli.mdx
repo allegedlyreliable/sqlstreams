@@ -1,0 +1,65 @@
+---
+group: system
+title: Manager commands
+description: "manager run: run background work and optionally serve Prometheus metrics."
+slop: high
+---
+
+```sh
+sqlstreams manager run
+```
+
+Runs the registered installation's system manager until SIGINT or SIGTERM.
+It handles eligible maintenance, cursor advancement, scheduled production,
+metric collection, and alert checks. It does not invoke application consumer
+handlers.
+
+## Syntax
+
+```text
+sqlstreams manager run [--metrics-address <address>]
+```
+
+| Flag | Default | Description |
+| --- | --- | --- |
+| `--metrics-address` | Disabled | Serve a Prometheus `/metrics` endpoint on this address, such as `127.0.0.1:9464`. |
+
+The [global connection flags](/reference/cli/#connection-and-global-flags)
+select the database and installation. Register the system before starting
+this command. It has no result document and rejects `--output json`.
+
+## Metrics endpoint
+
+```sh
+sqlstreams manager run --metrics-address 127.0.0.1:9464
+```
+
+The endpoint uses the [metrics exporter](/reference/metrics-exporter/) to
+read retained measurements on each scrape. It serves plain HTTP at the
+chosen bind address. A listener failure stops the manager and exits with
+an error.
+
+Run one scrape target per installation when summing deployment totals.
+Several manager processes can share the installation, but their exporters
+read the same retained measurements.
+
+## Lifecycle and output
+
+The command writes Info, Warn, and Error logs to stderr. Multiple manager
+processes coordinate through database worker claims. One holds the manager
+claim while others wait to claim it. Individual worker targets control how
+many instances can run.
+
+SIGINT or SIGTERM starts shutdown. A later signal uses the operating
+system's default termination behavior. Shutdown drains the manager, then
+the HTTP server, exporter, and pool. A requested stop normally exits `0`.
+
+An internal manager run failure logs [SQL0065](/reference/system-logs/#system-manager)
+and retries after backoff while the command remains running. Initial setup
+or metrics-server failures exit `1`. Invalid usage exits `2`.
+
+## Related topics
+
+- [Run the system manager](/reference/manager/) — Go API and worker lifecycle.
+- [Worker is not running](/troubleshooting/worker-not-running/) — Inspect suspension, claims, and failures.
+- [Export metrics](/reference/metrics-exporter/) — Collection and freshness behavior.

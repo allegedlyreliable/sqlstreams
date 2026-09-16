@@ -5,10 +5,8 @@
 	const { Story } = defineMeta({
 		title: 'Board/BoardStats',
 		component: BoardStats,
-		args: { docCount: 74, codeCount: 53 },
+		args: { docCount: 94 },
 	});
 </script>
 
 <Story name="Stats and legend" />
-
-<Story name="Documentation only" args={{ codeCount: 0 }} />

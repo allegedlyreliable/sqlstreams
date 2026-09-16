@@ -1,125 +1,100 @@
 ---
-title: Ordering & Concurrency
-description: Parallel, exclusive, and ordered delivery differ in whether a key waits for an active handler or an unresolved predecessor.
-slop: high
+group: consumer
+title: Ordering and concurrency
+description: How message keys and concurrency policies control which messages can run together and which must wait.
+slop: medium
 ---
 
-SQLStreams claims messages in id order, but concurrent handlers and retries
-can finish in a different order. Per-key policies determine when a
-message must wait within one consumer group. They do not order different
-keys or different groups.
+import ThreadAside from '../../../components/thread-aside/thread-aside.svelte';
 
-## The three policies
+Consumer instances can process several messages at once. This lets unrelated
+work move ahead, but messages can finish in a different order from their
+message ids.
 
-| Policy | Same key is active | An earlier same-key message is waiting to retry |
+SQLStreams uses **message keys** to identify related work and **concurrency
+policies** to control whether that work can run together or must wait.
+These rules apply within a consumer group, across its running instances.
+
+## Message keys identify related work
+
+Suppose a producer has committed three messages to the `orders.status`
+stream. Each message updates an order's status. To identify updates for
+the same order, the producer assigns the order id as each message's
+`MessageKey`.
+
+| Message id | Message key | Requested update |
 | --- | --- | --- |
-| `parallel` | may run concurrently | may run |
-| `exclusive` | waits for the key lease | may run before the retry |
-| `ordered` | waits | waits until the predecessor is resolved |
+| 1 | `order-101` | Set status to `paid`. |
+| 2 | `order-101` | Set status to `shipped`. |
+| 3 | `order-102` | Set status to `paid`. |
 
-Set the policy on the group with `ConsumerConfig.ConcurrencyOverride`
-when every producer must follow it. A per-message policy applies only
-to messages that request it: another producer supplying a key without a
-policy still requests the default parallel behavior. No warning is
-logged for that default.
+Messages 1 and 2 affect the same order. If message 2 finishes first and
+message 1 finishes afterward, the order ends up marked `paid` even though
+it has shipped. Message 3 updates a different order and can run independently.
 
-[Ordered Delivery](/guides/ordered-delivery/) shows the declaration.
-`MessageConcurrency` separately controls an instance's dispatch capacity;
-raising it cannot make one ordered key run concurrently.
+**A key alone does not impose any ordering.** The concurrency policy determines
+what SQLStreams does with messages sharing the same key.
 
-## Exclusive delivery and compaction
+## Three policies control when a message can start
 
-`ConcurrencyExclusive` uses a `message_key_lease` row to prevent another
-same-key delivery while the lease is held. A busy key produces a
-[`deferred`](/concepts/lifecycle/) exception row. After a handler error,
-the key can be released before that message's retry is due, allowing a
-later message to run first.
+For this example, assume the same policy applies to all three messages.
 
-For `apply-balance` on `ledger.adjustments`, message 101 subtracts 500
-from `acct-42` and fails; message 102 adds 200. Exclusive delivery can
-apply 102 before retrying 101. Choose ordered delivery when that reorder
-would change the business result.
+| Policy | While message 1 is running | If message 1 fails and waits to retry |
+| --- | --- | --- |
+| `parallel` | Message 2 can run at the same time. | Message 2 can run before the retry. |
+| `exclusive` | Message 2 waits. | Message 2 can run before the retry. |
+| `ordered` | Message 2 waits. | Message 2 keeps waiting for message 1 to succeed or be marked dead. |
 
-With [compaction](/concepts/message-key/), deferred deliveries also check
-which message is the current head. If updates 102 and 103 arrive while
-101 runs, 102 can be superseded by 103. That suits a handler applying a
-key's latest state; it does not preserve every delta. `ordered` refuses
-compaction because its guarantee requires preserving that history.
+**Parallel is the default.** It permits messages with the same key to overlap.
+Exclusive prevents that overlap while a consumer handler holds the key's
+lease, but it does not preserve message-id order.
 
-## Ordered delivery through a failure
+Ordered processes messages sharing a key in message-id order, including
+through retries. For the order-status updates above, this keeps message 1's
+retry from overwriting the status applied by message 2.
 
-The `apply-balance` group (id `7`) reads `ledger.adjustments` (stream id
-`1`) with ordered delivery for `acct-42`:
+Message 3 has a different key, so none of these policies requires it to wait
+for messages 1 or 2. It can run when consumer capacity is available.
 
-| Message id | Outcome |
-| --- | --- |
-| 101 | handler errors; recorded `ready` until its retry is due |
-| 102 | waits as `deferred`; handler has not run |
-| 103 | waits as `deferred`; handler has not run |
-| 104 | waits as `deferred`; handler has not run |
+## Ordered messages wait through a failure
 
-The retry of 101 runs first. Success deletes its exception row; permanent
-failure or an exhausted retry budget leaves it `dead`. Either outcome
-allows 102 to become eligible, followed by 103 and 104. A requested delay
-keeps the predecessor unresolved and the later messages waiting.
+With the `ordered` policy, suppose the consumer handler for message 1 cannot
+reach the application's database:
 
-```sql
-SELECT
-    message_id,
-    message_key,
-    status,
-    attempts,
-    can_run_after
-FROM sqlstreams.exception_queue_1
-WHERE consumer_group_id = 7 AND message_key = 'acct-42'
-ORDER BY message_id;
-```
+1. **Message 1 fails.** Its consumer handler returns an error, and SQLStreams
+   records the failure for a later retry.
+2. **Message 2 waits.** Its consumer handler cannot start while message 1
+   still needs a retry. Message 3 can proceed because it updates `order-102`.
+3. **Message 1 succeeds on retry.** Once SQLStreams records its success,
+   message 2 becomes eligible to run and set `order-101` to `shipped`.
 
-## What "earlier" means
+If or when message 1 is [marked dead](/concepts/retries-and-failed-messages/#when-retries-stop),
+message 2 becomes eligible. Ordered processing does not require every
+earlier message to succeed before later work can proceed.
 
-Ordered delivery checks both recorded exceptions and messages whose
-ranges have not committed:
+**The cost** is that one slow or repeatedly failing message holds up later work
+with the same key. Adding more consumer instances helps other keys, but it
+cannot make that ordered key run concurrently.
 
-1. `exception_queue` stores the resolved `message_key` and `concurrency`
-   on each row, with an index on `(consumer_group_id, message_key,
-   message_id)`. An earlier unresolved same-key delivery is
-   one indexed lookup: a row with a lower `message_id`, the same key,
-   and status `ready`, `inflight`, or `deferred`. The policy sits on
-   the row so the exception consumer's claim can tell an ordered row
-   from an exclusive one without re-resolving options in SQL.
-2. An earlier same-key message the group has claimed but not recorded
-   yet has no exception row. It sits between the group's `committed`
-   cursor and the message's own id, so the ordered claim also checks
-   `message_log` for a same-key id in that window, outside the
-   claimer's own range. Inside its own range the consumer instance runs
-   same-key ordered messages one after another in id order, in the
-   same goroutine: the first message of a key is dispatched, the rest
-   are chained behind it. When one succeeds or dead-letters the next
-   runs; when one fails, delays, or is deferred, the rest of the chain
-   is recorded `deferred` without running and the exception consumer
-   takes over in order. An uninterrupted same-key chain can run without an exception poll
-   between its successful handlers.
+<ThreadAside label="NOTE" title="Ordering still depends on leases">
 
-Both checks live in the key-lease claim. An earlier unresolved delivery
-produces a busy verdict and a `deferred` row. The exception claim also
-applies check 1, avoiding repeated claims of a row whose predecessor is
-waiting on backoff. Check 2 stays in the key-lease claim until the other
-range commits and cursor advancement closes the window.
+Exclusive and ordered processing coordinate access to a key through a lease,
+a time-limited claim on that key.
+If it expires while an old consumer handler ignores cancellation, another
+consumer handler can acquire the key and overlap with it. Pass the consumer
+handler's context to blocking operations and keep application effects
+[safe to repeat](/concepts/consumer-groups/#a-message-can-run-again).
 
-A deferred ordered message becomes eligible after its predecessor resolves
-and waits for an exception poll. A message blocked on another instance's
-range also waits for that range to commit and the cursor advancer to move
-`committed`. Exclusive delivery does not impose these predecessor waits,
-though its deferred rows still wait for the key lease and polling.
+</ThreadAside>
 
-## Lease limits
+## Related topics
 
-The policy coordinates claims through leases. An expired lease can be
-reclaimed even if an old handler ignored cancellation and is still
-running. Keep handlers idempotent and pass their contexts to blocking
-calls; [Consumer Timeouts](/guides/consumer-timeouts/) explains this
-at-least-once boundary.
-
-A hot key stays serial regardless of replica count. Different keys can
-use additional concurrency. For compacted messages, same-key produces
-also contend on the compaction head until commit.
+- [Concurrency settings](/reference/consumer-registration/#messageoptions) —
+  Choose a group default or override the policy supplied by producers.
+- [Produce options](/reference/produce/#produceoptions) — Assign a message
+  key and per-message policy.
+- [Consume options](/reference/consume/#consumeoptions) — Set an instance's
+  `MessageConcurrency`. This limits fresh-message processing capacity and
+  does not establish ordering across the group.
+- [Retries and failed messages](/concepts/retries-and-failed-messages/) —
+  How a failed message retries and when it becomes dead.

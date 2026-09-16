@@ -1,0 +1,170 @@
+---
+group: consumer
+title: Consumer metrics
+description: "Snapshot and metric selectors: group progress, exceptions, leases, and session counters."
+slop: high
+---
+
+```go title="ConsumerMetricsHandle"
+// Read current group progress, exceptions, and leases.
+Snapshot(ctx context.Context) (*ConsumerGroupSnapshot, error)
+
+// List built-in metric definitions for consumer groups.
+Definitions() []MetricDefinition
+```
+
+`Snapshot` reads a consumer group's current database state. The selectors
+below provide access to recorded measurements through
+[Latest or History](/reference/read-metrics/). `Definitions` returns metric
+names, units, and descriptions without querying the database.
+
+## Example
+
+Using an initialized `client`, inspect the `charge-cards` group on the
+`payments.requested` stream:
+
+```go
+metrics := client.Stream[sqlstreams.RawPayload]("payments.requested").
+	Consumer("charge-cards").Metrics()
+snapshot, err := metrics.Snapshot(ctx)
+if err != nil {
+	return err
+}
+fmt.Println(snapshot.Cursor.Backlog, snapshot.Exceptions.Dead)
+```
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `ctx` | `context.Context` | For `Snapshot` | Cancellation or its deadline interrupts the database reads. |
+
+## Returns
+
+| Condition | Return value |
+| --- | --- |
+| `Snapshot` succeeds | `(snapshot, nil)`. |
+| Stream is absent | `(nil, ErrStreamNotFound)`. |
+| Group or its cursor is absent | `(nil, ErrConsumerNotFound)`. |
+| Database or context operation fails | `(nil, err)`. |
+
+Abandoned-routine fields come from retained events, so they depend on event
+recording and retention.
+
+### ConsumerGroupSnapshot
+
+| Field | Type | JSON name | Description |
+| --- | --- | --- | --- |
+| `ConsumerGroup` | `string` | `group` | Group name. |
+| `Cursor` | `CursorSnapshot` | `cursor` | Read and commit positions, defined below. |
+| `Exceptions` | `ExceptionSnapshot` | `exceptions` | Counts of exception rows by status. |
+| `OpenLeases` | `int64` | `open_leases` | Claim lease rows belonging to the group, including expired rows awaiting reclaim. |
+| `AbandonedRoutines` | `AbandonedRoutineSnapshot` | `abandoned_routines` | Retained abandoned/cleared event pairs. |
+
+### CursorSnapshot
+
+| Field | Type | JSON name | Description |
+| --- | --- | --- | --- |
+| `Head` | `int64` | `head` | Highest id currently in the message log, or `0` when empty. |
+| `Claimed` | `int64` | `claimed` | Group's claimed cursor. |
+| `Committed` | `int64` | `committed` | Group's committed cursor. Stops before open claimed ranges and ready, inflight, or deferred exceptions. Dead exceptions do not block progress. |
+| `Backlog` | `int64` | `backlog` | `Head - Committed`. See [cursor backlog](/reference/consumer-cursor-backlog/) for interpretation. |
+| `Inflight` | `int64` | `inflight` | `Claimed - Committed`. Cursor distance, not a count of running consumer handlers. |
+
+### ExceptionSnapshot
+
+| Field | Type | JSON name | Description |
+| --- | --- | --- | --- |
+| `Ready` | `int64` | `ready` | Retryable rows, including those whose retry delay has not elapsed. |
+| `Inflight` | `int64` | `inflight` | Rows leased to an exception retry attempt. |
+| `Deferred` | `int64` | `deferred` | Rows waiting for their message key's lease. |
+| `Dead` | `int64` | `dead` | Dead-lettered rows. |
+| `OldestUnresolvedAge` | `time.Duration` | `oldest_unresolved_age` | Age since creation of the oldest ready, inflight, or deferred row. `0` when none exist. |
+
+### AbandonedRoutineSnapshot
+
+| Field | Type | JSON name | Description |
+| --- | --- | --- | --- |
+| `Outstanding` | `int64` | `outstanding` | Distinct retained abandoned events without a matching cleared event. |
+| `Total` | `int64` | `total` | Distinct abandoned events retained in the metrics stream. This is a windowed gauge, not a lifetime counter. |
+| `SelfClearLatencyAvg` | `time.Duration` | `self_clear_latency_avg` | Mean elapsed time between paired abandoned and cleared events. `0` when no pair has cleared. |
+
+## Collected group series
+
+Each selector returns `*MetricHandle` without I/O. All series are gauges
+with identity attributes `stream` and `group`. Wire names below use the
+prefix `sqlstreams.consumer.`.
+
+| Selector | Wire-name suffix | Code | Unit | Value |
+| --- | --- | --- | --- | --- |
+| `CursorHead()` | `cursor.head` | `SQL0080` | `{message}` | `Cursor.Head`. |
+| `CursorClaimed()` | `cursor.claimed` | `SQL0081` | `{message}` | `Cursor.Claimed`. |
+| `CursorCommitted()` | `cursor.committed` | `SQL0082` | `{message}` | `Cursor.Committed`. |
+| `CursorBacklog()` | `cursor.backlog` | `SQL0083` | `{message}` | `Cursor.Backlog`. |
+| `CursorInflight()` | `cursor.inflight` | `SQL0084` | `{message}` | `Cursor.Inflight`. |
+| `ReadyExceptions()` | `exceptions.ready` | `SQL0085` | `{exception}` | `Exceptions.Ready`. |
+| `InflightExceptions()` | `exceptions.inflight` | `SQL0086` | `{exception}` | `Exceptions.Inflight`. |
+| `DeferredExceptions()` | `exceptions.deferred` | `SQL0087` | `{exception}` | `Exceptions.Deferred`. |
+| `DeadExceptions()` | `exceptions.dead` | `SQL0088` | `{exception}` | `Exceptions.Dead`. |
+| `OldestUnresolvedAge()` | `exceptions.oldest_unresolved_age` | `SQL0089` | `ms` | `Exceptions.OldestUnresolvedAge` in milliseconds. |
+| `OpenLeases()` | `open_leases` | `SQL0090` | `{lease}` | Claim lease row count. |
+| `AbandonedRoutinesOutstanding()` | `abandoned_routines.outstanding` | `SQL0091` | `{routine}` | Unpaired abandoned events. |
+| `AbandonedRoutinesTotal()` | `abandoned_routines.total` | `SQL0092` | `{routine}` | Retained abandoned events. |
+| `AbandonedRoutinesSelfClearLatencyAverage()` | `abandoned_routines.self_clear_latency_avg` | `SQL0093` | `ms` | Mean self-clear latency. |
+
+## Consumer-session counters
+
+These counters belong to one `Consume` session, with attributes `stream`,
+`group`, `version`, and `session`. All attribute values are strings.
+Select them with `client.System().Metrics().Metric(name, attributes)`.
+Wire names use the prefix `sqlstreams.consumer.session.`.
+
+| Suffix | Code | Unit | Cumulative value |
+| --- | --- | --- | --- |
+| `claimed` | `SQL0042` | `{message}` | Messages claimed from cursor ranges and exception retries. |
+| `success` | `SQL0043` | `{message}` | Consumer handler calls that returned successfully, counted before database recording. |
+| `superseded` | `SQL0044` | `{message}` | Messages classified as superseded before database recording. |
+| `ready` | `SQL0045` | `{message}` | Results recorded for retry. |
+| `deferred` | `SQL0046` | `{message}` | Messages deferred by message-key contention. Exception retries count deferral before recording. |
+| `dead` | `SQL0047` | `{message}` | Results recorded as dead-lettered. |
+| `reclaimed` | `SQL0048` | `{lease}` | Expired leases reclaimed. |
+| `quarantined` | `SQL0049` | `{range}` | Ranges converted to independent exceptions after the reclaim cap. |
+| `abandoned` | `SQL0050` | `{routine}` | Consumer handler goroutines abandoned after their hard deadline. |
+| `lease_lost` | `SQL0051` | `{commit}` | Recording attempts rejected because another instance reclaimed the lease. |
+
+The instance writes changed counters every `30s`. Shutdown does not force
+one last metrics write. The [consumer stopped log](/reference/consumer-stopped-log/)
+contains the final session totals.
+
+## Lag summary
+
+```go title="ConsumerGroupSnapshot.Lag"
+Lag() ConsumerGroupLag
+```
+
+Computes a summary from an existing snapshot without I/O.
+
+| Field | Type | JSON name | Description |
+| --- | --- | --- | --- |
+| `ConsumerGroup` | `string` | `group` | Group name. |
+| `Committed` | `int64` | `committed` | Copied committed cursor. |
+| `Head` | `int64` | `head` | Copied message-log head. |
+| `Lag` | `int64` | `lag` | Backlog floored at `0`. |
+| `UnresolvedExceptions` | `int64` | `unresolved_exceptions` | Ready + inflight + deferred exception counts. |
+
+## CLI
+
+```sh
+sqlstreams metric latest sqlstreams.consumer.exceptions.dead \
+  --attribute stream=payments.requested --attribute group=charge-cards
+```
+
+Reads the collected dead-exception count. See [metric commands](/reference/metric-cli/)
+for history and output options. Use the Go `Snapshot` API for current group state.
+
+## Related topics
+
+- [Read metric measurements](/reference/read-metrics/) — Retention, freshness, and returned objects.
+- [Consumer cursor backlog](/reference/consumer-cursor-backlog/) — Interpret cursor distance.
+- [Consume messages](/reference/consume/) — Processing and result contracts.
+- [Size a consumer queue](/guides/size-a-consumer-queue/) — Use progress measurements while tuning processing capacity.

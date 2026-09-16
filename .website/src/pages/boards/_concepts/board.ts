@@ -4,6 +4,14 @@ export const board: Board = {
 	grouped: true,
 	title: 'Concepts',
 	slug: 'concepts',
-	description: 'Understand how delivery, shared groups, and leases behave.',
-	threads: () => ['concepts/consumer-groups', 'concepts/consumer-leases'],
+	description:
+		'Understand how SQLStreams stores messages and coordinates processing and maintenance.',
+	threads: () => [
+		'concepts/streams-and-messages',
+		'concepts/consumer-groups',
+		'concepts/consumer-leases',
+		'concepts/retries-and-failed-messages',
+		'concepts/ordering',
+		'concepts/background-managers-and-workers',
+	],
 };

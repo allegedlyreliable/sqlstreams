@@ -154,7 +154,8 @@ file) and README/CLAUDE.md stay at root:
   ROADMAP. Never edited by agents.
 - CONVENTIONS.md (code rules), .website/CONVENTIONS.md (frontend code
   rules), .website/VOICE.md (general site prose), .website/CONCEPTS.md
-  (concept-page writing), and .website/GUIDES.md (guide writing) -- the website rules are loaded via
+  (concept-page writing), .website/GUIDES.md (guide writing), and
+  .website/REFERENCE.md (reference writing) -- the website rules are loaded via
   .website/CLAUDE.md when working in that tree -- and AGENTS.md (this
   file) hold the binding CURRENT rules -- never infer today's rules by
   replaying decision history.

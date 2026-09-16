@@ -5,5 +5,11 @@ export const board: Board = {
 	title: 'Guides',
 	slug: 'guides',
 	description: 'Complete a task in an existing application and check the result.',
-	threads: () => ['guides/stop-a-consumer', 'guides/size-a-consumer-queue'],
+	threads: () => [
+		'guides/stop-a-consumer',
+		'guides/size-a-consumer-queue',
+		'guides/side-effects-and-retries',
+		'guides/transactional-produce',
+		'guides/migrations',
+	],
 };

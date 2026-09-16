@@ -2,7 +2,6 @@
 import type { InferGetStaticPropsType, GetStaticPaths } from 'astro';
 import { getCollection, render } from 'astro:content';
 import ThreadLayout from '../layouts/ThreadLayout.astro';
-import { isErrorThread } from './_board/identifiers';
 import { siteThreads } from './_board/threads';
 import { threadData } from './_thread/thread';
 
@@ -10,10 +9,7 @@ export const getStaticPaths = (async () => {
 	const docs = await getCollection('docs');
 	const threads = siteThreads(docs);
 
-	// error threads render through errors/[code].astro
-	return threads
-		.filter((thread) => !isErrorThread(thread.id))
-		.map((thread) => ({ params: { id: thread.id }, props: { thread } }));
+	return threads.map((thread) => ({ params: { id: thread.id }, props: { thread } }));
 }) satisfies GetStaticPaths;
 
 type Props = InferGetStaticPropsType<typeof getStaticPaths>;

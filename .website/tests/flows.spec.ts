@@ -47,13 +47,19 @@ test('utility pages stay outside the search-engine index and sitemap', async ({
 		'/boards/getting-started/',
 		'/getting-started/first-consumer/',
 		'/getting-started/why-sqlstreams/',
-		'/concepts/lifecycle/',
-		'/reference/consumer/',
-		'/errors/SQL0105/',
 		'/decisions/0679/',
 	]) {
 		expect(sitemapXml).not.toContain(pathname);
 		expect((await request.get(pathname)).status()).toBe(404);
+	}
+	for (const [pathname, destination] of [
+		['/concepts/lifecycle/', '/concepts/retries-and-failed-messages/'],
+		['/reference/consumer/', '/reference/consumer-group/'],
+		['/errors/SQL0105/', '/troubleshooting/queued-message-cannot-start/'],
+	] as const) {
+		expect(sitemapXml).not.toContain(pathname);
+		await page.goto(pathname);
+		await expect(page).toHaveURL(destination);
 	}
 });
 

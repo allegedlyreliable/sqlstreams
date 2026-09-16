@@ -1,0 +1,141 @@
+---
+group: system
+title: Export metrics
+description: "The otel module: export retained measurements through OpenTelemetry or Prometheus."
+slop: high
+---
+
+```go title="github.com/allegedlyreliable/sqlstreams/otel"
+NewExporter(ctx context.Context, pool *pgxpool.Pool, cfg *ExporterConfig) (*Exporter, error)
+NewMetrics(ctx context.Context, pool *pgxpool.Pool, cfg *MetricsConfig) (*Metrics, error)
+```
+
+`NewExporter` provides a Prometheus HTTP endpoint backed by its own
+OpenTelemetry provider. `NewMetrics` provides an external OpenTelemetry SDK
+producer to attach to an application's reader. Both read retained SQLStreams
+measurements without registering instruments for individual series.
+
+## Example
+
+Import the separate `github.com/allegedlyreliable/sqlstreams/otel` module as
+`sqlstreamsotel`. With an initialized `pool` and the application's HTTP `mux`:
+
+```go
+exporter, err := sqlstreamsotel.NewExporter(ctx, pool, nil)
+if err != nil {
+	return err
+}
+mux.Handle("/metrics", exporter.Handler())
+```
+
+Keep `exporter` for shutdown. The application owns the HTTP server and pool.
+The constructor does not start a listener or register SQLStreams tables.
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `ctx` | `context.Context` | Yes | Cancellation or its deadline interrupts the constructor's database ping. |
+| `pool` | `*pgxpool.Pool` | Yes | Non-`nil` pool. The caller owns and closes it. |
+| `cfg` | `*ExporterConfig` or `*MetricsConfig` | No | `nil` uses defaults. Constructors fill defaults in the supplied config. |
+
+### ExporterConfig
+
+| Field | Type | Default | Description |
+| --- | --- | --- | --- |
+| `Schema` | `string` | `"sqlstreams"` | Installation to read. Uses the client's schema-name validation. |
+| `CollectTimeout` | `time.Duration` | `5s` | Positive deadline for each collection's database reads. Prometheus collection does not inherit the HTTP request context. |
+| `Logger` | `logging.Logger` | Warn-level stderr logger | Reports rejected measurement families. |
+| `Retry` | `*RetryPolicy` | Default database retry policy | Same [retry defaults](/reference/client/#retrypolicy) as the client. |
+
+`Exporter` retains the config for inspection. Editing `Exporter.Config` after
+construction does not reconfigure collection.
+
+### MetricsConfig
+
+| Field | Type | Default | Description |
+| --- | --- | --- | --- |
+| `Schema` | `string` | `"sqlstreams"` | Installation to read, fixed when its datastore is constructed. |
+| `CollectTimeout` | `time.Duration` | `5s` | Positive deadline applied to each `Produce` call's context. |
+| `Logger` | `logging.Logger` | Warn-level stderr logger | Reports rejected measurement families. |
+| `Retry` | `*RetryPolicy` | Default database retry policy | Same [retry defaults](/reference/client/#retrypolicy) as the client. |
+
+`Metrics` retains this config and reads `CollectTimeout` at collection time.
+Do not mutate it concurrently with collection. `Logger` and `Retry` resolve
+when the datastore is constructed.
+
+## Returns
+
+| Condition | Return value |
+| --- | --- |
+| Constructor succeeds | `(exporter, nil)` or `(metrics, nil)`. |
+| Config validation or pool ping fails | `(nil, err)`. |
+
+## Prometheus endpoint and shutdown
+
+```go title="Exporter"
+Handler() http.Handler
+Close(ctx context.Context) error
+```
+
+`Handler` serves measurements when scraped. `Close` shuts down its private
+meter provider. It does not stop the HTTP server or close the pool.
+
+Drain the HTTP server before calling `Close`, then close the pool after all
+its users have stopped. In-flight scrapes can finish after `Close` returns.
+Pass a shutdown context that has not already been cancelled.
+
+Run one export target per installation when aggregating deployment totals.
+Replicas read the same measurements, so summing replicas multiplies those totals.
+
+## OpenTelemetry SDK producer
+
+```go title="Metrics.Produce"
+Produce(ctx context.Context) ([]metricdata.ScopeMetrics, error)
+```
+
+Attach `Metrics` through the reader's `sdkmetric.WithProducer` option. The
+reader owns collection cadence and shutdown. `Produce` supports concurrent calls.
+`Metrics` itself has no `Close` method.
+
+| Condition | Return value |
+| --- | --- |
+| Source read succeeds | Scope metrics with accepted measurements and export-health gauges, plus `nil` error. |
+| One or more metric families are invalid | Healthy families still export. Rejection health and `SQL0104` identify omissions. No collection error solely for rejected families. |
+| Source read fails | Read-success gauge `0` and the read error. No stale cached measurements are substituted. |
+
+Gauge values export directly. Counters export their stored cumulative totals,
+so collecting a total of `120` twice does not add another `120`.
+Data-point timestamps are collection times, not `Measurement.At`. Use
+collector-completion telemetry to detect stale source collection.
+`Metadata` is not exported as labels.
+
+### Export health
+
+| Metric | Code | Meaning |
+| --- | --- | --- |
+| `sqlstreams.otel.source.read_success` | `SQL0102` | `1` if the retained source read succeeded, otherwise `0`. |
+| `sqlstreams.otel.measurements.rejected` | `SQL0103` | Number of retained measurements omitted after a successful read. Absent when the read fails. |
+
+Prometheus names are `sqlstreams_otel_source_read_success` and
+`sqlstreams_otel_measurements_rejected`. These gauges belong to each export
+collection and are never stored in the metrics stream.
+
+### Rejected families
+
+A family consists of measurements with the same original metric name.
+The exporter omits the whole family for conflicting kinds or units,
+ambiguous translated attribute names, or reserved output names. If several
+original names translate to the same Prometheus name, all conflicting
+families are omitted.
+
+`SQL0104` logs `metric_names` and `detail` for each rejected family. Prometheus
+translation replaces unsupported characters and adds type/unit suffixes.
+Keep custom names outside the `sqlstreams_` output namespace as well as the
+reserved `sqlstreams.` source namespace.
+
+## Related topics
+
+- [Read metric measurements](/reference/read-metrics/) — Source identity and freshness.
+- [Produce metric measurements](/reference/publish-metrics/) — Custom measurement contracts.
+- [System metrics](/reference/system-metrics/#collector-completion) — Last completed collector pass.

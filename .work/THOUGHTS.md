@@ -1,6 +1,10 @@
 # Public API
 
+Need to update SQLSTREAMS_ADMIN_SCHEMA to SQLSTREAMS_SCHEMA
+
 # Docs
+
+Consider changing crying cat profile pic, its a bit distracting and out of place
 
 Really need a single Overview page that goes into the main concepts to understand:
 - stream

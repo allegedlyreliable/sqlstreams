@@ -1,0 +1,76 @@
+---
+group: consumer
+title: The consumer group object
+description: "Consumer: the stored identity of a consumer group, its fields, and available operations."
+slop: high
+---
+
+import ThreadAside from '../../../components/thread-aside/thread-aside.svelte';
+
+```go title="sqlstreams.Consumer"
+type Consumer struct {
+	Id        int64     `json:"group_id"`
+	StreamId  int64     `json:"stream_id"`
+	Name      string    `json:"group"`
+	CreatedAt time.Time `json:"created_at"`
+}
+```
+
+A `Consumer` is the stored registration of a consumer group on one stream.
+[Get](/reference/get-consumer/) and [Consumers](/reference/list-consumers/)
+return this object.
+
+## Fields
+
+| Field | Type | JSON name | Description |
+| --- | --- | --- | --- |
+| `Id` | `int64` | `group_id` | The consumer group's id. |
+| `StreamId` | `int64` | `stream_id` | The stream that owns the group. |
+| `Name` | `string` | `group` | The group's name, unique within its stream. |
+| `CreatedAt` | `time.Time` | `created_at` | When the group was registered. |
+
+<ThreadAside label="NOTE" title="Registration and activity">
+
+A group can remain registered when no instances are running. This object
+describes its identity, not current instance activity or message progress.
+Use [cursor backlog](/reference/consumer-cursor-backlog/) to read its progress.
+
+</ThreadAside>
+
+## Operations
+
+| Operation | Go API |
+| --- | --- |
+| [Register a consumer group](/reference/consumer-registration/) | `stream.Consumer(name).Register(ctx, cfg)` |
+| [Retrieve a consumer group](/reference/get-consumer/) | `stream.Consumer(name).Get(ctx)` |
+| [List consumer groups](/reference/list-consumers/) | `stream.Consumers(ctx)` |
+| [Delete a consumer group](/reference/destroy-consumer/) | `stream.Consumer(name).Destroy(ctx, options)` |
+| [Consume messages](/reference/consume/) | `consumer.Consume(ctx, consumerFunc, options)` |
+
+[Register](/reference/consumer-registration/) returns a `*ConsumerInstance[T]`
+for running `Consume`.
+
+## Example payload
+
+The examples in these entries use an initialized `client`, the
+`payments.requested` stream, and the `charge-cards` group. The stream's
+messages use this version 1 payload:
+
+```go
+type PaymentRequestedV1 struct {
+	OrderId string `json:"order_id"`
+}
+
+func (p PaymentRequestedV1) SchemaVersion() int { return 1 }
+```
+
+Examples use this import alias:
+
+```go
+import sqlstreams "github.com/allegedlyreliable/sqlstreams/client"
+```
+
+## Related topics
+
+- [Consumer groups](/concepts/consumer-groups/) — How instances share work and groups keep independent progress.
+- [Consumer metrics](/reference/consumer-metrics/) — Inspect current progress, exceptions, and leases.

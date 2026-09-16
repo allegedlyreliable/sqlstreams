@@ -1,0 +1,129 @@
+---
+group: system
+title: Register the system
+description: "System.Register: create the installation and declare built-in alerts and metric collection."
+slop: high
+---
+
+import ThreadAside from '../../../components/thread-aside/thread-aside.svelte';
+
+```go title="SystemHandle.Register"
+Register(ctx context.Context, cfg *SystemConfig) error
+```
+
+Creates the installation's shared tables and declares its built-in streams,
+alert schedules, and metric collector. Repeated calls apply the supplied
+configuration after defaults.
+
+## Example
+
+Use an initialized `client`. Its `Schema` selects the installation.
+
+```go
+if err := client.System().Register(ctx, &sqlstreams.SystemConfig{
+	MetricCollector: &sqlstreams.MetricCollectorWorkerConfig{
+		PollRate: 30 * time.Second,
+	},
+}); err != nil {
+	return err
+}
+```
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `ctx` | `context.Context` | Yes | Cancellation or its deadline interrupts registration. Earlier steps may already have completed. |
+| `cfg` | `*SystemConfig` | No | `nil` uses defaults. `Register` fills defaults in this struct and nested structs before applying the declaration. |
+
+### SystemConfig
+
+| Field | Type | Default | Description |
+| --- | --- | --- | --- |
+| `PartitionCountAlert` | [`*PartitionCountAlertConfig`](#partitioncountalertconfig) | Nested defaults | Settings for partition-count checks across streams. |
+| `CompactionReadCostAlert` | [`*CompactionReadCostAlertConfig`](#compactionreadcostalertconfig) | Nested defaults | Settings for compacted-message read-cost checks. |
+| `WorkerLivenessAlert` | [`*WorkerLivenessAlertConfig`](/reference/worker-liveness-alert/#workerlivenessalertconfig) | Nested defaults | Settings for unclaimed-worker checks. |
+| `MetricCollectorProgressAlert` | [`*MetricCollectorProgressAlertConfig`](#metriccollectorprogressalertconfig) | Nested defaults | Checks whether metric collection is making progress. |
+| `MetricCollector` | [`*MetricCollectorWorkerConfig`](#metriccollectorworkerconfig) | Nested defaults | Metric collection frequency. |
+
+### PartitionCountAlertConfig
+
+| Field | Type | Default | Description |
+| --- | --- | --- | --- |
+| `ScheduleExpression` | `string` | `"@every 1m"` | Supported schedule expression controlling evaluation frequency. |
+| `Threshold` | `int64` | `0` | Count at or above which a stream is unhealthy. Zero derives the threshold from half the reported PostgreSQL lock ceiling. Must be nonnegative. |
+| `PendingDuration` | `time.Duration` | `2m` | Required consecutive unhealthy sample span. Must be positive after defaults. |
+| `MaximumGap` | `time.Duration` | `2m` | Maximum gap between samples and age of the newest sample. Must be positive after defaults. |
+| `DisablePending` | `bool` | `false` | Allows activation from fresh unhealthy evidence without waiting for the pending span. |
+
+### CompactionReadCostAlertConfig
+
+| Field | Type | Default | Description |
+| --- | --- | --- | --- |
+| `ScheduleExpression` | `string` | `"@every 1m"` | Supported schedule expression controlling evaluation frequency. |
+| `Threshold` | `int64` | `0` | Partition count at or above which a compacted stream is unhealthy. Zero uses `10,000` partitions. Must be nonnegative. |
+| `PendingDuration` | `time.Duration` | `2m` | Required consecutive unhealthy sample span. Must be positive after defaults. |
+| `MaximumGap` | `time.Duration` | `2m` | Maximum gap between samples and age of the newest sample. Must be positive after defaults. |
+| `DisablePending` | `bool` | `false` | Allows activation from fresh unhealthy evidence without waiting for the pending span. |
+
+### MetricCollectorProgressAlertConfig
+
+| Field | Type | Default | Description |
+| --- | --- | --- | --- |
+| `ScheduleExpression` | `string` | `"@every 1m"` | Supported schedule expression controlling evaluation frequency. |
+| `MaximumAge` | `time.Duration` | `0` | Maximum age of a completed collection. Zero uses the greater of two minutes and three declared collector poll intervals. Must be nonnegative. |
+| `PendingDuration` | `time.Duration` | `2m` | Required unhealthy duration under continuous manager lease coverage. Must be positive after defaults. |
+| `DisablePending` | `bool` | `false` | Allows immediate activation with current manager lease coverage. |
+
+### MetricCollectorWorkerConfig
+
+| Field | Type | Default | Description |
+| --- | --- | --- | --- |
+| `PollRate` | `time.Duration` | `30s` | Delay between collection passes. Zero selects the default. Must be positive. |
+
+## Returns
+
+| Condition | Return value |
+| --- | --- |
+| All declarations succeed | `nil`. |
+| A declaration fails | A non-`nil` error. Earlier declarations can remain applied. |
+
+## Repeated registration
+
+An omitted field selects its default, so repeated registration with `cfg` set to `nil`
+can replace customized settings. Registration preserves existing suspension
+and instance targets. Stored worker settings take effect when new instances
+claim them. Queued alert checks retain the policy included in their messages.
+
+<ThreadAside label="NOTE" title="Registration and execution">
+
+`Register` declares the work. It does not start a manager loop. By default, `Consume`
+runs the system manager alongside its session, or an application can run the
+manager explicitly.
+
+</ThreadAside>
+
+## CLI
+
+```sh
+sqlstreams system register
+```
+
+Applies the default system configuration, including to an existing installation.
+Use the Go API for custom settings. `--output json` returns `{"registered":true}`
+on success.
+
+## Errors
+
+| Error | When |
+| --- | --- |
+| Validation error | Alert settings, collector settings, or a schedule expression is invalid. |
+| `ErrSchemaNotCreatable` | The schema is missing and the role cannot create it. |
+| Schema compatibility error | Existing tables are incompatible with this build. |
+| Database or context error | A declaration fails or is interrupted. Retrying the same declaration can complete partial registration. |
+
+## Related topics
+
+- [Create a client](/reference/client/) — Installation schema and manager behavior.
+- [Worker liveness alert](/reference/worker-liveness-alert/) — Evaluation and retained reports.
+- [Background managers and workers](/concepts/background-managers-and-workers/) — How the system manager starts and coordinates maintenance.

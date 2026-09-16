@@ -1,0 +1,131 @@
+---
+group: system
+title: Background managers and workers
+description: Where background work runs, what janitors maintain, and how processes share responsibility for it.
+slop: low
+---
+
+import Diagram from '../../../components/diagram/diagram.svelte';
+import ThreadAside from '../../../components/thread-aside/thread-aside.svelte';
+import { layoutResources } from '../../../components/diagram/layout';
+
+SQLStreams requires background processes to keep things running smoothly.
+Retention policies need to cull data. Metrics have to be calculated. And schedules need
+to run on time.
+
+To do this, SQLStreams runs background **workers** embedded directly in every
+running consumer instance.
+
+A **worker** is designed to run a particular background task. We have **janitors**
+that clean up data. And **managers** that start, monitor, and stop other
+workers.
+
+Suppose a payment application runs consumer instance A in the `charge-cards`
+group on the `payments.requested` stream. The same process also runs that
+stream's janitor.
+
+export const applicationProcess = await layoutResources([
+  {
+    id: 'stream', title: 'Stream: payments.requested', width: 250,
+    lines: ['Messages: 1 · 2 · 3 · 4'],
+  },
+  {
+    id: 'process', title: 'Process: payment application', width: 0,
+    children: [
+      {
+        id: 'group', title: 'Consumer group: charge-cards', width: 0,
+        children: [
+          { id: 'A', title: 'Instance A', width: 220, lines: ['Claims: 1–4'] },
+        ],
+      },
+      {
+        id: 'manager', title: 'Manager', width: 0,
+        children: [
+          { id: 'janitor', title: 'Janitor', width: 220, lines: ['Cleans expired stream data'] },
+        ],
+      },
+    ],
+  },
+], [['stream', 'process']]);
+
+<Diagram
+  graph={applicationProcess}
+  description="The payments.requested stream contains message ids 1–4 and points to the payment application process. Inside the process, the charge-cards consumer group contains instance A, which claims ids 1–4. Beside the group, a manager contains the stream's janitor, which cleans expired stream data."
+  caption="Message processing and maintenance run in the same application process."
+/>
+
+## Janitor
+
+A stream's janitor is the worker responsible for background cleanup. It
+periodically checks for eligible data and attempts to remove it.
+
+See [message retention](/concepts/streams-and-messages/#retention-controls-when-cleanup-is-allowed)
+for how message age and group progress determine which messages it can remove.
+
+## Manager
+
+SQLStreams uses managers at two scopes:
+
+- **The consumer's manager** runs the consumer group's processing and
+  progress tracking, along with maintenance for its stream.
+- **The system manager** looks across the installation. It can run stream
+  maintenance, collect metrics, produce scheduled messages, and evaluate
+  alerts, including for streams with no active consumer instance.
+
+By default, `Consume` runs both.
+
+## Leader election
+
+You might reasonably think, at this point, that each running consumer has a lot
+of extra process bloat and inefficiencies. While this remains true in some
+respects, SQLStreams uses claims and leases to elect leaders and cut down on
+excess running workers.
+
+For example, say consumer instances A and B run in separate processes,
+both reading the `payments.requested` stream:
+
+1. **Both processes look for work to run.** Their managers discover the
+   stream's janitor, which permits one active instance.
+2. **A's process claims the janitor first.** Postgres records a time-limited
+   lease, and the process starts running cleanup alongside its consumer.
+3. **B's process cannot claim the same janitor while that lease is valid.**
+   It continues processing messages without starting another janitor. Its
+   manager periodically checks whether it can claim the work.
+4. **A's janitor keeps its lease alive.** It periodically renews the lease
+   through **heartbeats**, so B's process continues leaving cleanup to A's.
+5. **If A's process crashes, cleanup can move to B's.** The heartbeats stop.
+   Once A's lease expires, B's manager can claim the janitor and start cleanup
+   in its own process.
+
+Adding application replicas therefore does not create an independent janitor
+for every replica. Each worker type controls how many can be active at a given
+time.
+
+<ThreadAside label="NOTE" title="Takeover delay">
+
+Takeover is not immediate after a crash. A replacement must wait for the old
+claim to expire and for a later claim attempt.
+
+</ThreadAside>
+
+## Maintenance needs a running process
+
+This is the most important line here:
+
+> **SQLStreams' maintenance requires a running process.**
+
+The idea is that, for most use cases, running a producer and consumer will 
+automagically keep SQLStreams up and running in the expected manner.
+
+However, if you have special circumstances where running a consumer doesn't
+make sense, you can also just run [`client.Manager().Run(ctx)`](/reference/manager/) in
+a separate process. This maintains SQLStreams even when no consumers are running.
+
+## Related topics
+
+- [Run the system manager](/reference/manager/) — Run maintenance independently
+  of consumer sessions, or change the automatic manager behavior.
+- [Control stream maintenance](/reference/maintenance/) — Inspect, suspend,
+  or resume a stream's janitor and vacuum worker.
+- [Worker is not running](/troubleshooting/worker-not-running/) — Investigate
+  maintenance that should be active but is not making progress.

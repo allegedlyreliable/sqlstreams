@@ -1,16 +1,26 @@
 ---
-title: Postgres pool
-description: NewPostgresPool and PostgresConnectionConfig — the DSN exploded into params, and what stays yours.
+group: client
+title: Create a PostgreSQL pool
+description: "NewPostgresPool: build the pgx pool used by a SQLStreams client."
 slop: high
 ---
 
-`sqlstreams.NewPostgresPool` builds a `*pgxpool.Pool` from the parts of a
-Postgres URL, in the order the URL writes them:
-`postgres://user:password@host:port/database`. It does not dial; `NewClient`
-is what pings the pool, so a wrong password surfaces there, not here.
+```go title="sqlstreams.NewPostgresPool"
+NewPostgresPool(ctx context.Context, user string, password string, host string, database string, cfg *PostgresConnectionConfig) (*pgxpool.Pool, error)
+```
+
+Builds a pgx pool from connection parameters. It does not test connectivity.
+`NewClient` pings the pool when creating a SQLStreams client. The caller owns
+and closes the pool.
+
+## Example
+
+Use the application's database credentials. This example reads the password
+from `PGPASSWORD`.
 
 ```go
-pool, err := sqlstreams.NewPostgresPool(ctx, "app_user", os.Getenv("PGPASSWORD"), "localhost", "app_db",
+pool, err := sqlstreams.NewPostgresPool(ctx,
+	"app_user", os.Getenv("PGPASSWORD"), "localhost", "app_db",
 	&sqlstreams.PostgresConnectionConfig{MaxConns: 20})
 if err != nil {
 	return err
@@ -18,38 +28,48 @@ if err != nil {
 defer pool.Close()
 ```
 
-The password goes inline, `""` meaning no password, which is real on a trust
-or peer auth setup. A password holding `@` or `#` and an IPv6 host survive:
-the DSN is built through `net/url`.
+## Parameters
 
-## Config
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `ctx` | `context.Context` | Yes | Context passed to pool construction. |
+| `user` | `string` | Yes | Database role. |
+| `password` | `string` | Yes | Role password. An empty string supplies no password. |
+| `host` | `string` | Yes | Database host, without the port. IPv6 addresses are supported. |
+| `database` | `string` | Yes | Database name. |
+| `cfg` | `*PostgresConnectionConfig` | No | `nil` uses defaults. The supplied struct has its default Port filled before validation. |
 
 ### PostgresConnectionConfig
 
-| field | default | what it decides |
-| --- | --- | --- |
-| `Port` | `5432` | the port |
-| `MaxConns` | pgx's own, `max(4, numCPU)` | the pool's size when `> 0`; raise it for high worker counts |
-| `ConnectTimeout` | pgx's own (none) | mirrors `pgconn.Config.ConnectTimeout` |
-| `TLSConfig` | pgx's own negotiation (`sslmode=prefer`) | mirrors `pgconn.Config.TLSConfig`; the package never sets `sslmode` itself |
+| Field | Type | Default | Description |
+| --- | --- | --- | --- |
+| `Port` | `int` | `5432` | Database port. Must be positive. |
+| `MaxConns` | `int` | `0` | A positive value sets the pool limit. Zero leaves pgx's default, the greater of 4 and the CPU count. Must be nonnegative. |
+| `ConnectTimeout` | `time.Duration` | `0` | Maximum time to establish a connection. Zero leaves pgx's connection configuration unchanged. Must be nonnegative. |
+| `TLSConfig` | `*tls.Config` | `nil` | Optional TLS configuration assigned to the parsed pgx connection config. `nil` preserves pgx's negotiation. Use a pgx DSN when configuring sslmode and fallback behavior explicitly. |
 
-`Schema` is not here. It was never a connection fact and sits on
-[`ClientConfig`](/reference/client/).
+## Returns
 
-## Gotchas
+| Condition | Return value |
+| --- | --- |
+| Pool construction succeeds | `(pool, nil)`. This does not establish that credentials or connectivity work. |
+| Parameters or pool configuration are invalid | `(nil, err)`. |
 
-- A caller holding a DSN skips this entirely: `pgxpool.New(ctx, dsn)` and
-  hand the result to `NewClient`, which takes any `*pgxpool.Pool`. That is
-  the path for a `DATABASE_URL` deployment and for an application whose
-  pool exists before SQLStreams enters it.
-- Whichever way the pool is built, you close it. `defer pool.Close()` is
-  the only shutdown this layer needs.
-- Taking a pool commits the public API to pgx. A team on `database/sql`
-  runs one pool: build the pgxpool, hand it to SQLStreams, and derive the
-  `*sql.DB` view with pgx's own `stdlib.OpenDBFromPool(pool)`, which shares
-  the pool and leaves closing to you. The derivation runs only that
-  direction, so a team that will not import pgx runs a second pool beside
-  SQLStreams's.
-- A pool you built can carry its own `search_path`, on the DSN as
-  `?search_path=myapp` or in an `AfterConnect` hook. SQLStreams does not care:
-  every statement it runs names its schema outright.
+## Existing pools and connection URLs
+
+`NewClient` accepts any `*pgxpool.Pool`. An application with an existing pool
+can pass it directly. For a connection URL, construct the pool with
+`pgxpool.New(ctx, dsn)` and pass that pool to `NewClient`.
+
+Close the pool after producers, consumers, and other database work have stopped.
+
+## Errors
+
+| Error | When |
+| --- | --- |
+| Validation error | User, host, or database is empty, or connection configuration is invalid. |
+| Pool configuration error | pgx rejects the generated connection configuration. |
+
+## Related topics
+
+- [Create a client](/reference/client/) — Test connectivity and configure the SQLStreams installation.

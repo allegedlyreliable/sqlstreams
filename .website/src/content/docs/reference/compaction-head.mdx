@@ -1,0 +1,104 @@
+---
+group: stream
+title: Read compaction heads
+description: "CompactionHead, CompactionHeads, and LockCompactionHead: read the current message for a key."
+slop: high
+---
+
+```go title="KeyHandle[T]"
+CompactionHead(ctx context.Context) (*StoredMessage[T], error)
+LockCompactionHead(ctx context.Context, tx Tx) (*StoredMessage[T], error)
+```
+
+```go title="StreamHandle[T]"
+CompactionHeads(ctx context.Context) ([]*StoredMessage[T], error)
+```
+
+A compaction head is the retained message currently selected for a message
+key. `CompactionHead` reads one key. `CompactionHeads` reads all current heads
+in key order, without pagination. Neither read filters by payload schema version.
+
+## Example
+
+Read the `order-123` message key on the `payments.requested` stream using an
+initialized `client`. The message must have been produced with compaction
+enabled to become a head.
+
+```go
+payments := client.Stream[sqlstreams.RawPayload]("payments.requested")
+head, err := payments.Key("order-123").CompactionHead(ctx)
+if err != nil {
+	return err
+}
+fmt.Println(head.Id, string(*head.Message))
+```
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `ctx` | `context.Context` | Yes | Cancellation or its deadline interrupts the read or lock acquisition. |
+| `tx` | [`Tx`](/reference/transactions/#tx-and-querier) | `LockCompactionHead` | An open transaction on the stream's database. The lock remains held until this transaction ends. |
+
+## Returns
+
+| Operation and condition | Return value |
+| --- | --- |
+| `CompactionHead` finds a current message | `(message, nil)`, a [stored message](/reference/stored-message/). |
+| `CompactionHead` finds no current message | `(nil, ErrCompactionHeadNotFound)`. |
+| `LockCompactionHead` locks a key with a current message | `(message, nil)`. |
+| `LockCompactionHead` locks a key without a current message | `(nil, nil)`. The key's row is still locked. |
+| `CompactionHeads` succeeds | `(heads, nil)`, containing current stored messages. The slice is empty when no heads exist. |
+| Stream is absent or an operation fails | A `nil` result and non-`nil` error. |
+
+## LockCompactionHead
+
+Ensures a lockable row exists, locks it, and reads its current message through
+the supplied transaction. This operation can create an empty compaction-head
+row even though it returns no message.
+
+```go
+payments := client.Stream[sqlstreams.RawPayload]("payments.requested")
+err := client.InTransaction(ctx, func(ctx context.Context, tx sqlstreams.Tx) error {
+	head, err := payments.Key("order-123").LockCompactionHead(ctx, tx)
+	if err != nil {
+		return err
+	}
+	if head != nil {
+		fmt.Println(head.Id)
+	}
+	return nil
+})
+if err != nil {
+	return err
+}
+```
+
+Keep the transaction short. Acquiring several compaction-key locks requires
+a consistent key order across transactions to avoid deadlocks.
+
+## CLI
+
+```sh
+sqlstreams stream key compaction-head payments.requested order-123
+```
+
+Prints the current message. `--output json` prints the stored-message object.
+A missing head exits unsuccessfully with `SQL0066`. This command does not hold
+a lock for subsequent application work.
+
+## Errors
+
+| Error | When |
+| --- | --- |
+| Validation error | A required name or key is empty, or `LockCompactionHead` receives `nil` `tx`. |
+| `ErrStreamNotFound` | The stream is absent. |
+| `ErrCompactionHeadNotFound` | `CompactionHead` finds no current message. |
+| Schema compatibility error | `LockCompactionHead` finds an unsupported database schema. |
+| JSON decoding error | The selected payload cannot be decoded into `T`. |
+| Database or context error | A read, row creation, or lock operation fails. |
+
+## Related topics
+
+- [List messages for a key](/reference/key-messages/) — Read other retained versions.
+- [Compaction options](/reference/produce/#compactionoptions) — How a produced message becomes the current version.

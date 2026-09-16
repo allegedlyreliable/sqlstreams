@@ -1,0 +1,68 @@
+---
+group: stream
+title: Payload versions and raw JSON
+description: "Versioned and RawPayload: typed message payloads and raw JSON reads."
+slop: medium
+---
+
+```go title="sqlstreams.Versioned"
+type Versioned interface {
+	SchemaVersion() int
+}
+```
+
+A message payload type implements `Versioned` and can be encoded as JSON.
+Its schema version is stored with each produced message. A consumer instance
+processes messages matching the version declared by its payload type.
+
+## Define a payload
+
+Use a value receiver that returns a constant of at least `1`.
+
+```go
+type PaymentRequestedV1 struct {
+	OrderId string `json:"order_id"`
+}
+
+func (p PaymentRequestedV1) SchemaVersion() int { return 1 }
+```
+
+Declare a new version for incompatible payload changes, such as removing
+or renaming a field or changing its type. The payload version is separate
+from the database schema version managed by migrations.
+
+## RawPayload
+
+```go title="sqlstreams.RawPayload"
+type RawPayload []byte
+```
+
+Use `RawPayload` for administrative reads that should preserve stored JSON
+without decoding it into an application struct. It implements JSON marshal
+and unmarshal methods and returns `0` from `SchemaVersion`.
+
+```go
+payments := client.Stream[sqlstreams.RawPayload]("payments.requested")
+stream, err := payments.Get(ctx)
+if err != nil {
+	return err
+}
+if stream != nil {
+	fmt.Println(stream.Id, stream.Name)
+}
+```
+
+This example uses an initialized `client` to inspect the `payments.requested` stream.
+
+| Use | Supported with `RawPayload` |
+| --- | --- |
+| Read stream registration | Yes. The lookup does not decode messages. |
+| Read retained keyed messages or compaction heads | Yes. The payload remains JSON bytes. |
+| Register a consumer group | No. Consumer payload versions must be at least `1`. |
+| `Produce` a message | No. Version `0` cannot be produced. |
+
+## Related topics
+
+- [Produce a message](/reference/produce/) — Payload validation and message production.
+- [Register a consumer group](/reference/consumer-registration/) — Consumer payload requirements.
+- [Streams and messages](/concepts/streams-and-messages/) — How payloads and message metadata are stored.

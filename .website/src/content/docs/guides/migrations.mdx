@@ -1,149 +1,122 @@
 ---
-title: Upgrades & Migrations
-description: How schema versions work, what a rolling deploy can rely on, and the compatibility table for every release.
-slop: high
+group: system
+title: Upgrading SQLStreams
+description: Update the library and CLI, check database schema versions, and deploy the new application build.
+slop: medium
 ---
 
-import CompatMatrix from '../../../components/compat-matrix/compat-matrix.svelte';
-import compat from '../../../data/compat.json';
+import ThreadAside from '../../../components/thread-aside/thread-aside.svelte';
 
-SQLStreams's tables live in your Postgres database, so upgrading SQLStreams can mean
-migrating schema. This page is the contract for how that works: what a
-version is, which upgrades are safe to roll, and how a binary refuses —
-early and legibly — when it can't run against what it finds.
+A SQLStreams upgrade can change both the Go library and the tables it uses
+in Postgres. Before starting an updated application, [check whether its
+release needs database migrations and whether older instances can keep running](#compatibility-table).
 
-## Release maintenance and deprecation
+This guide uses **v0.1.4 → v0.1.5** as the example. That pair needs no database
+migration. The version checks below identify when migration work is required
+for the release you choose.
 
-SQLStreams maintains the latest stable release only. Bug and security fixes
-arrive in a new release; older releases have no promised backports. Upgrade
-to receive fixes. Stable means a release without a prerelease suffix,
-including stable v0.x releases.
+## Before you begin
 
-The supported Go API is `client` and the exported fields and methods reachable
-through its types, parameters, and results. Other packages remain importable
-for advanced use without a stability commitment.
+Read the target release's [release notes](https://github.com/allegedlyreliable/sqlstreams/releases)
+and the [compatibility table](#compatibility-table). Confirm the release
+supports your [PostgreSQL version](/reference/supported-postgresql-versions/).
 
-For future releases, removing or incompatibly changing a supported public API
-requires a deprecation notice in the release notes, affected Go declarations
-marked with `Deprecated:`, and a replacement with migration steps. The
-deprecated API keeps working through at least one subsequent minor release.
-For example, an API deprecated in v0.2.0 stays available throughout v0.3.x;
-v0.4.0 is the earliest removal under this policy. These version numbers
-illustrate the notice period, not scheduled releases.
+Install the [SQLStreams CLI](/reference/cli/#installation) at the version
+matching your target library release.
 
-An urgent security fix may shorten that notice period. Its release notes
-explain the exception and the migration users need to make.
+The database connection below uses the [Quickstart](/quickstart/). For another
+installation, use its [database URL and schema](/reference/cli/#connection-and-global-flags).
 
-Which PostgreSQL servers a release runs on is a separate promise from the
-schema contract below. See
-[Supported PostgreSQL versions](/reference/supported-postgresql-versions/)
-for the majors and the minors each verification ran against.
-Report suspected vulnerabilities through the
-[security policy](https://github.com/allegedlyreliable/sqlstreams/blob/main/SECURITY.md).
+## 1. Check and update database versions
 
-## Two version counters
+Connect the new CLI to the application's database:
 
-The schema versions in two independent scopes, both starting at v1:
+```sh
+sqlstreams_database_url='postgres://username:password@localhost:5432/quickstart?sslmode=disable'
+sqlstreams --database-url "$sqlstreams_database_url" migrate status
+```
 
-- **System scope** — the shared control-plane tables (the stream catalog, the
-  worker fleet). One counter for the whole database.
-- **Stream scope** — the per-stream table families (message log, deliveries,
-  cursors, leases). Each stream carries its own counter, so streams can sit at
-  different versions mid-migration without breaking each other.
+Example output from v0.1.5 with the Quickstart stream registered:
 
-Both counters read off the client: `client.System().MigrationVersion(ctx)`
-for the system scope, `client.Stream[T](name).MigrationVersion(ctx)` for one
-stream. `sqlstreams migrate status` prints every counter beside the version the
-binary was built with.
+```text
+latest available: system 1, stream 1
 
-### CLI
+system: current 1, available 1
 
-Migration commands take `--target-version`, matching the client's
-`targetVersion` argument. For example,
-`sqlstreams migrate stream up orders.created --target-version 1` targets
-version 1 for `orders.created`. The flag is required for both `up` and `down`;
-`migrate versions` lists the versions the binary supports.
-JSON mutation results name the target `target_version`. Migration status
-reports `registered`, including `false` when the system has not been registered.
+STREAM                 CURRENT   AVAILABLE
+__system.alerts        1         1
+__system.metrics       1         1
+__system.schedules     1         1
+signup.welcome-email   1         1
+```
 
-These are SQLStreams's internal DDL versions. They are unrelated to the
-`SchemaVersion` your Message types declare, which versions *your message
-payloads* row by row ([schema versions](/guides/schema-versions/)); no
-SQLStreams migration ever touches your payloads.
+Confirm that the output lists the intended installation's streams. It shows
+the installed system version and each stream's `CURRENT` version beside the
+`AVAILABLE` version supported by this CLI.
 
-## The gate
+**If the system and all streams already match, continue to step 2.**
 
-Every producer, consumer, and worker checks both scopes at `Register` and
-refuses to start rather than run against a shape it doesn't understand:
+**If a system or stream is behind, follow the release's deployment requirements before
+migrating.** Keep old instances running only when the release is compatible
+with them. For an incompatible change, stop the old producers, consumers,
+and other SQLStreams processes first. Let consumers
+[stop gracefully](/guides/stop-a-consumer/) before proceeding.
 
-- **Database older than the binary** — the binary requires schema the
-  database doesn't have yet: `schema version is older than this build
-  requires — migrate the database up first` ([`SQL0022`](/errors/SQL0022)).
-- **Database migrated past what the binary tolerates** — a newer release
-  applied a breaking migration: `schema version is newer than this build
-  understands — upgrade the binary` ([`SQL0023`](/errors/SQL0023)).
+<ThreadAside label="NOTE" title="Back up before migrating">
 
-## Rolling deploys: the minimum compatible version
+Back up the database before applying schema changes.
 
-Every migration step declares its **minimum compatible version** — the
-oldest release whose SQL still runs correctly against the schema the step
-produces. Most steps are additive (a new column, a new table) and declare no
-requirement at all; a breaking step names the floor it raises.
+</ThreadAside>
 
-The gate admits a binary when no applied step requires anything newer than
-it. That is what makes the standard rolling upgrade safe:
+Migrate the system first if needed, then any streams that are behind:
 
-1. Migrate the database with the new release.
-2. Roll binaries at your own pace — old instances keep producing and
-   consuming through the window, because every step past them is additive.
+```sh
+sqlstreams --database-url "$sqlstreams_database_url" \
+  migrate system up --target-version {system_version}
+sqlstreams --database-url "$sqlstreams_database_url" \
+  migrate streams up --target-version {stream_version}
+```
 
-When a release *does* carry a breaking step, its notes say so, and the order
-inverts: **stop the old binaries first**, migrate, then start the new ones.
-The gate refuses old binaries that try to start after the migration, but a
-binary already running is past its gate — stopping it first is your job, not
-the machinery's.
+Replace each placeholder with that scope's numeric `AVAILABLE` version.
+System and stream versions are independent. These numbers describe SQLStreams'
+tables, not your message payload's `SchemaVersion`.
 
-Transactional migration steps run under a 2-second `lock_timeout`, so a step
-queued behind your traffic gives up and retries instead of stalling the
-queries queued behind it. When contention outlasts the retries, the run
-stops with [`SQL0053`](/errors/SQL0053) naming the blocking session as the
-thing to clear.
+<ThreadAside label="NOTE" title="Migrate one stream">
 
-## Which builds a database admits
+For lower risk migrations you can migrate one stream at a time.
 
-The rule is two comparisons, but its consequences are easier to see than to
-read. Each cell is the gate's answer for one pair — a binary built at some
-schema version, a database sitting at another. Both scopes sit at v1 today,
-so there is exactly one pair to ask about:
+```sh
+  ...
+  migrate stream up signup.welcome-email --target-version {stream_version}
+```
 
-<CompatMatrix scope={compat.stream} label="Stream scope" />
+</ThreadAside>
 
-The grid gains a row and a column per migration step, and settles into three
-regions:
+Repeat the status command with the same database URL. Continue once the
+installed versions match their targets. If a command fails, resolve the
+reported problem before deploying.
+[Migration lock timeout](/troubleshooting/migration-lock-timeout/)
+covers blocked schema changes.
 
-- **The diagonal** — binary and database agree. Always admitted.
-- **Over the diagonal** — the binary expects schema the database doesn't
-  have yet. Always `SQL0022`: migrate the database up.
-- **Under it** — the database is ahead of the binary. This is the
-  rolling-deploy window, and it reaches exactly as far back as the newest
-  breaking step allows. A run of additive steps leaves it wide; one breaking
-  step closes it to a single column, then it reopens at the new floor.
+<ThreadAside label="NOTE" title="Registration does not upgrade existing tables">
 
-No verdict is drawn by hand. A build-time export walks every pair through the
-same comparison the library runs at `Register`, so this page holds no second
-copy of the rule that could drift from the one your binaries enforce.
+Restarting the application or calling `Register` does not migrate an existing
+installation.
 
-The grid reads a database that reached its version by applying steps in
-order. A rolled-back database records the downgrade, so its floor is whatever
-the steps at or below its current version declare — the gate reads the
-recorded trail, never the declared one.
+</ThreadAside>
+
+## 2. Deploy the updated application
+
+Deploy your application built with the target library release. For a compatible upgrade, replace
+instances gradually and let each old consumer stop gracefully. If you stopped
+all old instances for an incompatible migration, start the new ones now.
+
+Check that producers and consumers start successfully and that your
+application processes a message. If startup reports `SQL0022` or `SQL0023`,
+use [Schema version mismatch](/troubleshooting/schema-version-mismatch/) to
+identify the database or application version that needs correcting.
 
 ## Compatibility table
-
-The table records released schemas and the prior client checked before
-an upcoming release. Before v1.0, a build may edit the baseline in place;
-recreate the database when that happens. An unchanged schema version alone
-does not promise compatibility across pre-v1 releases.
 
 | Release | System schema | Stream schema | Verified prior client | Notes |
 | ------- | ------------- | ------------- | --------------------- | ----- |
@@ -154,14 +127,13 @@ does not promise compatibility across pre-v1 releases.
 | v0.1.4 | v1 | v1 | v0.1.2 | Round-trip passed on 2026-09-14 against source 4da16369 with the race detector enabled; release source 40c98b58 adds checkpoint records only. |
 | v0.1.5 | v1 | v1 | v0.1.4 | Round-trip and all four signal cases passed on a fresh database on 2026-09-14 at source fa9d3c15; race detector enabled for compatibility. Library and schema unchanged from v0.1.4. |
 
-The v0.1.0 checkpoint used a fresh database prepared by that build and the
-published RC client with workspace replacement disabled. That client produced
-and consumed five distinct payloads through `compat.lab`, then destroyed the
-stream. The fresh-database signal suite also passed. Both migration registries
-are empty, so this pair needs no upgrade DDL.
+## Related topics
 
-The v0.1.4 checkpoint used a fresh database prepared by source 4da16369
-and the published v0.1.2 client with workspace replacement disabled. It
-produced and consumed five distinct payloads through `compat.lab`, then
-destroyed the stream. All four fresh-database signal cases passed. Both
-scopes remain at v1; no upgrade DDL was needed.
+- [Migrate database schemas](/reference/schema-migrations/) — Migration API,
+  individual-stream commands, and partial completion behavior.
+- [Stop a consumer gracefully](/guides/stop-a-consumer/) — Allow active work
+  to finish before replacing an instance.
+- [Schema version mismatch](/troubleshooting/schema-version-mismatch/) —
+  Investigate `SQL0022` and `SQL0023`.
+- [Migration lock timeout](/troubleshooting/migration-lock-timeout/) — Find
+  what is blocking a migration and retry it.

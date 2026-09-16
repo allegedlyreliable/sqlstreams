@@ -1,0 +1,136 @@
+---
+group: schedule
+title: Register a schedule
+description: "Register: declare a recurring message and its production schedule."
+slop: high
+---
+
+import ThreadAside from '../../../components/thread-aside/thread-aside.svelte';
+
+```go title="SchedulerHandle.Register"
+Register[Message Versioned](ctx context.Context, streamName string, cron string, payload *Message, cfg *SchedulerConfig) (*SchedulerInstance[Message], error)
+```
+
+Creates or replaces a named schedule. The payload is encoded and stored at
+registration, then reused for each automatic run. Registration does not start
+the manager that produces scheduled messages.
+
+## Example
+
+With an initialized `client` and registered `payments.requested` stream,
+declare the `payment-reminder` schedule using [PaymentRequestedV1](/reference/message-payload/#define-a-payload).
+
+```go
+reminder, err := client.Scheduler("payment-reminder").Register(ctx,
+	"payments.requested", "@hourly",
+	&PaymentRequestedV1{OrderId: "order-123"}, nil,
+)
+if err != nil {
+	return err
+}
+return reminder.Schedule(ctx)
+```
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `ctx` | `context.Context` | Yes | Cancellation or its deadline interrupts registration. It does not set the returned instance's lifetime. |
+| `streamName` | `string` | Yes | Existing target stream with a database schema supported by this build. |
+| `cron` | `string` | Yes | Five-field cron expression or descriptor. See [expression syntax](#expression-syntax). |
+| `payload` | `*Message` | Yes | Non-`nil`, JSON-encodable payload. Use a [Versioned](/reference/message-payload/) type whose schema version is at least `1`. |
+| `cfg` | `*SchedulerConfig` | No | Complete declaration with defaults filled for zero fields. `nil` uses all defaults. |
+
+### SchedulerConfig
+
+| Field | Type | Default | Description |
+| --- | --- | --- | --- |
+| `Timeout` | `time.Duration` | `30s` | Requested consumer handler timeout. Must be positive and no greater than the expression's minimum interval. Consumer group bounds apply when messages are processed. |
+| `Concurrency` | `ConcurrencyPolicy` | `ConcurrencyParallel` | Use `ConcurrencyParallel` or `ConcurrencyExclusive`. Schedules enable compaction, which cannot be combined with `ConcurrencyOrdered`. |
+| `Metadata` | `any` | `nil` | JSON-encodable registration metadata, stored as `{}` when omitted. It is not part of the produced payload. |
+
+`Register` fills defaults in the supplied config and retains its pointer in
+the returned instance. Editing the config or payload afterward does not
+update the stored registration.
+
+### Expression syntax
+
+```text
+minute hour day-of-month month day-of-week
+```
+
+| Expression | Meaning |
+| --- | --- |
+| `0 * * * *` or `@hourly` | Every hour on the hour. |
+| `30 4 * * 1` | Monday at 04:30 UTC. |
+| `@every 90m` | Every 90 minutes. |
+| `TZ=America/New_York 0 9 * * *` | Daily at 09:00 in New York. |
+
+The default timezone is UTC. Expressions must have a future occurrence and
+cannot recur more often than once per minute.
+
+## Returns
+
+| Condition | Return value |
+| --- | --- |
+| Declaration succeeds | `(instance, nil)`. |
+| Validation or registration fails | `(nil, err)`. |
+
+## Repeated registration
+
+The newest declaration replaces the target stream, expression, payload,
+schema version, timeout, concurrency, and metadata. A suspended schedule
+stays suspended. A changed expression resets the next scheduled time and
+drops any occurrence already due under the old expression.
+
+Changes apply to future production. Already produced messages keep their
+payload and options. Changing the target stream also changes where the
+schedule's outcome queries look.
+
+## Run automatic scheduling
+
+```go title="SchedulerInstance[Message].Schedule"
+Schedule(ctx context.Context) error
+```
+
+Runs the [system manager](/reference/manager/) until its context is cancelled.
+A requested stop returns `nil`. Failure to resolve the system before the
+manager starts returns an error.
+
+The manager produces **all registered schedules**, including schedules
+declared by other instances. An existing manager can produce this schedule
+without this call. After downtime, it produces only the newest due occurrence.
+Older missed occurrences are dropped.
+
+Each scheduled message uses the schedule name as its routing key and message
+key, with compaction enabled. A newer message can supersede one that has not
+started processing. Automatic production advances the scheduled time in the
+same transaction that stores its message.
+
+<ThreadAside label="NOTE" title="Outcome reporting">
+  Set the target stream's `DeliveryLogMode` to `DeliveryLogModeAll` when you
+  need successful outcomes in schedule status. Other modes produce `SQL0058`
+  at registration because they do not retain success rows.
+</ThreadAside>
+
+## Errors
+
+| Error | When |
+| --- | --- |
+| Validation error | Names, expression, payload, timeout, or concurrency are invalid. The schedule name must match `^[a-z0-9._-]+$`. |
+| `ErrNotRegistered` | No SQLStreams system is registered. |
+| `ErrStreamNotFound` | The target stream is absent. |
+| Schema compatibility error | The target stream's database schema is unsupported. |
+| `ErrPayloadNotEncodable` | The payload cannot be encoded as JSON. |
+| `ErrScheduleDeclarationInterrupted` | Concurrent deletion prevents registration from finishing after internal retries. |
+| Database or context error | Registration cannot complete. |
+
+Registration does not reject every configuration that can fail later:
+version `0` payloads fail when produced, and ordered concurrency fails because
+scheduled messages enable compaction.
+
+## Related topics
+
+- [The schedule object](/reference/schedule-object/) — Stored fields and scheduled times.
+- [Run a schedule now](/reference/run-schedule/) — `Produce` outside the expression.
+- [Read schedule message outcomes](/reference/schedule-messages/) — Results by consumer group.

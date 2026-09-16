@@ -19,6 +19,13 @@ Name the task in the title. Open with enough surrounding context to explain
 when the task matters and what the reader will accomplish. Avoid a long
 motivation, an isolated definition, or a catalogue of everything involved.
 
+When motivating a solution, establish the application goal and concrete
+problem before introducing the library mechanism. A signup example starts
+with saving an account and sending a welcome email, then asks what happens
+if the process stops between them. Introducing messages and consumer handlers
+in that setup assumes the solution. Name a useful established pattern, such
+as transactional outbox, after the problem is clear and before applying it.
+
 Assume basic competence in the tools the guide requires. State concrete
 prerequisites without turning the guide into an introductory tutorial.
 Explain a step's purpose when it affects how readers carry it out.
@@ -63,7 +70,8 @@ sentence that merely repeats it.
   the reader's task depends on them.
 - State necessary substitutions. Avoid narrating details already obvious
   from the code unless misunderstanding them would prevent completion.
-- Keep error handling real and identify simulated work. A handler that waits
+  Cut generic adaptation advice that adds no decision or required action.
+- Keep error handling real and identify simulated work. A consumer handler that waits
   and prints output must not be presented as sending an email or charging a
   payment provider.
 
@@ -90,6 +98,10 @@ ThreadAside is the preferred pattern for brief supporting information or a
 qualification that most readers are likely to need. Give the note a specific
 title and place it beside the relevant action. Use a note when the information
 is useful but does not warrant its own numbered step or section.
+
+Keep a caution focused on one action and its reason. State where the email
+API call belongs and why a database rollback cannot undo a sent email.
+Do not expand it into several failure scenarios or repeat the main procedure.
 
 For example, “Press Ctrl-C once” belongs beside the stop instruction because
 a second signal forces an immediate exit. A short deployment note can point
@@ -121,6 +133,9 @@ add a recap that repeats the procedure.
 - Can readers identify the task and required starting state immediately?
 - Does setup lead directly into how to run, before optional information?
 - Can readers place and run the code without reconstructing missing pieces?
+  After cuts, check required imports and setup against the stated starting file.
+  Shortening an explanation must also preserve its meaning, such as external
+  effects remaining outside rollback even when the API request succeeds.
 - Do commands and captured output match the example as written?
 - Is the success check useful and limited to what the task needs?
 - Would most readers benefit from each what-if or gotcha while doing this

@@ -1,0 +1,101 @@
+---
+group: system
+title: Worker logs
+description: "Worker lease loss, suspension, tick failures, and changed declarations."
+slop: high
+---
+
+```text title="Worker event codes"
+SQL0034  Worker instance lost
+SQL0035  Manager row suspended
+SQL0036  Tick backoff exhausted
+SQL0040  Slow worker tick
+SQL0059  Worker configuration replaced
+```
+
+Worker logs report background work and its ownership. Resource fields
+bound to the logger identify the worker and its system, stream, or consumer
+group. The templates show each event's fields.
+
+## Ownership and suspension
+
+```text title="Log templates"
+level=WARN msg="worker instance lost -- stopping, a replacement may already be running" code=SQL0034 worker={worker} owner={owner}
+level=WARN msg="manager row suspended -- its chain goes unreconciled until target_instances is restored" code=SQL0035 owner={owner}
+```
+
+| Code | Condition |
+| --- | --- |
+| `SQL0034` | The instance runner receives `ErrInstanceLost` and stops its work. |
+| `SQL0035` | A manager reads its own worker row with target instances set to zero. |
+
+To inspect current worker state, follow the
+[worker investigation procedure](/troubleshooting/worker-not-running/).
+Consumer range-lease loss is a separate condition, covered by
+[consumer logs](/reference/consumer-logs/).
+
+## Tick failures and duration
+
+```text title="Warn, before the retry cap"
+level=WARN msg="could not run worker tick -- backing off" worker={worker} owner={owner} attempts={attempts} delay={delay} error={error}
+```
+
+An ordinary failed tick logs `attempts`, `delay`, and `error`. Ticks continue
+with backoff. Once the consecutive failure count exceeds `TickRetry.MaxRetries`:
+
+```text title="Error · SQL0036"
+level=ERROR msg="worker tick backoff curve exhausted -- ticks continue at its cap" code=SQL0036 worker={worker} owner={owner} attempts={attempts} delay={delay} error={error}
+```
+
+`SQL0036` carries `code`, `attempts`, `delay`, and `error`. Exhausting the
+backoff curve does not terminate the worker. A successful tick resets the
+failure streak. The nested error identifies the failed operation.
+
+```text title="Warn · SQL0040"
+level=WARN msg="worker tick exceeded its poll rate -- the next tick is late" code=SQL0040 worker={worker} owner={owner} duration={duration} rate={rate}
+```
+
+A tick is one pass of the worker's task, such as collecting metrics.
+`SQL0040` is emitted when that pass takes longer than the worker's configured
+poll interval. It carries `code`, `duration`, and `rate`, alongside worker context.
+
+`duration` runs from the start of the task to its return, including its
+database operations. It excludes the wait between ticks. `rate` is the
+configured poll interval used for comparison.
+
+## Configuration replacement (SQL0059)
+
+```text title="Warn"
+level=WARN msg="worker config replaced -- the newest declaration wins; if this is unexpected or repeats on every restart, two services declare this worker with different configs and overwrite each other" code=SQL0059 worker={worker} worker_id={worker_id} owner={owner} metadata={metadata}
+```
+
+Emitted when registration replaces different stored metadata for an
+existing worker. Identical declarations do not emit it.
+
+| Field | Meaning |
+| --- | --- |
+| `code` | `SQL0059`. |
+| `worker` | Worker name. |
+| `worker_id` | Stored worker id. |
+| `owner` | Owning resource's name. |
+| `metadata` | Stored and declared configuration rendered as old → new. |
+
+```sh
+sqlstreams explain SQL0059
+```
+
+Prints the query for retained worker declaration history. Use the emitted
+worker id to compare which declarations keep replacing each other.
+
+## Suppression
+
+Worker runners inherit the owning consumer or system manager's
+[log suppression](/reference/diagnostics/#logging). Repeated messages can be
+collapsed across worker activity, and the next emitted repeat carries
+`suppressed_count`. Datastore registration logs use their own inherited sink.
+
+## Related topics
+
+- [Worker is not running](/troubleshooting/worker-not-running/) — Inspect state and follow the matching correction.
+- [Read consumer worker settings](/reference/consumer-workers/) — Stored worker declarations.
+- [Control stream maintenance](/reference/maintenance/) — Janitor and vacuum suspension.

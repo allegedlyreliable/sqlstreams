@@ -1,0 +1,111 @@
+---
+group: stream
+title: Partition count alert (SQL0094)
+description: "partition_count: partition-count evidence and the estimated database lock ceiling."
+slop: high
+---
+
+```text title="Alert name"
+partition_count
+```
+
+Reports a stream whose message-log partition count reaches its configured
+threshold. The default leaves room below an estimated PostgreSQL lock-table
+ceiling for operations that lock many partitions.
+
+## Definition
+
+| Property | Value |
+| --- | --- |
+| Code | `SQL0094` |
+| Severity | `warn` |
+| Owner | Stream. |
+| Evidence | Retained `sqlstreams.stream.state.partitions` gauge measurements. |
+| Unhealthy condition | Partition count is greater than or equal to the threshold. |
+| Default threshold | Half the estimated partition lock ceiling, resolved during each evaluation. |
+| Default activation | Consecutive unhealthy samples spanning `2m`. |
+| Default evaluation schedule | `@every 1m`. |
+| Active reminders | Every `4h` by default while the condition remains active. |
+
+### Default threshold
+
+```text
+lock_slots = max_locks_per_transaction * (max_connections + max_prepared_transactions)
+partition_ceiling = lock_slots / 5
+threshold = partition_ceiling / 2
+```
+
+Integer division applies. The estimate assumes five lockable relations per
+partition. It is a sizing estimate, not a measurement of current free locks
+or a guarantee that an operation will succeed.
+
+## Example
+
+Using an initialized `client` and the [example payload](/reference/consumer-group/#example-payload),
+evaluate the `payments.requested` stream without writing an alert:
+
+```go
+check := client.Stream[PaymentRequestedV1]("payments.requested").Alerts().PartitionCount()
+snapshot, err := check.Snapshot(ctx)
+if err != nil {
+	return err
+}
+fmt.Println(snapshot.State, snapshot.ObservedDuration)
+```
+
+Use `check.Latest(ctx)` for the last retained report and
+`check.History(ctx, limit)` for earlier reports. Their common return and error
+contracts are in [Read alerts](/reference/read-alerts/).
+
+## Configuration
+
+Set [`SystemConfig.PartitionCountAlert`](/reference/system-registration/#partitioncountalertconfig)
+when registering the system. It controls checks across all streams.
+`Threshold: 0` uses the formula above. A positive value is an explicit
+partition count.
+
+`PendingDuration` and `MaximumGap` govern activation. `DisablePending` permits
+activation from one fresh unhealthy sample. Queued checks retain their
+original policy. `Snapshot` evaluates using the current schedule declaration.
+
+## Evaluation and resolution
+
+| Evidence | Result |
+| --- | --- |
+| Fresh partition count below the threshold | Healthy. Resolve an active report. |
+| Fresh count at or above the threshold, with the required consecutive sample span | Active. Write a report or a due reminder. |
+| Fresh unhealthy evidence without the required span | Pending. Leave the report unchanged. |
+| Missing, stale, or invalid measurements | Insufficient evidence. Leave the report unchanged. |
+
+The count must be a nonnegative integer with the expected metric name,
+gauge kind, and partition unit. Sample age and gaps use database storage
+times. Waiting without additional samples does not extend the unhealthy span.
+
+## Reported data
+
+The common [Alert fields](/reference/read-alerts/#alert) identify the stream,
+state, severity, and observation time. Active reports add:
+
+| Data key | Type | Meaning |
+| --- | --- | --- |
+| `partition_count` | Number | Observed message-log partition count. |
+| `lock_ceiling` | Number | Estimated partition ceiling from the database settings. |
+| `threshold` | Number | Effective activation threshold. |
+
+Resolved reports do not retain these active-report data fields.
+
+## CLI
+
+```sh
+sqlstreams alert latest partition_count --stream payments.requested
+```
+
+Reads the retained report. Absence exits with status `1`.
+See [alert commands](/reference/alert-cli/).
+
+## Related topics
+
+- [Stream metrics](/reference/stream-metrics/) — Live partition counts and collected evidence.
+- [Register a stream](/reference/stream-registration/) — Retention and janitor settings.
+- [Delete a stream](/reference/destroy-stream/) — Destruction and partition cleanup behavior.
+- [Worker is not running](/troubleshooting/worker-not-running/) — Investigate a janitor that is not cleaning up eligible data.

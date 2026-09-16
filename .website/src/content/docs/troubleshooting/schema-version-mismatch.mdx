@@ -1,0 +1,59 @@
+---
+group: system
+title: Schema version mismatch (SQL0022–SQL0023)
+description: Identify whether the database schema or the application binary must advance.
+slop: high
+---
+
+```text title="Error openings"
+schema version is older than this build requires
+schema version is newer than this build understands
+```
+
+The application build and an installed database schema are incompatible.
+These errors concern SQLStreams database tables, not message payload versions.
+
+## Compare the installed and supported versions
+
+Using the CLI release that matches the intended application release:
+
+```sh
+sqlstreams migrate versions
+sqlstreams migrate status
+```
+
+| Result | Action |
+| --- | --- |
+| `SQL0022` identifies an older system schema | Migrate the system to the error's required build version below. |
+| `SQL0022` identifies an older stream schema | Migrate that stream to the required build version below. |
+| `SQL0023` identifies a schema newer than the application supports | Deploy a library build compatible with that schema. Do not downgrade the database merely to silence an old process. |
+| Required version is absent from `migrate versions` | Use the CLI built for the intended release. This binary cannot execute migration steps it does not contain. |
+| No registered system or unexpected streams | Check the database URL and schema before changing anything. |
+
+## Apply the matching correction
+
+1. **For `SQL0022`, migrate the scope named by `owner_kind`.** Use `build_version`
+   from the error as the target:
+
+   ```sh
+   sqlstreams migrate system up --target-version {build_version}
+   ```
+
+   For a stream-owned error, use its stream name:
+
+   ```sh
+   sqlstreams migrate stream up '{stream}' --target-version {build_version}
+   ```
+
+2. **For `SQL0023`, update the affected application instances.** Use a release
+   whose supported database version meets the reported compatibility floor.
+
+System registration does not migrate existing tables. A release can require
+both system and stream migrations. Follow its declared targets rather than
+assuming their version numbers are the same.
+
+## Related topics
+
+- [Upgrading SQLStreams](/guides/migrations/) — Check release compatibility and apply required migrations.
+- [Migrate database schemas](/reference/schema-migrations/) — Migration targets and commands.
+- [Migration lock timeout](/troubleshooting/migration-lock-timeout/) — Resolve a blocked migration.

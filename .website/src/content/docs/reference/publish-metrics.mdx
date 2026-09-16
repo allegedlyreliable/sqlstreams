@@ -1,0 +1,104 @@
+---
+group: system
+title: Produce metric measurements
+description: "NewMeasurement and the metric producer: produce custom series to the metrics stream."
+slop: high
+---
+
+```go title="sqlstreams.NewMeasurement"
+NewMeasurement(name string, kind MetricKind, value float64, unit MetricUnit, attributes map[string]string, at time.Time) (*Measurement, error)
+```
+
+```go title="MetricProducerHandle.Register"
+Register(ctx context.Context, cfg *ProducerConfig) (*MetricProducerInstance, error)
+```
+
+```go title="MetricProducerInstance.Produce"
+Produce(ctx context.Context, measurement *Measurement) (*ProduceResult[Measurement], error)
+```
+
+`NewMeasurement` builds and validates an observation. `Register` creates a
+producer for the existing `__system.metrics` stream, and `Produce` records
+the observation. Each metric name and attribute set forms one series. The newest produced
+measurement becomes its current value while older observations remain
+available until retention cleanup.
+
+## Example
+
+Using an initialized `client` with a registered system, produce a queue-depth
+gauge for the payment application:
+
+```go
+metricsProducer, err := client.System().Metrics().Producer().Register(ctx, nil)
+if err != nil {
+	return err
+}
+measurement, err := sqlstreams.NewMeasurement(
+	"payments.queue_depth", sqlstreams.MetricKindGauge, 7,
+	"{message}",
+	map[string]string{"region": "us-east"}, time.Now(),
+)
+if err != nil {
+	return err
+}
+if _, err := metricsProducer.Produce(ctx, measurement); err != nil {
+	return err
+}
+```
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `name` | `string` | Yes | Nonempty metric name. The `sqlstreams.` prefix is reserved and rejected at produce time. |
+| `kind` | `MetricKind` | Yes | `MetricKindGauge` or `MetricKindCounter`. A counter carries its new cumulative total. |
+| `value` | `float64` | Yes | Observation in the stated unit. JSON encoding requires a finite value. |
+| `unit` | `MetricUnit` | Yes | Unit string, or `""` for none. Whitespace, malformed braces, and empty annotations are rejected. |
+| `attributes` | `map[string]string` | No | Series identity. `nil` means no attributes. The constructor retains the map. |
+| `at` | `time.Time` | Yes | Nonzero observation time. It does not control compaction ordering. |
+| `ctx` | `context.Context` | For `Register`/`Produce` | Controls database operations. [Produce cancellation](/reference/produce/#idempotency-and-cancellation) applies after queueing. |
+| `cfg` | `*ProducerConfig` | No | [Producer settings](/reference/producer-registration/#producerconfig), including automatic batching. `Register` fills defaults and retains the config. |
+| `measurement` | `*Measurement` | For `Produce` | Non-`nil` observation. Keep it and its attributes unchanged until `Produce` returns. |
+
+Use `NewMeasurement` for validation before production. The producer rejects
+`nil` and reserved names, but does not repeat every constructor check on a
+manually built object.
+
+## Returns
+
+| Condition | Return value |
+| --- | --- |
+| `NewMeasurement` succeeds | `(measurement, nil)`, without I/O. |
+| `Register` succeeds | `(producer, nil)`, ready to produce. |
+| `Produce` succeeds | `(result, nil)`, containing the [committed message result](/reference/produce/#produceresult). |
+| Validation or operation fails | `(nil, err)`. |
+
+Custom metrics appear in `Latest` and `History`, but never in `Definitions`.
+The producer supplies routing and compaction keys automatically. There is
+no caller-supplied idempotency key, so repeating a call can add another observation.
+
+## Consume measurements
+
+```go title="SystemMetricsHandle.Consumer"
+Consumer(name string) *ConsumerHandle[Measurement]
+```
+
+Returns a [consumer group handle](/reference/consumer-registration/) on the
+metrics stream. Registration's `Bindings` accepts metric names or patterns,
+such as `payments.*`. Compaction can skip intermediate observations, and
+metrics retention can delete data even when a metrics consumer is behind.
+
+## Errors
+
+| Error | When |
+| --- | --- |
+| Validation error | A constructor argument is invalid, the measurement is `nil`, or its name uses the reserved prefix. |
+| `ErrStreamNotFound` | `Register` cannot find the system metrics stream. Register the system first. |
+| Payload encoding error | The measurement, including `Metadata` or its numeric value, cannot be encoded as JSON. |
+| Schema, database, or context error | Registration or production cannot complete. |
+
+## Related topics
+
+- [Read metric measurements](/reference/read-metrics/) — Measurement fields, reads, and retention.
+- [Produce a message](/reference/produce/) — Batching and uncertain outcomes.
+- [Export metrics](/reference/metrics-exporter/) — OpenTelemetry and Prometheus export.

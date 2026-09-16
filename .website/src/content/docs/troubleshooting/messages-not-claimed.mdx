@@ -1,0 +1,66 @@
+---
+group: consumer
+title: Messages are not being claimed (SQL0108)
+description: Inspect recurring claim failures and restore database access.
+slop: high
+---
+
+```text title="Warning · SQL0108"
+level=WARN msg="could not claim messages -- the next claim waits one poll rate" code=SQL0108 group={group} stream_id={stream_id} worker={worker} delay={delay} error={error}
+```
+
+The instance could not complete a claim after its internal retries. It
+waits the warning's `delay` before trying again. An empty queue does not
+produce this warning.
+
+## Identify the claim failure
+
+Read the warning's `error` for the affected `group`, `stream_id`, and `worker`.
+
+| Error evidence | Action |
+| --- | --- |
+| Connection failure or database restart | Run `sqlstreams system get` from the affected environment with the application's database URL and schema. Restore that connection if it fails. |
+| `too many connections` or SQLSTATE `53300` | Inspect connection usage below. |
+| Deadlock, serialization failure, query cancellation, or database timeout | Inspect active transactions below and read the PostgreSQL error's detail. |
+| `Consume` has returned instead of continuing to warn | Read its returned error or `SQL0041` stopped log. A permanent failure ends the session. |
+
+## Fix recurring database failures
+
+1. **If connection slots are exhausted, find their users.** Run:
+
+   ```sql
+   SELECT application_name, usename, state, count(*) AS connections
+   FROM pg_stat_activity
+   WHERE backend_type = 'client backend'
+   GROUP BY application_name, usename, state
+   ORDER BY connections DESC;
+   ```
+
+   Reduce excessive application pool sizes or replica counts. Close pools
+   belonging to processes that have finished.
+
+2. **If claims repeatedly block or time out, inspect open transactions.** Run:
+
+   ```sql
+   SELECT pid, application_name, state,
+       statement_timestamp() - xact_start AS transaction_age,
+       wait_event_type, wait_event, pg_blocking_pids(pid) AS blocking_pids,
+       query
+   FROM pg_stat_activity
+   WHERE datname = current_database()
+       AND pid <> pg_backend_pid()
+       AND xact_start IS NOT NULL
+   ORDER BY xact_start;
+   ```
+
+   | Result | Action |
+   | --- | --- |
+   | `blocking_pids` is nonempty | Find those pids in the results. Have the owning application finish or roll back the blocking transaction. |
+   | Old `idle in transaction` session | Fix the application path that leaves its transaction open. |
+   | No blocker or no rows | The failed attempt is no longer observable here. Use the error detail to identify the cancelled query or conflicting transaction. |
+
+## Related topics
+
+- [Consumer logs](/reference/consumer-logs/#claims-and-lease-time) — Claim failure fields and lease warnings.
+- [Create a PostgreSQL pool](/reference/pool/) — Connection and pool settings.
+- [Consumer stopped log](/reference/consumer-stopped-log/) — Identify why a session stopped.

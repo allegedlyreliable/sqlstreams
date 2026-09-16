@@ -1,0 +1,99 @@
+---
+group: producer
+title: Producer logs
+description: "Production duration and partition-creation events, with exact fields and emission conditions."
+slop: medium
+---
+
+```text title="Producer event codes"
+SQL0038  Slow produce
+SQL0033  Partition not created ahead
+SQL0057  Partition created during insert
+```
+
+These events report production latency and partition creation.
+
+## Slow produce (SQL0038)
+
+```text title="Warn"
+level=WARN msg="produce exceeded the duration threshold" code=SQL0038 stream={stream} duration={duration} threshold={threshold}
+```
+
+Emitted after a produce call whose elapsed duration exceeds the producer's
+positive `SlowProduceThreshold`, regardless of success or failure. The
+setting defaults to `0`, which disables this warning.
+
+| Field | Meaning |
+| --- | --- |
+| `code` | `SQL0038`. |
+| `stream` | Registered stream name. This event does not add `stream_id`. |
+| `duration` | Elapsed call duration. |
+| `threshold` | Configured warning threshold. |
+
+`duration` measures the total time spent in the produce call:
+
+- **Batch queue:** time the message waits in the producer's local queue before
+  its batch is written, when automatic batching applies.
+- **Database operations:** time spent writing the message, including waits
+  for database connections and locks.
+- **Application callback:** for `ProduceFunc` and `ProduceFuncInTx`, time
+  spent running the function you supplied to build the message.
+
+For `ProduceInTx` and `ProduceFuncInTx`, timing stops when the method returns.
+Your application still owns the transaction. Work you perform afterward,
+including committing that transaction, is outside the logged duration.
+
+Configure [`ProducerConfig.SlowProduceThreshold`](/reference/producer-registration/#producerconfig).
+For investigation, see [Produce is slow](/troubleshooting/produce-is-slow/).
+
+## Partition not created ahead (SQL0033)
+
+```text title="Warn"
+level=WARN msg="could not create partition ahead -- the first insert past the boundary will create it" code=SQL0033 stream_id={stream_id} error={error}
+```
+
+The asynchronous attempt to create the next partition failed. A later
+insert can create the partition when it reaches that boundary.
+
+| Field | Meaning |
+| --- | --- |
+| `code` | `SQL0033`. |
+| `stream_id` | Affected stream id. |
+| `error` | Error from the create-ahead attempt. |
+
+Read the nested error to distinguish lock contention from other database
+failures. `SQL0018` identifies a partition-creation lock timeout.
+
+## Partition created during insert (SQL0057)
+
+```text title="Warn"
+level=WARN msg="no partition covers the next message id -- the insert creates it and pays the creation latency; run a consumer for the stream's upkeep or raise PartitionSize" code=SQL0057 stream_id={stream_id} message_id={message_id}
+```
+
+An insert encountered an uncovered message id and entered partition
+creation. The warning is emitted before creation finishes, so it is not
+proof that the retry succeeded.
+
+| Field | Meaning |
+| --- | --- |
+| `code` | `SQL0057`. |
+| `stream_id` | Affected stream id. |
+| `message_id` | Next id observed when checking the sequence for a covering partition. |
+
+If repeated creation cannot catch up with allocated ids, the `Produce` call
+can return `ErrPartitionCreationBehind` (`SQL0056`). See
+[Produce is slow](/troubleshooting/produce-is-slow/) for the investigation path.
+
+## Suppression
+
+Producer-instance Warn/Error repeats share the [one-minute suppression rule](/reference/diagnostics/#logging).
+The next emitted repeat can include `suppressed_count`. Datastore events
+use their owning logger's configuration, so suppression is not guaranteed
+for every partition event.
+
+## Related topics
+
+- [Register a producer](/reference/producer-registration/) — Duration and batching settings.
+- [Produce a message](/reference/produce/) — Returns, errors, and cancellation.
+- [Errors and diagnostics](/reference/diagnostics/) — Structured errors and offline code lookup.
+- [Produce is slow](/troubleshooting/produce-is-slow/) — Investigate duration warnings and partition creation delays.

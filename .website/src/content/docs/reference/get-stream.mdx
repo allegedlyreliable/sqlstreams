@@ -1,0 +1,67 @@
+---
+group: stream
+title: Retrieve a stream
+description: "Get: read a stream's registration and stored settings."
+slop: high
+---
+
+```go title="StreamHandle[T].Get"
+Get(ctx context.Context) (*Stream, error)
+```
+
+Reads the named stream's registration. It does not create a missing stream
+or change an existing stream's settings or messages.
+
+## Example
+
+Read the `payments.requested` stream using an initialized `client`.
+`RawPayload` avoids declaring a payload type for this registration lookup.
+
+```go
+payments := client.Stream[sqlstreams.RawPayload]("payments.requested")
+stream, err := payments.Get(ctx)
+if err != nil {
+	return err
+}
+if stream == nil {
+	return errors.New("payments.requested is not registered")
+}
+fmt.Println(stream.Id, stream.RetentionTTL)
+```
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `ctx` | `context.Context` | Yes | Cancelling this context or reaching its deadline interrupts the database read. |
+
+## Returns
+
+| Condition | Return value |
+| --- | --- |
+| Stream is registered | `(stream, nil)`, where `stream` is the [stream object](/reference/stream-object/). |
+| Stream or installation is absent | `(nil, nil)`. |
+| Read fails | `(nil, err)`. |
+
+## CLI
+
+```sh
+sqlstreams stream get payments.requested
+```
+
+Prints the registration and exits with status `0` when found. An absent stream
+prints an absence message and exits with status `1`. See
+[stream commands](/reference/stream-cli/#read-streams) for output formats and flags.
+
+## Errors
+
+| Error | When |
+| --- | --- |
+| Validation error | The stream name is empty. |
+| Read error | The database read fails or stored settings cannot be decoded. |
+| Context cancellation or deadline error | The read is interrupted by its context. |
+
+## Related topics
+
+- [The stream object](/reference/stream-object/) — Returned fields.
+- [Register a stream](/reference/stream-registration/) — Create or update a registration.

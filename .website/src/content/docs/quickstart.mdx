@@ -238,11 +238,13 @@ real time.
 
 ## 4. Continue with your application
 
-- [Transactional Produce](/guides/transactional-produce/) puts a business
-  write and its message in one commit.
-- [Message Lifecycle](/concepts/lifecycle/) explains retries, leases, and
-  the rows you can inspect when a handler fails.
-- [Fan-out, Retention & Replay](/concepts/fan-out/) explains independent
-  groups and how long their source messages remain available.
-- [Consumer](/reference/consumer/) lists configuration fields, defaults,
-  and session options.
+- [Produce messages in a database transaction](/guides/transactional-produce/)
+  saves an application change and its message together.
+- [Consumer groups](/concepts/consumer-groups/) explains shared work and
+  independent progress.
+- [Retries and failed messages](/concepts/retries-and-failed-messages/)
+  explains what happens when processing fails.
+- [Register a consumer group](/reference/consumer-registration/) lists group
+  configuration fields and defaults.
+- [Consume messages](/reference/consume/) lists session options and consumer
+  handler results.

@@ -1,0 +1,88 @@
+---
+group: system
+title: Worker is not running
+description: Identify suspension, missing claims, or repeated failures behind stalled background work.
+slop: medium
+---
+
+Missing cleanup, scheduled production, or collector progress can mean a worker
+is suspended, unclaimed, or failing.
+
+## Inspect worker state
+
+```sql
+SELECT worker.id, worker.name, worker.system_id, worker.stream_id,
+    worker.consumer_group_id, worker.target_instances,
+    count(instance.id) FILTER (WHERE instance.expires_at > now()) AS live_instances,
+    coalesce(max(instance.attempts) FILTER (WHERE instance.expires_at > now()), 0) AS attempts
+FROM {schema}.worker_config AS worker
+LEFT JOIN {schema}.worker_instance AS instance ON instance.worker_id = worker.id
+WHERE worker.name = '{worker}'
+GROUP BY worker.id
+ORDER BY worker.id;
+```
+
+Use the warning or alert's worker name. Match the returned owner ids to the
+affected resource.
+
+| Result | Action |
+| --- | --- |
+| `target_instances` is `0` | The worker is suspended. Follow step 1 if it should run. |
+| Nonzero target, `live_instances` is `0` | No instance currently holds a live claim. Follow step 2. |
+| Live instances with `attempts` above `0` | The worker is running but failing. Follow step 3. |
+| Live instances with `attempts` equal to `0` | A claim exists without a recorded failure streak. Check `SQL0040` for late ticks, or the collector completion measurement for collector progress. |
+| No rows | Check the worker name and installation. Run the resource's existing registration code if its declaration is missing. |
+
+## Restore the worker
+
+1. **If stream maintenance was suspended, resume the intended worker.**
+
+   ```sh
+   sqlstreams stream janitor unsuspend '{stream}'
+   ```
+
+   Use `vacuum` in place of `janitor` for `stream_vacuum`. Vacuum starts
+   suspended by default, so an unused vacuum worker is not itself a fault.
+
+   If the system's `manager` or `metrics_collector` row was suspended through
+   an administrative database change, restore its normal one-instance target:
+
+   ```sql
+   UPDATE {schema}.worker_config
+   SET target_instances = 1
+   WHERE id = {worker_id}
+       AND system_id IS NOT NULL
+       AND name IN ('manager', 'metrics_collector')
+       AND target_instances = 0
+   RETURNING id, name, target_instances;
+   ```
+
+   No returned row means it did not match those conditions. Re-registration
+   preserves suspension and does not substitute for this change.
+
+2. **If background workers have no live claims, run a manager.**
+
+   ```sh
+   sqlstreams manager run
+   ```
+
+   For `message_consumer` or `exception_consumer`, start the application's
+   `Consume` call instead. The standalone manager cannot run application
+   consumer handlers. A suspended parent manager must be resumed first.
+
+3. **If the worker has failures, read its latest tick error.** Match `worker`
+   and `owner` in either log:
+
+   ```text
+   level=WARN msg="could not run worker tick -- backing off" worker={worker} owner={owner} attempts={attempts} delay={delay} error={error}
+   level=ERROR msg="worker tick backoff curve exhausted -- ticks continue at its cap" code=SQL0036 worker={worker} owner={owner} attempts={attempts} delay={delay} error={error}
+   ```
+
+   Fix the nested database or configuration error. Ticks continue with backoff,
+   so a process restart alone does not correct the cause.
+
+## Related topics
+
+- [Background managers and workers](/concepts/background-managers-and-workers/) — How workers start, renew claims, and take over.
+- [Worker logs](/reference/worker-logs/) — Ownership, suspension, and tick failure fields.
+- [Control stream maintenance](/reference/maintenance/) — Inspect, suspend, or resume a janitor or vacuum worker.

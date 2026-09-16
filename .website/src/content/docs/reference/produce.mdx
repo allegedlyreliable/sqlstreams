@@ -1,0 +1,108 @@
+---
+group: producer
+title: Produce a message
+description: "Produce: append a payload, resolve per-message options, and read the committed result."
+slop: high
+---
+
+import ThreadAside from '../../../components/thread-aside/thread-aside.svelte';
+
+```go title="ProducerInstance[T].Produce"
+Produce(ctx context.Context, message *T, options *ProduceOptions) (*ProduceResult[T], error)
+```
+
+Appends a message to the producer's stream and returns its committed result.
+Concurrent calls without caller-supplied idempotency keys share automatic
+batches. A call with an idempotency key uses its own transaction.
+
+## Example
+
+Use a [registered producer](/reference/producer-registration/) for the
+`payments.requested` stream and the [example payload](/reference/consumer-group/#example-payload).
+Reuse the same idempotency key when retrying this payment request.
+
+```go
+result, err := producer.Produce(ctx, &PaymentRequestedV1{OrderId: "order-123"},
+	&sqlstreams.ProduceOptions{IdempotencyKey: "payment-request:order-123"})
+if err != nil {
+	return err
+}
+fmt.Println(result.Id, result.Duplicate)
+```
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `ctx` | `context.Context` | Yes | Controls the call's wait. Cancellation after the message enters the batch queue does not recall a message from an automatic batch. |
+| `message` | `*T` | Yes | A non-`nil` payload whose `SchemaVersion` is at least `1` and whose value can be encoded as JSON. Do not mutate it while the call is in progress. |
+| `options` | `*ProduceOptions` | No | `nil` uses producer defaults. Options are copied for resolution, including merged message options. |
+
+### ProduceOptions
+
+| Field | Type | Default | Description |
+| --- | --- | --- | --- |
+| `RoutingKey` | `string` | `""` | Matched against consumer bindings. An empty key matches no binding, so only groups without bindings receive the message. |
+| `MessageKey` | `string` | `""` | Identifies the entity used by compaction or keyed concurrency. A key alone does not enable either behavior. |
+| `Compaction` | [`*CompactionOptions`](#compactionoptions) | `nil` | Opts the message into selecting a current version under its `MessageKey`. |
+| `IdempotencyKey` | `string` | `""` | Deduplicates message inserts within this stream while the key is retained. Empty generates a key for retries within this call only. |
+| `Message` | [`*MessageOptions`](/reference/consumer-registration/#messageoptions) | `nil` | Requested processing options. Unset fields inherit producer defaults, then consumer defaults when claimed. Consumer bounds and concurrency override still apply. |
+
+### CompactionOptions
+
+| Field | Type | Default | Description |
+| --- | --- | --- | --- |
+| `Enable` | `bool` | `false` | Makes this a compacted message. Requires a `MessageKey`. Cannot be combined with requested `ConcurrencyOrdered`. |
+| `Rank` | `int64` | `0` | Within one payload schema version, higher rank selects the current message. Equal ranks use message id as a tiebreaker. A higher schema version takes precedence over rank. Zero uses message-id order. Must be zero when Enable is `false`. |
+
+## Returns
+
+| Condition | Return value |
+| --- | --- |
+| New message committed | `(result, nil)` with its id and `Duplicate == false`. |
+| Idempotency key already exists | `(result, nil)` with `Id == 0` and `Duplicate == true`. |
+| Call fails | `(nil, err)`. A cancellation or lost commit confirmation can leave the outcome uncertain. |
+
+### ProduceResult
+
+| Field | Type | JSON name | Description |
+| --- | --- | --- | --- |
+| `Message` | `*T` | `message` | This call's payload. On a duplicate it is not the originally stored payload. |
+| `Id` | `int64` | `message_id` | The stored message id. Zero on a duplicate. |
+| `Duplicate` | `bool` | `duplicate` | This idempotency key was already recorded, including by an earlier attempt within the call. |
+
+## Idempotency and cancellation
+
+A caller-supplied key protects retries across calls and process restarts.
+Its protection lasts until the stream's `IdempotencyKeyTTL` cleanup removes
+the key. Deduplication does not compare payloads or recover the original id.
+
+Automatic batching rejects a context already cancelled before the message enters the batch queue.
+Once queued, cancellation waits up to `Batch.ShutdownGrace` for the real
+outcome. If that wait expires, the message may still commit. A negative grace
+abandons the wait immediately. See [batch settings](/reference/producer-registration/#batcherconfig).
+
+<ThreadAside label="NOTE" title="Producing and processing are separate">
+
+Producing a message successfully does not mean a consumer group has processed
+it. An idempotency key deduplicates the message insert, not the application's
+effects when a consumer handler runs again.
+
+</ThreadAside>
+
+## Errors
+
+| Error | When |
+| --- | --- |
+| Validation error | The schema version or options are invalid, including missing keys for keyed concurrency or compaction. |
+| `ErrPayloadNotEncodable` | JSON encoding rejects the payload. |
+| `ErrPartitionCreationBehind` | Missing-partition recovery cannot keep up with allocated message ids. |
+| `ErrPartitionLockTimeout` | A required partition lock cannot be acquired in time. |
+| Database or context error | The append fails, its wait is interrupted, or its commit cannot be confirmed. |
+
+## Related topics
+
+- [Register a producer](/reference/producer-registration/) — Producer defaults and automatic batch settings.
+- [Stream registration](/reference/stream-registration/#streamconfig) — Idempotency key retention and message retention.
+- [Produce messages in a database transaction](/guides/transactional-produce/) — Save an application change and its message together.
+- [Ordering and concurrency](/concepts/ordering/) — How message keys and concurrency policies affect processing.

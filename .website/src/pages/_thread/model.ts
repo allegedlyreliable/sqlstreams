@@ -14,15 +14,3 @@ export type ThreadData = {
 	next: ThreadLink | null;
 	slop: SlopLevel | null;
 };
-
-export type CodeThreadData = {
-	code: string;
-	kind: 'error' | 'event' | 'metric' | 'alert';
-	solved: boolean;
-	classification: string;
-	rank: string;
-	introduction: string;
-	logLine: string;
-	consequence: string;
-	fix: string | null;
-};

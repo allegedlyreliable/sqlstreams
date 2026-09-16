@@ -1,182 +1,117 @@
 ---
-title: Transactional Produce
-description: Choose a produce verb, write business data and messages in one transaction, and verify rollback.
-slop: high
+group: producer
+title: Produce messages in a database transaction
+description: Save an application record and produce its message in one PostgreSQL transaction with ProduceFunc.
+slop: medium
 ---
 
 import ThreadAside from '../../../components/thread-aside/thread-aside.svelte';
 
-Use `ProduceFunc` to commit a business write and its message together.
-Use `InTransaction` with `ProduceInTx` when one transaction must produce
-to several streams. [Why SQLStreams](/why-sqlstreams/#one-commit-for-the-business-write-and-message)
-explains the failure window this removes.
+Suppose you are building a user signup flow where you want to send a welcome
+email after successful signup.
 
-The examples assume registered producers and application-owned `orders`
-and invoice tables. Replace their fields with your application's schema.
+Seems simple but what happens if your applicate saves and stores the account
+but fails before sending the email.
 
-## Choose the verb
+Distrubuted systems like to call this problem and solution the **transactional outbox**.
+SQLStreams solves this simply.
 
-| Transaction | Payload already exists | Payload comes from database work |
-| --- | --- | --- |
-| SQLStreams opens it | `Produce` | `ProduceFunc` |
-| Your `InTransaction` closure owns it | `ProduceInTx` | `ProduceFuncInTx` |
+Use `ProduceFunc` to save the user and a message requesting the welcome email
+in one PostgreSQL transaction. Both writes commit together, or neither does.
 
-`ProduceBatch` writes several messages on one stream in one transaction,
-returning results in argument order. [Producer](/reference/producer/)
-lists each method's parameters and errors.
+## Before you begin
 
-## Write and produce together
+Use the Go project and running database from the [Quickstart](/quickstart/).
+Keep its `WelcomeEmail` payload and `signup.welcome-email` stream. You will
+change the producer in `cmd/produce/main.go`.
 
-The closure you pass to `ProduceFunc` runs inside the message's own
-transaction. Run your business writes on the `tx` it hands you and
-return the payload; both commit together, or neither does.
+## 1. Create the application table
+
+Run this from the Quickstart project directory:
+
+```sh
+docker compose exec -T db psql -U username -d quickstart <<'SQL'
+CREATE TABLE users (
+    id text PRIMARY KEY
+);
+SQL
+```
+
+This table holds the application's users in the same database as SQLStreams.
+
+## 2. Write the user and message together
+
+Add `"context"` to the imports in `cmd/produce/main.go`.
+
+Replace the `producer.Produce` call, its error check, and the following
+`fmt.Printf` with this block. Keep the final `return nil` in `run`.
 
 ```go
-func CreateOrder(ctx context.Context, instance *sqlstreams.ProducerInstance[OrderCreated], order Order) error {
-	_, err := instance.ProduceFunc(ctx,
-		func(ctx context.Context, tx sqlstreams.Tx) (*OrderCreated, error) {
-			if _, err := tx.Exec(ctx,
-				`INSERT INTO orders (id, total) VALUES ($1, $2)`, order.Id, order.Total); err != nil {
-				return nil, err
-			}
-			return &OrderCreated{OrderId: order.Id}, nil
-		}, nil)
+produced, err := producer.ProduceFunc(ctx,
+	func(ctx context.Context, tx sqlstreams.Tx) (*WelcomeEmail, error) {
+		if _, err := tx.Exec(ctx,
+			`INSERT INTO users (id) VALUES ($1) ON CONFLICT (id) DO NOTHING`, "user-123"); err != nil {
+			return nil, err
+		}
+		return &WelcomeEmail{UserId: "user-123"}, nil
+	}, &sqlstreams.ProduceOptions{IdempotencyKey: "welcome-email:user-123"})
+if err != nil {
 	return err
+}
+if produced.Duplicate {
+	fmt.Println("welcome-email request already produced for user-123")
+} else {
+	fmt.Printf("committed user=user-123 message_id=%d\n", produced.Id)
 }
 ```
 
-Returning an error from the closure rolls back its statements and the
-message. A commit error can still leave the caller uncertain whether the
-transaction landed; it does not split the business write from the message.
-[Side Effects & Retries](/guides/side-effects-and-retries/#retries-are-yours-to-own)
-explains safe retries after an ambiguous result.
+Use the supplied `tx` for your database writes. When the callback returns a
+payload and `nil`, SQLStreams produces the message and commits the transaction.
 
-Three details about the closure:
+If the callback returns an error, SQLStreams rolls back the transaction,
+including the user insert.
 
-- `tx sqlstreams.Tx` runs `Exec`, `Query`, `QueryRow`, `SendBatch`, and
-  `CopyFrom` — the statement surface of a pgx transaction. For anything
-  beyond that, `tx.Raw()` returns the underlying `pgx.Tx` (an escape
-  hatch, not the default path).
-- The payload comes back from the closure, not from a captured
-  variable — so it can be built from what your own statements returned
-  (a generated id, a computed total).
-- Nothing hands you an idempotency key. A produce mints its own unless
-  you set `ProduceOptions.IdempotencyKey`, and retrying across a crash
-  means setting it — more in
-  [Side Effects & Retries](/guides/side-effects-and-retries/).
+## 3. Run the producer
 
-Consumers cannot observe the message before its transaction commits.
-
-## Prove it to yourself
-
-1. Choose an unused order id, such as `order-9`, and **force a rollback**
-   after inserting it:
-
-   ```go
-   _, err := instance.ProduceFunc(ctx,
-   	func(ctx context.Context, tx sqlstreams.Tx) (*OrderCreated, error) {
-   		if _, err := tx.Exec(ctx, `INSERT INTO orders (id) VALUES ($1)`, "order-9"); err != nil {
-   			return nil, err
-   		}
-   		return nil, errors.New("rollback on purpose")
-   	}, nil)
-   ```
-
-2. Check for that order and its message; neither should exist. Resolve the stream's id
-   from the catalog once (each stream owns its physical tables, named by
-   that id; say it returned `1`):
-
-   ```sql
-   SELECT id FROM sqlstreams.stream_config WHERE name = 'orders.created';
-
-   SELECT count(*) FROM orders WHERE id = 'order-9'; -- 0
-   SELECT count(*) FROM sqlstreams.message_log_1
-   WHERE payload ->> 'order_id' = 'order-9'; -- 0
-   ```
-
-3. Replace the final return with `return &OrderCreated{OrderId: "order-9"}, nil`
-   and run it again. Check `err` before proceeding. Both counts should now
-   be `1`, provided `OrderCreated.OrderId` uses the JSON tag `order_id`.
-   While the transaction is open, consumers cannot see its message.
-
-## Several streams, one commit
-
-To produce to more than one stream atomically, `client.InTransaction`
-opens one transaction and hands your closure a `Tx` that every
-instance's `ProduceInTx` accepts. One statement per stream:
-
-```go
-err := client.InTransaction(ctx, func(ctx context.Context, tx sqlstreams.Tx) error {
-	if _, err := tx.Exec(ctx, `UPDATE orders SET status = 'paid' WHERE id = $1`, orderId); err != nil {
-		return err
-	}
-
-	// produce last -- see the lock note below
-	if _, err := invoices.ProduceInTx(ctx, tx, &InvoicePaid{OrderId: orderId}, nil); err != nil {
-		return err
-	}
-	_, err := receipts.ProduceInTx(ctx, tx, &ReceiptRequested{OrderId: orderId}, nil)
-	return err
-})
+```sh
+go run ./cmd/produce
 ```
 
-<ThreadAside label="CAUTION" title="Do your own statements first; produce last">
-Producing holds every consumer group on the stream at your message until
-you commit. A claim only advances to the oldest uncommitted message id,
-so an open transaction with a produce in it is a wall for the whole
-stream, and every statement you run *after* the produce is time the wall
-stands. Nothing in the types enforces the order, and nothing logs the
-stall today -- consumers just lag.
+A successful first run prints a line like this. The message id depends on
+what you have already produced:
 
-For one stream, `ProduceFunc` makes the order structural: the closure
-runs first and the produce is the last thing in the transaction by
-construction. Reach for `InTransaction` plus `ProduceInTx` when you
-need several streams in one commit, and put the produces at the end.
+```text
+committed user=user-123 message_id=1
+```
+
+Check the saved user:
+
+```sh
+docker compose exec -T db psql -U username -d quickstart \
+  -c "SELECT id FROM users WHERE id = 'user-123';"
+```
+
+The query returns `user-123`. The successful `ProduceFunc` call confirms
+that the user insert and message committed together.
+
+The callback can run again during database recovery. `ON CONFLICT` makes
+repeating this user insert harmless, and the stable `IdempotencyKey` protects
+the message insert from duplication.
+
+<ThreadAside label="NOTE" title="Keep external calls out of the transaction">
+
+In this example, send the email API request from your downstream consumer
+handler, NOT within the `ProduceFunc` transaction. Rolling back the database
+cannot undo an email that has already been sent.
 
 </ThreadAside>
 
-Producing several **compacted** keys in one transaction adds a second
-ordering rule. Each key's `compaction_head` row stays locked until you
-commit, so two transactions taking the same keys in opposite order
-deadlock: Postgres kills one of them (`40P01`) and rolls its whole
-transaction back. `InTransaction` never reruns your closure, so that
-retry is yours to write. Producing in message-key order avoids the
-cycle, and `ProduceBatch` sorts its items the same way, so a consistent
-order composes across both.
+## Related topics
 
-Two things stay yours after the commit guarantee — side effects the
-transaction can't undo, and rerunning the closure when the outcome
-was ambiguous. Both have their own page:
-[Side Effects & Retries](/guides/side-effects-and-retries/).
-
-<ThreadAside label="NOTE" title="Need to reach external systems too?">
-If some messages must also flow to systems outside Postgres (another
-org's Kafka, a partner webhook), your SQLStreams stream already *is* a
-transactional outbox — add a relay consumer group that forwards
-downstream, with retries and
-[dead-lettered messages](/guides/dead-letters/) for the flaky
-remote end. The downstream operation still needs idempotency because a relay
-can repeat after a crash.
-
-</ThreadAside>
-
-## Build a payload inside a shared transaction
-
-Inside `InTransaction` you already hold `tx`, so `ProduceInTx` usually
-suffices. Use `ProduceFuncInTx` when an existing producer function owns
-the write and constructs the payload from its result:
-
-```go
-err := client.InTransaction(ctx, func(ctx context.Context, tx sqlstreams.Tx) error {
-	_, err := invoices.ProduceFuncInTx(ctx, tx,
-		func(ctx context.Context, tx sqlstreams.Tx) (*InvoicePaid, error) {
-			var invoiceId int64
-			if err := tx.QueryRow(ctx,
-				`INSERT INTO invoices (order_id) VALUES ($1) RETURNING id`, orderId).Scan(&invoiceId); err != nil {
-				return nil, err
-			}
-			return &InvoicePaid{OrderId: orderId, InvoiceId: invoiceId}, nil
-		}, nil)
-	return err
-})
-```
+- [Produce a message from database work](/reference/produce-func/) — Callback
+  retries, return values, and errors for `ProduceFunc`.
+- [Run a database transaction](/reference/transactions/) — Use `InTransaction`
+  when several operations need to share one transaction.
+- [Produce within a transaction](/reference/produce-in-transaction/) —
+  Add messages to that transaction with `ProduceInTx` or `ProduceFuncInTx`.
+- [Make message processing safe to repeat](/guides/side-effects-and-retries/) — Protect the consumer side from applying the same change twice.

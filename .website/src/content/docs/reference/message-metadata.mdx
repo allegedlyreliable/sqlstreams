@@ -1,0 +1,71 @@
+---
+group: consumer
+title: Read message metadata
+description: "MetaFromContext: read the current message's id, keys, attempt counts, and resolved options."
+slop: high
+---
+
+import ThreadAside from '../../../components/thread-aside/thread-aside.svelte';
+
+```go title="sqlstreams.MetaFromContext"
+MetaFromContext(ctx context.Context) (MessageMeta, bool)
+```
+
+Reads message metadata from the context supplied to a consumer handler.
+
+## Example
+
+Use this consumer handler with [Consume](/reference/consume/) for the `charge-cards`
+group on the `payments.requested` stream. It uses the
+[example payload](/reference/consumer-group/#example-payload).
+
+```go
+func printPayment(ctx context.Context, payment *PaymentRequestedV1) error {
+	metadata, ok := sqlstreams.MetaFromContext(ctx)
+	if !ok {
+		return errors.New("message metadata is missing")
+	}
+	fmt.Println(metadata.Id, payment.OrderId, metadata.Attempts)
+	return nil
+}
+```
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `ctx` | `context.Context` | Yes | The consumer handler's context, or a context derived from it. |
+
+## Returns
+
+| Condition | Return value |
+| --- | --- |
+| Context contains message metadata | `(metadata, true)`, where `metadata` is a `MessageMeta` value. |
+| Context contains no message metadata | `(MessageMeta{}, false)`. |
+
+### MessageMeta
+
+| Field | Type | JSON name | Description |
+| --- | --- | --- | --- |
+| `Id` | `int64` | `message_id` | The message id. |
+| `RoutingKey` | `string` | `routing_key` | The produced routing key. Empty when none was supplied. |
+| `MessageKey` | `string` | `message_key` | The produced message key. Empty when none was supplied. |
+| `CompactionRank` | `int64` | `compaction_rank` | The message's rank under its key. Zero for an uncompacted message. |
+| `CreatedAt` | `time.Time` | `created_at` | The message's creation time. |
+| `ScheduledAt` | `time.Time` | `scheduled_at` | The scheduled time represented by this message. Zero for other messages. |
+| `Attempts` | `int` | `attempts` | Runs counted before this invocation. Zero on the first invocation. |
+| `Delays` | `int` | `delays` | Consumer handler-requested later runs counted so far, separately from failed attempts. |
+| `Options` | [`*MessageOptions`](/reference/consumer-registration/#messageoptions) | `options` | Resolved options for this invocation, with group defaults and bounds applied. For example, `Options.Timeout` is the effective processing timeout. |
+
+<ThreadAside label="NOTE" title="Message outcomes">
+
+Reading or changing metadata does not record success, request a retry, or
+delay processing. The [consumer handler's return value](/reference/consume/#message-results)
+determines the message's outcome.
+
+</ThreadAside>
+
+## Related topics
+
+- [Produce options](/reference/produce/#produceoptions) — Assign the routing key, message key, and processing options.
+- [Retries and failed messages](/concepts/retries-and-failed-messages/) — How failed attempts and requested delays affect processing.

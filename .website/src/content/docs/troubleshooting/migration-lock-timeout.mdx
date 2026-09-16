@@ -1,0 +1,61 @@
+---
+group: system
+title: Migration lock timeout (SQL0053)
+description: Find the transaction blocking a migration step and retry the same target.
+slop: high
+---
+
+```text title="Error · SQL0053"
+could not take a lock needed by the migration step
+```
+
+A transactional migration step could not acquire a database lock within
+its allowed wait. That step rolls back. Earlier completed steps remain applied.
+
+## Find the blocking session
+
+Run while the migration is attempting the step:
+
+```sql
+SELECT waiting.pid AS waiting_pid, waiting.query AS waiting_query,
+    blocker.pid AS blocking_pid, blocker.application_name,
+    blocker.state, statement_timestamp() - blocker.xact_start AS transaction_age,
+    blocker.query AS blocking_query
+FROM pg_stat_activity AS waiting
+CROSS JOIN LATERAL unnest(pg_blocking_pids(waiting.pid)) AS blocked_by(pid)
+JOIN pg_stat_activity AS blocker ON blocker.pid = blocked_by.pid
+WHERE waiting.datname = current_database()
+    AND waiting.pid <> pg_backend_pid();
+```
+
+| Result | Action |
+| --- | --- |
+| `waiting_query` is the migration step | Use its `blocking_pid` and application name in the correction below. |
+| Rows belong to other queries | Identify the migration's session before interrupting another transaction. |
+| No rows | The failed attempt has already released its wait, or no blocker exists now. Retry the same migration target and observe during its lock wait if it fails again. |
+
+## Release the lock
+
+1. **Have the blocking application finish or roll back its transaction.**
+   For an active operation that is expected to finish shortly, let it finish
+   before retrying the migration.
+
+2. **If an abandoned session is idle in a transaction, terminate that exact session.**
+   This disconnects it and rolls back its uncommitted work:
+
+   ```sql
+   SELECT pg_terminate_backend({blocking_pid});
+   ```
+
+3. **Run the original migration command again with the same target.**
+   Completed versions are retained. The migration resumes from the installed
+   version rather than reapplying every previous step.
+
+An “another migration is already in progress” message refers to the separate
+installation migration lock. Let that migration finish before starting another.
+
+## Related topics
+
+- [Upgrading SQLStreams](/guides/migrations/) — Continue the upgrade after resolving the blocker.
+- [Migrate database schemas](/reference/schema-migrations/) — Migration options and partial completion.
+- [Schema version mismatch](/troubleshooting/schema-version-mismatch/) — Check which database scope needs migration.

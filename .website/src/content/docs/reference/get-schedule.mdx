@@ -1,0 +1,64 @@
+---
+group: schedule
+title: Retrieve a schedule
+description: "Get: read a schedule's stored declaration and scheduled times."
+slop: high
+---
+
+```go title="SchedulerHandle.Get"
+Get(ctx context.Context) (*Schedule, error)
+```
+
+Reads the named schedule without registering it or changing its next scheduled time.
+
+## Example
+
+Using an initialized `client`, read the `payment-reminder` schedule.
+
+```go
+schedule, err := client.Scheduler("payment-reminder").Get(ctx)
+if err != nil {
+	return err
+}
+if schedule == nil {
+	return errors.New("payment-reminder is not registered")
+}
+fmt.Println(schedule.Expression, schedule.Suspended)
+```
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `ctx` | `context.Context` | Yes | Cancellation or its deadline interrupts the database read. |
+
+## Returns
+
+| Condition | Return value |
+| --- | --- |
+| Schedule is registered | `(schedule, nil)`, containing the [schedule object](/reference/schedule-object/). |
+| Schedule is absent | `(nil, nil)`. |
+| Read fails, including an installation with no schedule tables | `(nil, err)`. |
+
+## CLI
+
+```sh
+sqlstreams scheduler get payment-reminder
+```
+
+Prints the registration with exit status `0` when found. Absence exits with
+status `1`. See [schedule commands](/reference/schedule-cli/#read-schedules)
+for output formats and flags.
+
+## Errors
+
+| Error | When |
+| --- | --- |
+| Validation error | The schedule name is empty. |
+| Database or decoding error | The registration cannot be read or its stored concurrency policy is invalid. |
+| Context cancellation or deadline error | The read is interrupted. |
+
+## Related topics
+
+- [The schedule object](/reference/schedule-object/) — Returned fields.
+- [Register a schedule](/reference/schedule-registration/) — Create or replace the declaration.

@@ -1,98 +1,96 @@
 ---
-title: Client
-description: NewClient over your pool, the five ambient settings on ClientConfig, the schema, and the selectors every handle hangs off.
+group: client
+title: Create a client
+description: "NewClient: connect a pgx pool to a SQLStreams installation."
 slop: high
 ---
 
-`sqlstreams.NewClient(ctx, pool, cfg)` is the one constructor a program calls.
-It builds every registration object over your `*pgxpool.Pool` and pings the
-pool once, so a wrong address or credential fails here instead of at the
-first produce. The pool stays yours: SQLStreams never closes it, and the client
-has no `Close`.
+```go title="sqlstreams.NewClient"
+NewClient(ctx context.Context, pool *pgxpool.Pool, cfg *ClientConfig) (*Client, error)
+```
+
+Creates a client over an existing pgx pool and pings the database. It does
+not register the SQLStreams system or streams. The pool remains owned by
+the application, and the client has no `Close` method.
+
+## Example
+
+Use an existing `pool`, such as one returned by
+[`NewPostgresPool`](/reference/pool/).
 
 ```go
-ctx, stop := sqlstreams.LifecycleContext(nil)
-defer stop()
-
-pool, err := sqlstreams.NewPostgresPool(ctx, "app_user", os.Getenv("PGPASSWORD"), "localhost", "app_db", nil)
-if err != nil {
-	return err
-}
-defer pool.Close()
-
 client, err := sqlstreams.NewClient(ctx, pool, &sqlstreams.ClientConfig{
-	Schema:       "payments",
-	AllowDestroy: false,
+	Schema: "sqlstreams",
 })
 if err != nil {
 	return err
 }
 ```
 
-## Verbs
+## Parameters
 
-| verb | returns | notes |
-| --- | --- | --- |
-| `Streams(ctx)` | `[]*Stream` | every registered stream, ordered by name |
-| `Stream[T](name)` | `*StreamHandle[T]` | no I/O; [Stream](/reference/stream/) |
-| `Schedulers(ctx)` | `[]*Schedule` | every registered schedule, ordered by name |
-| `Scheduler(name)` | `*SchedulerHandle` | no I/O; [Scheduler](/reference/scheduler/) |
-| `System()` | `*SystemHandle` | no I/O; [System](/reference/system/) |
-| `Manager()` | `*ManagerHandle` | no I/O; [Manager](/reference/manager/) |
-| `InTransaction(ctx, transactionFunc)` | `error` | one transaction, your closure, commit; the closure receives a `sqlstreams.Tx` that `ProduceInTx` accepts |
-
-`InTransaction` does not retry. A transient blip or an ambiguous commit
-surfaces as-is, and only you know what is safe to rerun in your closure.
-Rerunning the whole closure is dedup-safe only under caller-supplied
-`IdempotencyKey` values; unset keys mint fresh per call, so a rerun produces
-twice ([transactional produce](/guides/transactional-produce/)).
-
-`sqlstreams.LifecycleContext(logger)` returns a context cancelled on the first
-SIGINT or SIGTERM, which starts graceful shutdown of every blocking verb; a
-second signal during the drain force-exits with status 128 plus the signal
-number. `nil` uses the default logger.
-
-## Config
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `ctx` | `context.Context` | Yes | Cancellation or its deadline interrupts the connectivity check. |
+| `pool` | `*pgxpool.Pool` | Yes | Application-owned pool. SQLStreams never closes it. |
+| `cfg` | `*ClientConfig` | No | `nil` uses defaults. `NewClient` fills Schema, captures values, and copies Retry. Later changes do not reconfigure the client. The logger is shared. |
 
 ### ClientConfig
 
-| field | default | what it decides |
-| --- | --- | --- |
-| `Schema` | `"sqlstreams"` | the Postgres namespace holding every table; one schema is one installation |
-| `AllowDestroy` | `false` | whether any `Destroy` verb on this client may run |
-| `DisableManager` | `false` | whether `Consume` skips running the system manager beside its session; `Manager().Run` is unaffected |
-| `Logger` | text lines to stderr, warn and up | your `*slog.Logger` or anything satisfying `logging.Logger`; held once |
-| `Retry` | `common.NewDefaultRetryPolicy()` | the retry curve for every Postgres call the client makes, never a message's redelivery |
+| Field | Type | Default | Description |
+| --- | --- | --- | --- |
+| `Schema` | `string` | `"sqlstreams"` | PostgreSQL schema containing this installation. Must match `^[a-z_][a-z0-9_]*$`. |
+| `AllowDestroy` | `bool` | `false` | Enables Destroy operations through this client. Individual operations retain their own guards. |
+| `DisableManager` | `bool` | `false` | Prevents `Consume` from starting the system manager alongside its session. Explicit Manager.Run remains available. The consumer's stream janitor still runs. |
+| `Logger` | `Logger` | Text to stderr at warn level | A slog.Logger or another implementation of the four context-aware logging methods. |
+| `Retry` | [`*RetryPolicy`](#retrypolicy) | Nested defaults | Retry policy for supported internal database operations. It does not set consumer message retries or make `InTransaction` retry its callback. |
 
-`NewClient` captures the values and copies `Retry`; editing the config after
-it returns changes nothing. Every config below the client inherits `Logger`
-and `Retry`, so none of them carries either field. Two clients over the same
-pool is how one consumer runs without upkeep while another runs with it.
+### RetryPolicy
 
-## The schema
+These defaults apply to `ClientConfig.Retry`. Consumer message retry defaults
+are defined with [consumer registration](/reference/consumer-registration/#retrypolicy).
 
-Two clients on two schemas in the same database each get their own catalog,
-streams, and sequences; `orders` registers in both and they are different
-streams. `client.System().Register` creates the schema if it is missing,
-which needs CREATE on the database; without that you get
-[SQL0064](/errors/SQL0064/), and the fix is to create the schema yourself and
-grant the role USAGE and CREATE on it.
+| Field | Type | Default | Description |
+| --- | --- | --- | --- |
+| `MaxRetries` | `int` | `6` | Maximum attempts, including the first. Must be at least `1`. |
+| `MaxDelays` | `int` | `0` | Unused for database-operation retries. Must be nonnegative. |
+| `BaseDelay` | `time.Duration` | `1s` | First retry delay. Must be positive. |
+| `MaxDelay` | `time.Duration` | `5m` | Delay ceiling. Must be at least `BaseDelay`. |
+| `Exponent` | `int` | `2` | Multiplier for successive delays. Must be at least `1`. |
 
-The pool sets no `search_path`. Every statement SQLStreams runs names its schema
-outright, `sqlstreams.message_log_4` and never `message_log_4`, so your own SQL
-inside `InTransaction` resolves the way it would on any other connection: a
-`CREATE TABLE orders` in that closure lands in your default schema, not
-SQLStreams's. The diagnose queries on every error page carry a `{schema}`
-placeholder for the same reason.
+Zero fields select defaults except `MaxDelays`.
 
-## Gotchas
+### Logger
 
-- A first program imports `sqlstreams` and nothing else of SQLStreams's. Every type
-  a user spells is declared or aliased there; the implementation packages
-  are importable without a stability commitment
-  ([the supported API](/concepts/api-shape/#the-supported-api)).
-- `DisableManager` is for consumer pods beside a dedicated
-  `sqlstreams manager run`. It does not remove DDL from the process: the
-  consumer's own stream janitor still runs there and creates and drops
-  partitions, so its database role needs DDL rights on that stream's
-  tables.
+| Method | Signature |
+| --- | --- |
+| `DebugContext` | `(ctx context.Context, message string, args ...any)` |
+| `InfoContext` | `(ctx context.Context, message string, args ...any)` |
+| `WarnContext` | `(ctx context.Context, message string, args ...any)` |
+| `ErrorContext` | `(ctx context.Context, message string, args ...any)` |
+
+## Returns
+
+| Condition | Return value |
+| --- | --- |
+| Configuration and connectivity check succeed | `(client, nil)`. |
+| Construction fails | `(nil, err)`. |
+
+## Installation scope
+
+Clients using different `Schema` values have separate installations even when
+they share a database and pool. SQLStreams qualifies its own table names.
+Your application SQL still uses the connection's `search_path`.
+
+## Errors
+
+| Error | When |
+| --- | --- |
+| Validation error | Pool is `nil`, the schema name is invalid, or retry settings are invalid. |
+| Connection or context error | The database cannot be reached, authentication fails, or the connectivity check is interrupted. |
+
+## Related topics
+
+- [Create a PostgreSQL pool](/reference/pool/) — Connection configuration and ownership.
+- [Register a stream](/reference/stream-registration/) — Create a stream and bootstrap an empty installation.
+- [Run a database transaction](/reference/transactions/) — Application transactions over the same pool.

@@ -1,0 +1,98 @@
+---
+group: consumer
+title: Delete a consumer group
+description: "Destroy: permanently delete a consumer group, with guards for live instances and remaining exception rows."
+slop: high
+---
+
+import ThreadAside from '../../../components/thread-aside/thread-aside.svelte';
+
+```go title="ConsumerHandle[T].Destroy"
+Destroy(ctx context.Context, options *DestroyOptions) error
+```
+
+Permanently deletes a consumer group and its progress. The stream and its
+messages remain.
+
+## Example
+
+Delete the `charge-cards` group on the `payments.requested` stream using an
+initialized `client` and the [example payload](/reference/consumer-group/#example-payload).
+
+- Create the client with `ClientConfig.AllowDestroy` enabled.
+- Stop the group's instances and resolve remaining exception rows before
+  deleting with the default guards.
+
+```go
+payments := client.Stream[PaymentRequestedV1]("payments.requested")
+chargeCards := payments.Consumer("charge-cards")
+if err := chargeCards.Destroy(ctx, nil); err != nil {
+	return err
+}
+```
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `ctx` | `context.Context` | Yes | Cancelling this context or reaching its deadline interrupts deletion's database operations. |
+| `options` | `*DestroyOptions` | No | `nil` keeps the deletion guards enabled. |
+
+### DestroyOptions
+
+| Field | Type | Default | Description |
+| --- | --- | --- | --- |
+| `Force` | `bool` | `false` | Skips the checks for live instances and remaining exception rows. Does not bypass `ClientConfig.AllowDestroy`. |
+
+<ThreadAside label="NOTE" title="Forcing deletion">
+
+`Force` can discard retryable, deferred, and dead exception rows while
+instances are still running. It does not gracefully stop those instances.
+
+</ThreadAside>
+
+## Returns
+
+| Condition | Return value |
+| --- | --- |
+| Deletion succeeds | `nil`. |
+| Deletion is refused or fails | A non-`nil` error. See [Errors](#errors). |
+
+## Behavior
+
+Deletes the group's registration, cursor, bindings, leases, exception rows,
+processing history, group-owned workers, and group-owned schedules.
+
+Registering the same group name after deletion creates a new group. Its
+starting position follows the new registration's
+[Start setting](/reference/consumer-registration/#cursorposition).
+
+## CLI
+
+```sh
+sqlstreams consumer destroy payments.requested charge-cards --yes
+```
+
+Deletes the group without an interactive confirmation prompt. Success prints
+a deletion confirmation and exits with status `0`. A missing resource, live
+instance, remaining exception rows, or database failure exits with status `1`.
+See [consumer destroy](/reference/consumer-cli/#consumer-destroy) for flags
+and JSON output.
+
+## Errors
+
+| Error | When |
+| --- | --- |
+| `ErrDestroyDisabled` | `ClientConfig.AllowDestroy` is `false`. |
+| `ErrStreamNotFound` | The stream is not registered. |
+| `ErrConsumerNotFound` | The group is not registered. |
+| `ErrConsumerGroupLive` | An instance is live and `Force` is `false`. |
+| `ErrConsumerGroupDeliveriesPending` | Exception rows remain and `Force` is `false`. |
+| Validation error | The stream or group name is empty. |
+| Database error | A deletion read or write fails. |
+| Context cancellation or deadline error | Deletion I/O is interrupted by its context. |
+
+## Related topics
+
+- [Stop a consumer gracefully](/guides/stop-a-consumer/) — Stop active instances before deleting their group.
+- [Messages are dead-lettered](/troubleshooting/messages-dead-lettered/) — Investigate failed messages before discarding their records.

@@ -1,0 +1,122 @@
+---
+group: system
+title: System logs
+description: "System manager, schedule, registration, metrics, and alert events."
+slop: high
+---
+
+```sh
+sqlstreams explain SQL0065
+```
+
+System events report registration changes and background processing across
+the installation.
+Use [worker logs](/reference/worker-logs/) for individual worker ownership
+and tick failures.
+
+## System manager
+
+```text title="Error · SQL0065"
+level=ERROR msg="system manager stopped -- nothing reconciles the deployment's workers until the loop re-claims the row after its backoff" code=SQL0065 attempt={attempt} delay={delay} error={error}
+```
+
+The manager's current run ended with an error without its context being
+cancelled. The outer Run call stays active and retries after backoff.
+The event carries `attempt`, `delay`, and `error`. A requested shutdown
+does not emit this event.
+
+## Registration changes
+
+```text title="Log templates"
+level=WARN msg="stream config replaced -- the newest declaration wins; if this is unexpected or repeats on every restart, two services declare this stream with different configs and overwrite each other" code=SQL0061 stream={stream} stream_id={stream_id} retention_ttl={retention_ttl} allow_drop_past_committed={allow_drop_past_committed} idempotency_key_ttl={idempotency_key_ttl} empty_compaction_head_ttl={empty_compaction_head_ttl} delivery_log_mode={delivery_log_mode}
+level=WARN msg="schedule config replaced -- the newest declaration wins; if this is unexpected or repeats on every restart, two services declare this schedule with different configs and overwrite each other" code=SQL0062 schedule={schedule} schedule_id={schedule_id} next_scheduled_at={next_scheduled_at} expression={expression} concurrency={concurrency} timeout={timeout} payload_changed={payload_changed} metadata_changed={metadata_changed}
+```
+
+Changed settings are rendered as old → new values.
+`SQL0061` reports changes to `retention_ttl`, `allow_drop_past_committed`,
+`idempotency_key_ttl`, `empty_compaction_head_ttl`, and `delivery_log_mode`.
+Only changed fields appear.
+
+`SQL0062` reports changed `expression`, `concurrency`, and `timeout`.
+Payload and metadata changes use `payload_changed` and `metadata_changed`
+booleans without logging their contents. This event does not enumerate
+every mutable schedule field. Read the stored registration for its full state.
+
+Repeated warnings on startup indicate differing declarations. Identical
+settings do not produce these replacement warnings. See the
+[stream](/reference/stream-registration/) and [schedule](/reference/schedule-registration/)
+registration contracts.
+
+## Scheduling
+
+```text title="Log templates"
+level=WARN msg="schedule message was already produced by an earlier ambiguous commit" code=SQL0037 schedule_id={schedule_id} schedule={schedule} scheduled_at={scheduled_at}
+level=WARN msg="schedule target stream keeps no success rows -- Client.Scheduler(name).Status counts no successes for it; set DeliveryLogMode all on the stream to count them" code=SQL0058 schedule={schedule} stream={stream} delivery_log_mode={delivery_log_mode}
+```
+
+| Code | Condition |
+| --- | --- |
+| `SQL0037` | Scheduled production finds its idempotency key already present and skips another append. |
+| `SQL0058` | `Register` declares a schedule on a stream whose `DeliveryLogMode` is not `DeliveryLogModeAll`. |
+
+`SQL0058` does not reject registration. It qualifies the accuracy of
+[schedule outcome reporting](/reference/schedule-messages/).
+
+## Metrics
+
+```text title="Log templates"
+level=WARN msg="abandoned-routine events dropped -- abandoned-routine snapshots undercount" code=SQL0052 dropped_count={dropped_count}
+level=WARN msg="measurements cannot be exported -- the current collection omits the rejected metric family; healthy families still export" code=SQL0104 metric_names={metric_names} detail={detail}
+```
+
+| Code | Condition |
+| --- | --- |
+| `SQL0052` | The in-memory event queue overflows, or a batch of abandoned/cleared events cannot be recorded. |
+| `SQL0104` | Export validation omits a metric family from the current collection. |
+
+```text title="Failed event recording"
+level=WARN msg="abandoned-routine events dropped -- abandoned-routine snapshots undercount" code=SQL0052 dropped_count={dropped_count} error={error}
+```
+
+`SQL0052` means retained abandoned-routine snapshots can undercount. Events
+are not requeued after a failed batch. `SQL0104` leaves healthy families
+available, as defined by [Export metrics](/reference/metrics-exporter/#rejected-families).
+
+## Alerts
+
+```text title="Log templates"
+level=WARN msg="alert condition holds -- nothing was published; the scheduled check is what publishes and resolves an alert" code=SQL0063 alert={alert} alert_message={alert_message} detail={detail} hint={hint} owner={owner} severity={severity}
+level=WARN msg="alert evidence does not meet measurement requirements -- recorded alert unchanged" code=SQL0109 alert={alert} owner={owner} owner_kind={owner_kind} system_id={system_id} stream_id={stream_id} group_id={group_id} detail={detail}
+```
+
+| Code | Condition |
+| --- | --- |
+| `SQL0063` | A producer or consumer registration's advisory alert evaluation finds an unhealthy condition. |
+| `SQL0109` | A scheduled check rejects semantically invalid evidence. |
+
+The registration-time check is advisory. Its failure does not fail `Register`,
+and its warning does not write an alert. Missing or stale evidence alone
+uses a Debug message rather than `SQL0109`.
+
+```text title="Alert evaluation and transitions"
+level=DEBUG msg="alert evidence is insufficient -- recorded alert unchanged" alert={alert} owner={owner} owner_kind={owner_kind} system_id={system_id} stream_id={stream_id} group_id={group_id} detail={detail}
+level=WARN msg="alert active" alert={alert} alert_message={alert_message} detail={detail} hint={hint} owner={owner} severity={severity}
+level=INFO msg="alert resolved" alert={alert} alert_message={alert_message} owner={owner}
+```
+
+After a committed alert state transition, the check logs `alert active` at
+Warn or `alert resolved` at Info. These lines have no separate SQL event code.
+Active reminders with unchanged status do not repeat transition logs.
+
+## Suppression
+
+System-manager Warn/Error repeats use [one-minute suppression](/reference/diagnostics/#logging).
+Registration and exporter events use their supplied logger. A suppressed
+repeat can later surface through `suppressed_count`.
+
+## Related topics
+
+- [Run the system manager](/reference/manager/) — Lifecycle and retry behavior.
+- [Read alerts](/reference/read-alerts/) — Evidence, evaluation, and retained reports.
+- [Worker is not running](/troubleshooting/worker-not-running/) — Diagnose missing background work.
+- [Schema version mismatch](/troubleshooting/schema-version-mismatch/) — Resolve database/build compatibility failures.

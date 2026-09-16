@@ -1,7 +1,7 @@
 # Voice
 
 How AI-drafted prose on the doc site sounds like its author. Binds
-the prose written for .website/ — guides, concept pages, homepage and
+the prose written for .website/ — guides, concept pages, reference, homepage and
 board copy. It does not touch error/log message grammar (root
 ## Errors, ## Logging), decision records (append-only, rendered
 as-is), or code comments (root ## Comments). The root ## Vocabulary
@@ -13,6 +13,10 @@ registry outranks everything here.
   [CONCEPTS.md](CONCEPTS.md).
 - For guide structure, procedures, examples, and notes, also follow
   [GUIDES.md](GUIDES.md).
+- For reference structure, contracts, examples, and formatting, also follow
+  [REFERENCE.md](REFERENCE.md).
+- For troubleshooting structure, diagnostic procedures, and review, also
+  follow [TROUBLESHOOTING.md](TROUBLESHOOTING.md).
 - Write against the samples: match their structure, stance, diction,
   and rhythm. The samples are verbatim and keep the author's real
   typos — correct spelling, punctuation, and apostrophes in what you
@@ -172,6 +176,9 @@ Measurable only — anything a checklist pass can verify.
 - Real uncertainty is stated in first person where the doc's frame
   allows it ("I'm not sure this holds when...") and never faked as
   confidence.
+- Describe verified default behavior as “by default” rather than “normally”
+  when the distinction matters. A configured default is a concrete rule,
+  while “normally” can sound like an observation about how often it happens.
 - Zero exclamation points. Zero emoji. At most one CAPS word per
   page for stress.
 - No semicolons in newly written or revised doc prose. Split the sentence
@@ -180,6 +187,11 @@ Measurable only — anything a checklist pass can verify.
 - Use paragraph breaks a little more often to emphasize a key point or
   consequence. A short paragraph can give that point room. Keep connected
   reasoning together rather than putting every sentence on its own line.
+- Explain code outcomes with the actual condition and resulting action.
+  “The callback returns a payload and `nil`” is clearer than “returning the
+  payload lets it commit.” Give success and error paths separate paragraphs
+  when that makes them easier to distinguish, and name what is affected,
+  such as rolling back the user insert.
 - Identify what a name refers to on first use: “the `payments.requested`
   stream,” “the `charge-cards` group,” or “consumer instance A.” Formatting
   and naming conventions do not establish that context. Repeat the noun
@@ -197,6 +209,9 @@ Measurable only — anything a checklist pass can verify.
   For example, processing a message and recording its completion are different
   actions. If “delivery” is needed as a formal term, explain which action it
   names rather than using it as a synonym for both.
+- In prose, always write “consumer handler” or “consumer handlers.” Never
+  shorten either to “handler” or “handlers,” even after introducing the term.
+  Preserve exact API identifiers and quoted diagnostic messages.
 - Naming consistency is a correctness requirement. Give each example resource
   one name and keep its spelling, kind, and role stable across prose, code,
   diagrams, captions, alternative text, and related pages using that example.
@@ -206,6 +221,15 @@ Measurable only — anything a checklist pass can verify.
 - Sentences vary in length; a short verdict sentence may sit beside a
   long mechanism sentence. Do not sand every sentence to the same
   medium length.
+- Preserve conversational rhythm during grammar edits. A continuation such
+  as “And managers that…” can borrow its subject from the preceding “We have
+  janitors that…” without repeating the whole definition. Fix errors and
+  unclear connections without turning every continuation into a formal,
+  self-contained sentence or restating a category already established.
+- Prefer the direct phrase when extra words add no meaning. “Running a
+  producer and consumer” is enough when “running a standard producer and
+  consumer setup” describes the same thing. Preserve the author's informal
+  wording when it remains clear and accurate.
 - Spelling, apostrophes, and punctuation are corrected — the typos in
   the samples are fingerprints of the source, not the style.
 
