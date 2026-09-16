@@ -42,7 +42,7 @@ func newRetentionJanitor(t testing.TB) (*janitordatastore.JanitorDatastore, *str
 		t.Fatal(err)
 	}
 	orders := client.Stream[retentionTestMessage]("orders")
-	registered, err := orders.Register(t.Context(), &stream.StreamConfig{PartitionSize: 1000})
+	registered, err := orders.Register(t.Context(), &sqlstreams.StreamConfig{PartitionSize: 1000})
 	if err != nil {
 		t.Fatal(err)
 	}

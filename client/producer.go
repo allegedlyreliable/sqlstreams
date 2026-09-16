@@ -1,6 +1,10 @@
 package sqlstreams
 
-import "context"
+import (
+	"context"
+
+	"github.com/allegedlyreliable/sqlstreams/pkg/producer"
+)
 
 // ProducerHandle is a stream's name plus the client, holding no row.
 type ProducerHandle[Message Versioned] struct {
@@ -17,7 +21,7 @@ func (t *StreamHandle[Message]) Producer() *ProducerHandle[Message] {
 // Register resolves the stream and returns an instance that produces its
 // Message. cfg may be nil or sparse.
 func (p *ProducerHandle[Message]) Register(ctx context.Context, cfg *ProducerConfig) (*ProducerInstance[Message], error) {
-	instance, err := p.client.producer.Register[Message](ctx, p.streamName, cfg)
+	instance, err := p.client.producer.Register[Message](ctx, p.streamName, (*producer.ProducerConfig)(cfg))
 	if err != nil {
 		return nil, err
 	}

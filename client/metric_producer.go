@@ -1,6 +1,10 @@
 package sqlstreams
 
-import "context"
+import (
+	"context"
+
+	"github.com/allegedlyreliable/sqlstreams/pkg/producer"
+)
 
 type MetricProducerHandle struct {
 	client *Client
@@ -14,5 +18,5 @@ func (s *SystemMetricsHandle) Producer() *MetricProducerHandle {
 // Register resolves the system metrics stream using the client's existing
 // datastore. Register the system first; cfg may be nil or sparse.
 func (p *MetricProducerHandle) Register(ctx context.Context, cfg *ProducerConfig) (*MetricProducerInstance, error) {
-	return p.client.producer.RegisterMetrics(ctx, cfg)
+	return p.client.producer.RegisterMetrics(ctx, (*producer.ProducerConfig)(cfg))
 }

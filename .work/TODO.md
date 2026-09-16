@@ -4,6 +4,39 @@ Sliding window of in-flight work only. Future work lives in ROADMAP.md;
 shipped work in HISTORY.md; decision rationale in DECISIONS.md ->
 .work/decisions/.
 
+## Public config hover
+
+- Accepted option B: explicit public ProducerConfig,
+  ConsumerConfig, StreamConfig, SystemConfig, SchedulerConfig,
+  ScheduleRunOptions, and ProduceOptions structs with public field names.
+  ClientConfig uses its public Logger and RetryPolicy aliases too.
+- AGENTS.md specifies when to mirror a struct for gopls; CONVENTIONS.md
+  records the exception to the one-declaration rule. Each mirrored struct's
+  file carries the requested GOPLS comment below imports.
+  Keep leaf types and read-models aliased. MessageOptions itself remains an
+  alias, so this does not remove every internal package name from all hovers.
+- Boundary pointer conversions preserve nil inputs and sharing; existing
+  owners still implement defaults, validation, DeepCopy, and ToStream.
+  Conversion compilation catches incompatible field changes, but comments
+  and newly added methods still need manual synchronization. No generator.
+- ProduceItem also becomes a public struct so its Options accepts the public
+  ProduceOptions; ProduceBatch allocates converted items at its boundary.
+- Public types no longer have their underlying packages' type identities.
+  Changed the stream integration setup's one public Register call to use
+  sqlstreams.StreamConfig; no assertion or behavior was changed.
+- Verified ten gopls hovers from a separate consumer module: every changed
+  composite's checked field uses its sqlstreams type, including
+  ProducerConfig.Message as *sqlstreams.MessageOptions. Temporary LSP probe
+  and evidence live outside the repository.
+- Checks pass: root build/vet; client race tests (default mutation, independent
+  deep copies, option capture, validation, and nil batch options); targeted
+  alias/import/closure checks; all stream PostgreSQL integration tests.
+  Examples, CLI, exporter, integration/e2e callers, and benchmarks compile;
+  example vet passes. No existing test assertion changed.
+- Eight public declaration/forwarding files plus boundary edits. Leaves and
+  read-models retain their existing type identity. Accepted; changes remain
+  uncommitted.
+
 ## Runnable example audit
 
 - Set up and execute examples 01–13 against PostgreSQL. Check advertised

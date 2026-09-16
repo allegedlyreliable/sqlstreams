@@ -2,6 +2,8 @@ package sqlstreams
 
 import (
 	"context"
+
+	"github.com/allegedlyreliable/sqlstreams/pkg/stream"
 )
 
 // StreamHandle is the stream's name plus the client, holding no row. Message
@@ -28,7 +30,7 @@ func (c *Client) Stream[Message Versioned](name string) *StreamHandle[Message] {
 // Register declares the named stream, creating its tables on first
 // registration. Idempotent; cfg may be nil or sparse.
 func (t *StreamHandle[Message]) Register(ctx context.Context, cfg *StreamConfig) (*Stream, error) {
-	return t.client.admin.RegisterStream(ctx, t.name, cfg)
+	return t.client.admin.RegisterStream(ctx, t.name, (*stream.StreamConfig)(cfg))
 }
 
 // Get reads the stream's row. Returns (nil, nil) when the stream is not

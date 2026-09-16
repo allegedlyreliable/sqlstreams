@@ -61,7 +61,9 @@ Every package is exactly one of three kinds:
   scheduler). Declares no codes, owns no SQL, holds no vocabulary.
   `sqlstreams` (in root `client/`) is the client plus aliases: it declares Client, ClientConfig,
   the pool and its config, the handles, and the three instance wrappers;
-  every other exported name is an alias or var into the declaring package,
+  it also mirrors composite input structs where gopls alias hover exposes
+  owning-package field types instead of public names (see the exception below).
+  Every other exported name is an alias or var into the declaring package,
   and the client holds assemblers only.
 
 Admin owns assembly, cross-domain identity resolution, operation policy,
@@ -87,6 +89,11 @@ never under its assembler.
 Every exported type, const, named error, and declared event is declared
 once, in the lowest package that reads it, with a floor:
 
+- Exception: `client/` may mirror composite config/option structs for gopls
+  hover using public field types, plus related inputs needed to accept them
+  (ProduceItem). The owning package remains the source of behavior; client
+  methods forward to it and convert at API boundaries. Keep fields,
+  documentation, and exported methods in sync; other types remain aliases.
 - Machinery (a controller, datastore, batcher, or worker package)
   declares nothing a user spells except its own Config and `*Row`
   structs and its controller / datastore / instance / provisioner

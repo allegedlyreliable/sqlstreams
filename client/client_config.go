@@ -1,8 +1,6 @@
 package sqlstreams
 
 import (
-	"github.com/allegedlyreliable/sqlstreams/pkg/common"
-	"github.com/allegedlyreliable/sqlstreams/pkg/common/logging"
 	"github.com/allegedlyreliable/sqlstreams/pkg/datastore"
 )
 
@@ -29,16 +27,16 @@ type ClientConfig struct {
 	// Default: false.
 	DisableManager bool
 
-	// Logger - your own *slog.Logger or anything satisfying logging.Logger.
+	// Logger - your own *slog.Logger or anything satisfying Logger.
 	// Held once on the datastore NewClient builds; no config below the
 	// client carries one.
 	// Default: text lines to stderr, warn level and up.
-	Logger logging.Logger
+	Logger Logger
 
 	// Retry - transient-error retry policy for every Postgres call the
 	// client makes, never a message's redelivery. Held once, like Logger.
 	// Default: common.NewDefaultRetryPolicy().
-	Retry *common.RetryPolicy
+	Retry *RetryPolicy
 }
 
 // WithDefaults fills Schema; Logger and Retry resolve in

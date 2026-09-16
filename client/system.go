@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	"github.com/allegedlyreliable/sqlstreams/pkg/migrate"
+	"github.com/allegedlyreliable/sqlstreams/pkg/system"
 )
 
 // SystemHandle is a handle on the singleton system, holding no row. Get is the
@@ -22,7 +23,7 @@ func (c *Client) System() *SystemHandle {
 // Register declares the system's own knobs and built-in alert schedules.
 // Safe to run on every startup; cfg may be nil or sparse.
 func (s *SystemHandle) Register(ctx context.Context, cfg *SystemConfig) error {
-	return s.client.admin.RegisterSystem(ctx, cfg)
+	return s.client.admin.RegisterSystem(ctx, (*system.SystemConfig)(cfg))
 }
 
 // Get reads the system's row. Returns (nil, nil) when no system is

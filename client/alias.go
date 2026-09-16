@@ -17,7 +17,6 @@ import (
 	"github.com/allegedlyreliable/sqlstreams/pkg/produce/batcher"
 	"github.com/allegedlyreliable/sqlstreams/pkg/producer"
 	"github.com/allegedlyreliable/sqlstreams/pkg/schedule"
-	"github.com/allegedlyreliable/sqlstreams/pkg/scheduler"
 	"github.com/allegedlyreliable/sqlstreams/pkg/stream"
 	"github.com/allegedlyreliable/sqlstreams/pkg/system"
 	"github.com/allegedlyreliable/sqlstreams/pkg/worker"
@@ -116,11 +115,6 @@ type (
 	// once -- InTransaction never reruns it.
 	TransactionFunc = datastore.TransactionFunc
 
-	// ProduceOptions holds per-message knobs that are optional and rarely set --
-	// the zero value means "neither is set," so a caller who doesn't need them
-	// never has to name them.
-	ProduceOptions = produce.ProduceOptions
-
 	// CompactionOptions is ProduceOptions.Compaction: whether the message
 	// compacts under its MessageKey, and the rank that decides the key's winner.
 	CompactionOptions = produce.CompactionOptions
@@ -133,24 +127,12 @@ type (
 	// calls on one producer instance.
 	BatcherConfig = batcher.BatcherConfig
 
-	// ProducerConfig is one producer instance's process-local settings: its
-	// message defaults and batching. Nothing durable -- a producer has no row.
-	ProducerConfig = producer.ProducerConfig
-
 	// MetricProducerInstance produces custom measurements with routing and
 	// compaction keys derived from their metric name and attributes.
 	MetricProducerInstance = producer.MetricProducerInstance
 
-	// ProduceItem is one message plus its options -- the unit ProduceBatch takes.
-	ProduceItem[Message Versioned] = producer.ProduceItem[Message]
-
 	// ProduceResult is one produce call's outcome.
 	ProduceResult[Message Versioned] = producer.ProduceResult[Message]
-
-	// ConsumerConfig is the group's declaration: what the group means, identical
-	// for every instance of the group. Session settings -- how one process runs
-	// -- live on ConsumeOptions at Consume.
-	ConsumerConfig = consumer.ConsumerConfig
 
 	// ConsumeOptions is one Consume call's session settings -- how this process
 	// runs, free to differ per instance. What the group means lives on
@@ -191,10 +173,6 @@ type (
 	// read inside consumerFunc via MetaFromContext.
 	MessageMeta = consume.MessageMeta
 
-	// StreamConfig is Register's spec -- separate from Stream so Register can grow
-	// (retention, etc.) without a signature change.
-	StreamConfig = stream.StreamConfig
-
 	// JanitorConfig declares retention cleanup settings.
 	// A new stream's janitor starts active.
 	JanitorConfig = stream.JanitorConfig
@@ -209,14 +187,6 @@ type (
 
 	// DeliveryLogMode selects which delivery outcomes write delivery_log_<id> rows.
 	DeliveryLogMode = stream.DeliveryLogMode
-
-	// SchedulerConfig is a schedule's declared delivery semantics, stored on
-	// its row: how each message it produces runs.
-	SchedulerConfig = scheduler.SchedulerConfig
-
-	// ScheduleRunOptions controls one immediate run of a registered schedule.
-	// Every field is optional.
-	ScheduleRunOptions = scheduler.ScheduleRunOptions
 
 	// Schedule is one row of schedule_config joined to its schedule_cursor row.
 	// Every schedule is the system's; StreamId is the target stream every produce
@@ -257,10 +227,6 @@ type (
 	// DestroyOptions configures one Destroy call on a stream, consumer, or the
 	// system. Every destroy is refused unless ClientConfig.AllowDestroy is set.
 	DestroyOptions = admin.DestroyOptions
-
-	// SystemConfig declares the built-in alert settings and metrics collector's
-	// poll rate. Every field is optional.
-	SystemConfig = system.SystemConfig
 
 	// StreamVersionHealth is one payload version's retire verdict on a stream: safe
 	// once no compaction head points at it and every group has read past it.

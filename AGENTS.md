@@ -64,6 +64,16 @@ Public surface:
   documentation is missing, write it on the owning declaration first.
   Review the copies for drift before finishing; maintain them directly,
   without a generator or sync tool.
+- Duplicate a composite config or option struct in `client/` when gopls
+  alias hover exposes owning-package field types where callers should use
+  `sqlstreams` names. Spell its fields with public types and convert at the
+  API boundary. Duplicate related inputs such as ProduceItem only when
+  needed to accept those public types; keep other types aliased.
+  Keep mirrored fields, comments, and exported methods in sync with the
+  owner; forward behavior (including defaults and validation) to it.
+  Verify the affected hover from a caller importing `client/`.
+  Each file containing a duplicated struct carries this standalone comment
+  below its imports: `// please GOPLS make aliases and go doc comments work better`.
 - Documentation drives implementation for a feature a user consumes: the
   doc-site page IS the proposal -- write it, review it with the user, then
   build. The site documents shipped behavior only; anything ahead of the

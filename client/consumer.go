@@ -2,6 +2,8 @@ package sqlstreams
 
 import (
 	"context"
+
+	"github.com/allegedlyreliable/sqlstreams/pkg/consumer"
 )
 
 // ConsumerHandle is a consumer group named on its stream, holding no row.
@@ -30,7 +32,7 @@ func (t *StreamHandle[Message]) Consumer(name string) *ConsumerHandle[Message] {
 // group's declaration -- nil or sparse for the defaults, with cfg.Bindings
 // the full pattern set (nil = the whole stream).
 func (h *ConsumerHandle[Message]) Register(ctx context.Context, cfg *ConsumerConfig) (*ConsumerInstance[Message], error) {
-	instance, err := h.client.consumer.Register[Message](ctx, h.name, h.streamName, cfg)
+	instance, err := h.client.consumer.Register[Message](ctx, h.name, h.streamName, (*consumer.ConsumerConfig)(cfg))
 	if err != nil {
 		return nil, err
 	}

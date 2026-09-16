@@ -2,6 +2,8 @@ package sqlstreams
 
 import (
 	"context"
+
+	"github.com/allegedlyreliable/sqlstreams/pkg/scheduler"
 )
 
 // SchedulerHandle is a schedule's name plus the client, holding no row.
@@ -26,7 +28,7 @@ func (c *Client) Scheduler(name string) *SchedulerHandle {
 // Register declares this schedule on streamName and returns a runnable
 // instance. The newest declaration wins. cfg may be nil or sparse.
 func (s *SchedulerHandle) Register[Message Versioned](ctx context.Context, streamName string, cron string, payload *Message, cfg *SchedulerConfig) (*SchedulerInstance[Message], error) {
-	instance, err := s.client.scheduler.Register[Message](ctx, s.name, streamName, cron, payload, cfg)
+	instance, err := s.client.scheduler.Register[Message](ctx, s.name, streamName, cron, payload, (*scheduler.SchedulerConfig)(cfg))
 	if err != nil {
 		return nil, err
 	}
@@ -53,7 +55,7 @@ func (s *SchedulerHandle) Unsuspend(ctx context.Context) error {
 // Run produces the schedule's stored message immediately, outside its
 // expression. options may be nil for the defaults.
 func (s *SchedulerHandle) Run(ctx context.Context, options *ScheduleRunOptions) (*ProduceResult[ScheduleStoredMessage], error) {
-	return s.client.scheduler.RunSchedule(ctx, s.name, options)
+	return s.client.scheduler.RunSchedule(ctx, s.name, (*scheduler.ScheduleRunOptions)(options))
 }
 
 // Status reports the schedule's messages rolled up per consumer group.
