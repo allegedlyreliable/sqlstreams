@@ -1,10 +1,12 @@
 ---
-status: accepted
+status: superseded
 date: 2026-09-06
 phase: "pre-v1"
 ---
 
 # The doc site splits by page kind: a Reference board, one thread per handle
+
+Superseded by [0813](0813-documentation-uses-four-boards-and-grouped-articles.md).
 
 ## Context
 

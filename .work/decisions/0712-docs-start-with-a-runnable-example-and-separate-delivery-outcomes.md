@@ -1,10 +1,12 @@
 ---
-status: accepted
+status: superseded
 date: 2026-09-07
 phase: "pre-v1"
 ---
 
 # Documentation starts with a runnable example and separates progress from delivery outcomes
+
+Superseded by [0813](0813-documentation-uses-four-boards-and-grouped-articles.md).
 
 ## Context
 

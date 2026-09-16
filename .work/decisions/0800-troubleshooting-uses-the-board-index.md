@@ -1,10 +1,12 @@
 ---
-status: accepted
+status: superseded
 date: 2026-09-13
 phase: pre-v1
 ---
 
 # Troubleshooting uses the board index
+
+Superseded by [0813](0813-documentation-uses-four-boards-and-grouped-articles.md).
 
 ## Context
 

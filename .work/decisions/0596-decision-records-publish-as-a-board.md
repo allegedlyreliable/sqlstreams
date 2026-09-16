@@ -1,10 +1,12 @@
 ---
-status: accepted
+status: superseded
 date: 2026-08-26
 phase: pre-v1
 ---
 
 # 0596 — the decision records publish as a board
+
+Superseded by [0813](0813-documentation-uses-four-boards-and-grouped-articles.md).
 
 ## Context
 

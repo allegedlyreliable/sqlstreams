@@ -16,16 +16,6 @@ the item is removed.
 
 ## Now
 
-- **Documentation expansion** -- Consumer subset review is complete.
-  The approved scope is six Concepts and five Guides, with a background
-  managers and workers concept replacing automatic producer batching and no
-  background-maintenance guide. Reference and Troubleshooting are complete
-  for now. TODO.md owns the exact list, boundaries, and progress. Create the
-  approved learning pages, one page per focused task and review cycle.
-  Finish with a complete Related topics,
-  terminology, navigation, and legacy URL pass. Additional Concepts or Guides
-  require user approval.
-
 - **manual review of cli**
 
 - **manual review of docs**

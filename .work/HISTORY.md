@@ -5,6 +5,27 @@ Dated ledger of what shipped, newest first — one entry per milestone.
 Entries before 2026-08-13 were reconstructed from the phase notes when this
 ledger was created; dates come from the phase git tags.
 
+## 2026-09-16 — Four-board documentation rework [0813]
+
+Committed as b06a5d2c, with deployment confirmed by the user. The site now has
+94 articles: two original homepage stickies, six Concepts, five Guides,
+71 Reference, and ten Troubleshooting. Group frontmatter drives headings,
+breadcrumbs, and the collapsible cross-board tree. Resource-and-operation
+Reference replaces one page per handle. Dedicated writing rules capture the
+reviewed formats, terminology, examples, notes, and Svelte Flow/ELK visuals.
+
+Removed 138 retired documents and the obsolete per-code renderer. All 109
+diagnostic URLs and 27 retired article URLs redirect to canonical pages.
+Related topics connects the completed set. Concepts and Guides completed user
+review; further Reference and Troubleshooting spot checks remain separate work.
+
+Validation included 54 compiled Go examples, 55 struct tables checked against
+source, 12 diagnostic SQL blocks, and runnable guide scenarios in disposable
+databases. The v0.1.4 → v0.1.5 upgrade exercise passed without migration DDL.
+Final prose checks, site build, 4,626 local links, and all 138 redirects passed.
+Pagefind indexes exactly 94 articles. Targeted type checks, unit tests, browser
+navigation, sitemap exclusions, and desktop/mobile checks also passed.
+
 ## 2026-09-14 — PostgreSQL 15–18 supported-version matrix [0812]
 
 The supported set is the PostgreSQL majors the community supports, 15 to

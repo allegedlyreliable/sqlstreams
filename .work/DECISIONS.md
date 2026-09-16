@@ -348,7 +348,7 @@ in `.work/DECISION_MAP.md` routes a question to its records.
 - 0593 2026-08-26 accepted (pre-v1) — the night board, chosen from the footer
 - 0594 2026-08-26 rejected (pre-v1) — initial-payload ceilings are NOT built
 - 0595 2026-08-26 accepted (pre-v1) — spacing token scale: exact values, pixel-value names, one tier
-- 0596 2026-08-26 accepted (pre-v1) — the decision records publish as a board
+- 0596 2026-08-26 superseded (pre-v1) — the decision records publish as a board
 - 0597 2026-08-27 accepted (pre-v1) — website layered error handling
 - 0598 2026-08-27 accepted (pre-v1) — the site notice's full-page face is cut until something needs it
 - 0599 2026-08-27 superseded in part by 0756 (pre-v1) — the cookie notice is the site's privacy note, on its own surface
@@ -431,7 +431,7 @@ in `.work/DECISION_MAP.md` routes a question to its records.
 - 0676 2026-09-06 accepted (pre-v1) — Admin owns orchestration and domains own validation rules and resource reads
 - 0677 2026-09-06 accepted (pre-v1) — Public API comments state their contract
 - 0678 2026-09-06 superseded (pre-v1) — Metrics export distinguishes read success and observation freshness
-- 0679 2026-09-06 accepted (pre-v1) — The doc site splits by page kind: a Reference board, one thread per handle
+- 0679 2026-09-06 superseded (pre-v1) — The doc site splits by page kind: a Reference board, one thread per handle
 - 0680 2026-09-06 accepted (pre-v1) — pkg/concurrency is infrastructure and lives under common
 - 0681 2026-09-06 accepted (pre-v1) — The rule files carry no decision citations; the decision map is the index
 - 0682 2026-09-06 accepted (pre-v1) — Metrics export uses an OTel producer and source-read health
@@ -464,7 +464,7 @@ in `.work/DECISION_MAP.md` routes a question to its records.
 - 0709 2026-09-07 accepted (pre-v1) — Topic alerts evaluate every minute
 - 0710 2026-09-07 accepted (pre-v1) — Consumer defaults use small batches and responsive polling
 - 0711 2026-09-07 superseded (pre-v1) — The reliability lab is the benchmark harness, and a benchmark is a scenario
-- 0712 2026-09-07 accepted (pre-v1) — Documentation starts with a runnable example and separates progress from delivery outcomes
+- 0712 2026-09-07 superseded (pre-v1) — Documentation starts with a runnable example and separates progress from delivery outcomes
 - 0713 2026-09-07 accepted (pre-v1) — Sustainable throughput keeps both producer and consumer queues bounded
 - 0714 2026-09-07 superseded (pre-v1) — Consumer observations allocate transaction ids before advancing cursors
 - 0715 2026-09-07 accepted (pre-v1) — Throughput work excludes the archived delivery consumer
@@ -596,8 +596,8 @@ in `.work/DECISION_MAP.md` routes a question to its records.
 - 0796 2026-09-13 accepted (pre-v1) — Registration alert evidence is debug diagnostics
 - 0797 2026-09-13 accepted (pre-v1) — Runtime alerts classify invalid evidence
 - 0798 2026-09-13 accepted (pre-v1) — Threads declare a slop level
-- 0799 2026-09-13 accepted (pre-v1) — Decision records use the board index
-- 0800 2026-09-13 accepted (pre-v1) — Troubleshooting uses the board index
+- 0799 2026-09-13 superseded (pre-v1) — Decision records use the board index
+- 0800 2026-09-13 superseded (pre-v1) — Troubleshooting uses the board index
 - 0801 2026-09-13 accepted (pre-v1) — Reference uses the board index
 - 0802 2026-09-13 accepted (pre-v1) — Each board owns its page
 - 0803 2026-09-14 superseded (pre-v1) — Chocolatey retries skip release publication
@@ -608,3 +608,4 @@ in `.work/DECISION_MAP.md` routes a question to its records.
 - 0808 2026-09-14 accepted (pre-v1) — The producer's register-time pass drops worker_liveness
 - 0809 2026-09-14 accepted (pre-v1) — CLI database URL uses SQLSTREAMS_DATABASE_URL
 - 0812 2026-09-14 accepted (pre-v1) — Supported PostgreSQL majors follow the community support window
+- 0813 2026-09-16 accepted (pre-v1) — Documentation uses four boards and grouped articles
