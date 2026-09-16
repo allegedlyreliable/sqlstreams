@@ -31,8 +31,6 @@ thought bubbles (hover over text and I interject my random thoughts)
 
 Announcments need to be curated
 
-Need to have good standardized linking. Because we don't have a sidebar internal navigation can be a bit rough
-
 Should add a nerd 'But what about!' note or section in doc for when obvious point or counter argument pops up to address it
 
 roadmap later item for review code for interesting design decisions to write articles on (big or small things)

@@ -14,7 +14,7 @@ import (
 
 const (
 	databaseURLEnv = "SQLSTREAMS_DATABASE_URL"
-	schemaEnv      = "SQLSTREAMS_ADMIN_SCHEMA"
+	schemaEnv      = "SQLSTREAMS_SCHEMA"
 )
 
 type connection struct {
