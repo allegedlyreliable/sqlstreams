@@ -1,7 +1,7 @@
 package sqlstreams
 
-// Every type a user spells through this package is an alias into the
-// package that declares it, so a click-through lands on the declaration.
+// Comments are copied from the owning declarations so editor hover and
+// Go documentation show them at the public entry point.
 
 import (
 	"github.com/allegedlyreliable/sqlstreams/pkg/admin"
@@ -24,164 +24,469 @@ import (
 )
 
 type (
-	Versioned                        = common.Versioned
-	RawPayload                       = common.RawPayload
-	StoredMessage[Message Versioned] = common.StoredMessage[Message]
-	MessageOptions                   = common.MessageOptions
-	RetryPolicy                      = common.RetryPolicy
-	ConcurrencyPolicy                = common.ConcurrencyPolicy
-	Owner                            = common.Owner
-	OwnerKind                        = common.OwnerKind
-	Logger                           = logging.Logger
-	DiagnosticError                  = diagnostic.DiagnosticError
-	DiagnosticEvent                  = diagnostic.DiagnosticEvent
-	DiagnosticQuery                  = diagnostic.DiagnosticQuery
-	DiagnosticRecovery               = diagnostic.DiagnosticRecovery
-	DiagnosticKind                   = diagnostic.DiagnosticKind
+	// Versioned is what every Message type declares: the payload's
+	// compatibility version, written on every message row it produces. A
+	// value receiver, so the zero value answers.
+	//
+	// Bump only on a BREAKING change to Message:
+	// - a field has a different type
+	// - a field has been renamed
+	// - a field has been removed
+	//
+	// A consumer group reads only rows at its Message type's version.
+	Versioned = common.Versioned
 
-	Querier         = datastore.Querier
-	Tx              = datastore.Tx
+	// RawPayload is a message payload kept as the JSON bytes the row stores,
+	// for readers with no message type in scope: the CLI, an admin-only
+	// script. Its version is 0, which no declared message type may use:
+	// Consumer(name).Register refuses it and every produce path refuses to
+	// write it.
+	RawPayload = common.RawPayload
+
+	// StoredMessage is one message as the log holds it: the payload plus the
+	// row's own facts.
+	StoredMessage[Message Versioned] = common.StoredMessage[Message]
+
+	// MessageOptions are the per-message knobs a producer may REQUEST and a
+	// consumer may CLAMP. Any unset field means "the consumer decides".
+	//
+	// Resolution is per field:
+	// - consumer clamp > produced message > consumer defaults > system defaults
+	// Messages REQUEST, consumers PROTECT THEMSELVES.
+	MessageOptions = common.MessageOptions
+
+	// RetryPolicy is an exponential backoff curve. ClientConfig.Retry applies it
+	// to the client's own Postgres calls; MessageOptions.Retry applies it to a
+	// message's redelivery. Zero fields take the defaults.
+	RetryPolicy = common.RetryPolicy
+
+	// ConcurrencyPolicy is a message's concurrency policy.
+	ConcurrencyPolicy = common.ConcurrencyPolicy
+
+	// Owner is which resource owns a row in a polymorphic table (worker,
+	// schedule, migration_log).
+	Owner = common.Owner
+
+	// OwnerKind is which resource an Owner names, derived from the ids it holds.
+	OwnerKind = common.OwnerKind
+
+	// Logger is exactly *slog.Logger's Context method set. Pass your own
+	// *slog.Logger with whatever slog.Handler you want (zap/zerolog/logr all
+	// ship one), or anything else that implements these four methods.
+	Logger = logging.Logger
+
+	// DiagnosticError is the one error shape:
+	// - code
+	// - recovery
+	// - problem
+	// - fix
+	// - diagnose queries fixed at declaration
+	// - values
+	// - wrapped cause attached per raise via With and Wrap
+	DiagnosticError = diagnostic.DiagnosticError
+
+	// DiagnosticEvent is a declared operator-actionable log event: the static message
+	// a call site logs and the code that rides in its "code" attribute.
+	DiagnosticEvent = diagnostic.DiagnosticEvent
+
+	// Query is one declared diagnose query: the label names what the query
+	// answers, the SQL answers it against the reader's own database. The library
+	// never runs it -- the fix says what to change, a query says what to look at.
+	DiagnosticQuery = diagnostic.DiagnosticQuery
+
+	// DiagnosticRecovery states whether an unchanged retry of the operation can succeed.
+	DiagnosticRecovery = diagnostic.DiagnosticRecovery
+
+	// DiagnosticKind names a Declaration's kind.
+	DiagnosticKind = diagnostic.DiagnosticKind
+
+	// Querier is what pool, conn, and tx can all do, minus transaction control
+	// (Begin/Commit/Rollback) -- the surface for statements that run inside a
+	// boundary the callee doesn't own. *pgxpool.Pool, *pgxpool.Conn, and pgx.Tx
+	// all satisfy it.
+	Querier = datastore.Querier
+
+	// Tx is the surface handed to a ProducerFunc/TransactionFunc closure: every
+	// statement pool, conn, and tx share (Querier), never transaction control --
+	// the closure runs inside a transaction it does not own.
+	Tx = datastore.Tx
+
+	// TransactionFunc runs inside the transaction InTransaction opened. A nil
+	// return commits; an error rolls back and is returned as-is. It is called
+	// once -- InTransaction never reruns it.
 	TransactionFunc = datastore.TransactionFunc
 
-	ProduceOptions                   = produce.ProduceOptions
-	CompactionOptions                = produce.CompactionOptions
-	ProducerFunc[Message Versioned]  = produce.ProducerFunc[Message]
-	BatcherConfig                    = batcher.BatcherConfig
-	ProducerConfig                   = producer.ProducerConfig
-	MetricProducerInstance           = producer.MetricProducerInstance
-	ProduceItem[Message Versioned]   = producer.ProduceItem[Message]
+	// ProduceOptions holds per-message knobs that are optional and rarely set --
+	// the zero value means "neither is set," so a caller who doesn't need them
+	// never has to name them.
+	ProduceOptions = produce.ProduceOptions
+
+	// CompactionOptions is ProduceOptions.Compaction: whether the message
+	// compacts under its MessageKey, and the rank that decides the key's winner.
+	CompactionOptions = produce.CompactionOptions
+
+	// ProducerFunc runs inside the append's transaction and returns the payload to
+	// store -- its writes commit or roll back with the message.
+	ProducerFunc[Message Versioned] = produce.ProducerFunc[Message]
+
+	// BatcherConfig tunes the shared-transaction batching of concurrent Produce
+	// calls on one producer instance.
+	BatcherConfig = batcher.BatcherConfig
+
+	// ProducerConfig is one producer instance's process-local settings: its
+	// message defaults and batching. Nothing durable -- a producer has no row.
+	ProducerConfig = producer.ProducerConfig
+
+	// MetricProducerInstance produces custom measurements with routing and
+	// compaction keys derived from their metric name and attributes.
+	MetricProducerInstance = producer.MetricProducerInstance
+
+	// ProduceItem is one message plus its options -- the unit ProduceBatch takes.
+	ProduceItem[Message Versioned] = producer.ProduceItem[Message]
+
+	// ProduceResult is one produce call's outcome.
 	ProduceResult[Message Versioned] = producer.ProduceResult[Message]
 
-	ConsumerConfig                  = consumer.ConsumerConfig
-	ConsumeOptions                  = consumer.ConsumeOptions
-	ConsumerFunc[Message Versioned] = consumer.ConsumerFunc[Message]
-	CursorPosition                  = consume.CursorPosition
-	CursorPositionKind              = consume.CursorPositionKind
-	Consumer                        = consume.Consumer
-	Binding                         = consume.Binding
-	BindingOutcome                  = consume.BindingOutcome
-	MessageMeta                     = consume.MessageMeta
+	// ConsumerConfig is the group's declaration: what the group means, identical
+	// for every instance of the group. Session settings -- how one process runs
+	// -- live on ConsumeOptions at Consume.
+	ConsumerConfig = consumer.ConsumerConfig
 
-	StreamConfig    = stream.StreamConfig
-	JanitorConfig   = stream.JanitorConfig
-	VacuumConfig    = stream.VacuumConfig
-	Stream          = stream.Stream
+	// ConsumeOptions is one Consume call's session settings -- how this process
+	// runs, free to differ per instance. What the group means lives on
+	// ConsumerConfig at Register. Sparse: zero fields take the defaults.
+	ConsumeOptions = consumer.ConsumeOptions
+
+	// ConsumerFunc handles one delivered message. It should be idempotent --
+	// redelivery after a crash or timeout is normal. nil records success; a
+	// plain error retries under the message's RetryPolicy; consume.Terminal
+	// dead-letters now; consume.Delay runs it again later without counting a
+	// failure.
+	ConsumerFunc[Message Versioned] = consumer.ConsumerFunc[Message]
+
+	// CursorPosition is a place in a stream's message log a group's cursor is set
+	// to -- by Register for a group that has no cursor row yet.
+	CursorPosition = consume.CursorPosition
+
+	// CursorPositionKind names where a new group's cursor starts.
+	CursorPositionKind = consume.CursorPositionKind
+
+	// Consumer is the registered consumer group row. A group is owned by
+	// exactly one stream -- names are unique per
+	// stream, not globally. Children (cursor, lease, binding) reference Id and
+	// carry no stream_id of their own; the stream_id FK cascade is the group's
+	// lifecycle -- destroying the stream destroys it.
+	Consumer = consume.Consumer
+
+	// Binding is one declarer's newest declaration on a group.
+	// BindingInstalled is the group's effective set.
+	// BindingJoined is a declarer that found its set already stored.
+	// BindingWaiting is a declarer still blocked on changing the effective set.
+	Binding = consume.Binding
+
+	// BindingOutcome is where one DeclareBindings attempt ended up.
+	BindingOutcome = consume.BindingOutcome
+
+	// MessageMeta is everything about a delivered message besides its payload,
+	// read inside consumerFunc via MetaFromContext.
+	MessageMeta = consume.MessageMeta
+
+	// StreamConfig is Register's spec -- separate from Stream so Register can grow
+	// (retention, etc.) without a signature change.
+	StreamConfig = stream.StreamConfig
+
+	// JanitorConfig declares retention cleanup settings.
+	// A new stream's janitor starts active.
+	JanitorConfig = stream.JanitorConfig
+
+	// VacuumConfig declares VACUUM (ANALYZE) settings for the stream's idempotency-key table.
+	// A new stream's vacuum starts suspended.
+	VacuumConfig = stream.VacuumConfig
+
+	// Stream is the registered stream row; Id addresses this stream's own
+	// message_log_<id>. The remaining fields hold StreamConfig's resolved values.
+	Stream = stream.Stream
+
+	// DeliveryLogMode selects which delivery outcomes write delivery_log_<id> rows.
 	DeliveryLogMode = stream.DeliveryLogMode
 
-	SchedulerConfig              = scheduler.SchedulerConfig
-	ScheduleRunOptions           = scheduler.ScheduleRunOptions
-	Schedule                     = schedule.Schedule
-	ScheduleConsumerGroupSummary = schedule.ScheduleConsumerGroupSummary
-	ScheduleMessageStatus        = schedule.ScheduleMessageStatus
-	ScheduleMessageOutcome       = schedule.ScheduleMessageOutcome
-	ScheduleStoredMessage        = schedule.ScheduleStoredMessage
+	// SchedulerConfig is a schedule's declared delivery semantics, stored on
+	// its row: how each message it produces runs.
+	SchedulerConfig = scheduler.SchedulerConfig
 
-	System         = system.System
-	Worker         = worker.Worker
+	// ScheduleRunOptions controls one immediate run of a registered schedule.
+	// Every field is optional.
+	ScheduleRunOptions = scheduler.ScheduleRunOptions
+
+	// Schedule is one row of schedule_config joined to its schedule_cursor row.
+	// Every schedule is the system's; StreamId is the target stream every produce
+	// lands on.
+	Schedule = schedule.Schedule
+
+	// ScheduleConsumerGroupSummary is one consumer group's outcomes for one schedule's messages,
+	// derived from the target stream's delivery log.
+	ScheduleConsumerGroupSummary = schedule.ScheduleConsumerGroupSummary
+
+	// ScheduleMessageStatus is one of a schedule's messages' outcome for one consumer
+	// group, newest message first in a SchedulerHandle.Messages listing.
+	ScheduleMessageStatus = schedule.ScheduleMessageStatus
+
+	// ScheduleMessageOutcome is where one of a schedule's messages ended up for one
+	// consumer group.
+	ScheduleMessageOutcome = schedule.ScheduleMessageOutcome
+
+	// ScheduleStoredMessage is a schedule_config row's payload at the row's
+	// schema_version, produced as-is: the JSON goes to the message row
+	// unchanged and SchemaVersion answers with the stored version, so the
+	// producer path needs no Message type at produce time.
+	ScheduleStoredMessage = schedule.ScheduleStoredMessage
+
+	// System is the singleton system row, read back by System().Get.
+	System = system.System
+
+	// Worker is one row of the worker_config table.
+	Worker = worker.Worker
+
+	// InstanceTarget is how many live instances of one worker row may run at once
+	// across the deployment
+	// positive value   => claim up to that many instances
+	// NoInstanceTarget => any number of instances
+	// 0                => worker is suspended
 	InstanceTarget = worker.InstanceTarget
 
-	DestroyOptions      = admin.DestroyOptions
-	SystemConfig        = system.SystemConfig
+	// DestroyOptions configures one Destroy call on a stream, consumer, or the
+	// system. Every destroy is refused unless ClientConfig.AllowDestroy is set.
+	DestroyOptions = admin.DestroyOptions
+
+	// SystemConfig declares the built-in alert settings and metrics collector's
+	// poll rate. Every field is optional.
+	SystemConfig = system.SystemConfig
+
+	// StreamVersionHealth is one payload version's retire verdict on a stream: safe
+	// once no compaction head points at it and every group has read past it.
 	StreamVersionHealth = stream.StreamVersionHealth
 
-	PartitionCountAlertConfig          = alert.PartitionCountAlertConfig
-	CompactionReadCostAlertConfig      = alert.CompactionReadCostAlertConfig
-	WorkerLivenessAlertConfig          = alert.WorkerLivenessAlertConfig
-	MetricCollectorProgressAlertConfig = alert.MetricCollectorProgressAlertConfig
-	MetricCollectorWorkerConfig        = metric.MetricCollectorWorkerConfig
+	// PartitionCountAlertConfig declares how the partition_count alert is
+	// evaluated and the count it alerts at.
+	PartitionCountAlertConfig = alert.PartitionCountAlertConfig
 
-	StreamSnapshot                = metric.StreamSnapshot
-	WorkerSnapshot                = metric.WorkerSnapshot
-	WorkerStatus                  = metric.WorkerStatus
-	ConsumerGroupSnapshot         = metric.ConsumerGroupSnapshot
-	StreamSchemaVersionSnapshot   = metric.StreamSchemaVersionSnapshot
+	// CompactionReadCostAlertConfig declares how the compaction_read_cost alert is
+	// evaluated and the cost it alerts at.
+	CompactionReadCostAlertConfig = alert.CompactionReadCostAlertConfig
+
+	// WorkerLivenessAlertConfig declares how the worker_liveness alert is
+	// evaluated.
+	WorkerLivenessAlertConfig = alert.WorkerLivenessAlertConfig
+
+	// MetricCollectorProgressAlertConfig declares the installation's collector-progress check.
+	MetricCollectorProgressAlertConfig = alert.MetricCollectorProgressAlertConfig
+
+	// MetricCollectorWorkerConfig declares the metrics_collector worker row:
+	// how often the collector measures the fleet and produces to
+	// __system.metrics.
+	MetricCollectorWorkerConfig = metric.MetricCollectorWorkerConfig
+
+	// StreamSnapshot is a stream's live metrics, read from its tables at the
+	// moment of the call, with every consumer group's snapshot beside it.
+	StreamSnapshot = metric.StreamSnapshot
+
+	// WorkerSnapshot reports one worker's operational target, live instances, and recorded failures.
+	WorkerSnapshot = metric.WorkerSnapshot
+
+	// WorkerStatus describes suspension, live claims, and recorded failures.
+	WorkerStatus = metric.WorkerStatus
+
+	// ConsumerGroupSnapshot is the live, DB-truth picture of one (group, stream),
+	// sectioned by the store each number reads -- answers "what's true right now"
+	// for state that multiple consumer processes share.
+	ConsumerGroupSnapshot = metric.ConsumerGroupSnapshot
+
+	// StreamSchemaVersionSnapshot is one payload version's presence in a stream's log.
+	StreamSchemaVersionSnapshot = metric.StreamSchemaVersionSnapshot
+
+	// ConsumerGroupSchemaVersionLag is one consumer group's unread and unresolved rows
+	// at one payload version.
 	ConsumerGroupSchemaVersionLag = metric.ConsumerGroupSchemaVersionLag
-	ConsumerGroupLag              = metric.ConsumerGroupLag
-	CursorSnapshot                = metric.CursorSnapshot
-	ExceptionSnapshot             = metric.ExceptionSnapshot
-	AbandonedRoutineSnapshot      = metric.AbandonedRoutineSnapshot
-	Measurement                   = metric.Measurement
-	MetricDefinition              = metric.MetricDefinition
-	MetricKind                    = metric.MetricKind
-	MetricScope                   = diagnostic.MetricScope
-	MetricUnit                    = metric.MetricUnit
-	Alert                         = alert.Alert
-	AlertDefinition               = alert.AlertDefinition
-	AlertStatus                   = alert.AlertStatus
-	AlertSeverity                 = alert.AlertSeverity
-	AlertEvaluationSnapshot       = alert.AlertEvaluationSnapshot
-	AlertEvaluationState          = alert.AlertEvaluationState
+
+	// ConsumerGroupLag is a group's drain progress -- the retire-relevant distillation
+	// of its snapshot.
+	ConsumerGroupLag = metric.ConsumerGroupLag
+
+	// CursorSnapshot is the group's read/commit position against the message log.
+	CursorSnapshot = metric.CursorSnapshot
+
+	// ExceptionSnapshot is the group's delivery rows counted by status.
+	ExceptionSnapshot = metric.ExceptionSnapshot
+
+	// AbandonedRoutineSnapshot is derived from the __system.metrics event stream
+	// for one (stream, group) -- no in-process counter is kept anywhere, every
+	// number here comes from pairing abandoned/cleared events already on the
+	// stream.
+	AbandonedRoutineSnapshot = metric.AbandonedRoutineSnapshot
+
+	// Measurement is one value of one metric at one time, on the __system.metrics
+	// stream. Names starting with "sqlstreams." are reserved for SQLStreams's own metrics.
+	Measurement = metric.Measurement
+
+	// MetricDefinition is one SQLStreams built-in metric's identity and metadata.
+	// It exists before any measurement is collected.
+	MetricDefinition = metric.MetricDefinition
+
+	// MetricKind is how a series' values read over time: a gauge replaces, a
+	// counter accumulates.
+	MetricKind = metric.MetricKind
+
+	// MetricScope names the resource or collection described by a built-in metric.
+	MetricScope = diagnostic.MetricScope
+
+	// MetricUnit is a metric's UCUM code. A real unit ("ms", "s", "By") carries a
+	// dimension a reader may format (47000 ms -> 47s); a braced annotation
+	// ("{worker}", via MetricUnitCount) is a dimensionless count whose text is a human
+	// label only. "" is no unit.
+	MetricUnit = metric.MetricUnit
+
+	// Alert is what one run found for one owner, published to the
+	// __system.alerts stream as an ordinary message.
+	Alert = alert.Alert
+
+	// AlertDefinition is one SQLStreams built-in alert's identity and metadata. It
+	// exists before any alert is published.
+	AlertDefinition = alert.AlertDefinition
+
+	// AlertStatus is an alert's lifecycle state -- an active alert and its later
+	// resolution are versions of one compacted message key.
+	AlertStatus = alert.AlertStatus
+
+	// AlertSeverity is how urgently an operator should act; every built-in
+	// alert is warn.
+	AlertSeverity = alert.AlertSeverity
+
+	// AlertEvaluationSnapshot describes retained evidence under one resolved policy.
+	// It is calculated on demand, not a recorded alert or the last scheduled check.
+	AlertEvaluationSnapshot = alert.AlertEvaluationSnapshot
+
+	// AlertEvaluationState describes evidence, not a recorded alert's lifecycle.
+	AlertEvaluationState = alert.AlertEvaluationState
 )
 
 const (
-	AlertEvaluationStateHealthy              = alert.AlertEvaluationStateHealthy
-	AlertEvaluationStatePending              = alert.AlertEvaluationStatePending
-	AlertEvaluationStateActive               = alert.AlertEvaluationStateActive
+	// AlertEvaluationStateHealthy means the evidence establishes a healthy condition.
+	AlertEvaluationStateHealthy = alert.AlertEvaluationStateHealthy
+	// AlertEvaluationStatePending means an unhealthy condition has not met the required pending duration.
+	AlertEvaluationStatePending = alert.AlertEvaluationStatePending
+	// AlertEvaluationStateActive means an unhealthy condition meets the policy's activation requirements.
+	AlertEvaluationStateActive = alert.AlertEvaluationStateActive
+	// AlertEvaluationStateInsufficientEvidence means the evidence cannot establish the condition's health.
 	AlertEvaluationStateInsufficientEvidence = alert.AlertEvaluationStateInsufficientEvidence
 
-	RecoveryTransient = diagnostic.RecoveryTransient
-	RecoveryPermanent = diagnostic.RecoveryPermanent
+	RecoveryTransient = diagnostic.RecoveryTransient // attempt unchanged -> retry can succeed
+	RecoveryPermanent = diagnostic.RecoveryPermanent // attempt unchanged -> retry cannot succeed
 
-	DiagnosticKindError  = diagnostic.DiagnosticKindError
-	DiagnosticKindEvent  = diagnostic.DiagnosticKindEvent
-	DiagnosticKindMetric = diagnostic.DiagnosticKindMetric
-	DiagnosticKindAlert  = diagnostic.DiagnosticKindAlert
+	DiagnosticKindError  = diagnostic.DiagnosticKindError  // a declared error value (Err*)
+	DiagnosticKindEvent  = diagnostic.DiagnosticKindEvent  // a declared log event (Event*)
+	DiagnosticKindMetric = diagnostic.DiagnosticKindMetric // a built-in metric
+	DiagnosticKindAlert  = diagnostic.DiagnosticKindAlert  // a built-in alert
 
-	ConcurrencyParallel  = common.ConcurrencyParallel
-	ConcurrencyExclusive = common.ConcurrencyExclusive
-	ConcurrencyOrdered   = common.ConcurrencyOrdered
+	ConcurrencyParallel  = common.ConcurrencyParallel  // same-key deliveries may overlap
+	ConcurrencyExclusive = common.ConcurrencyExclusive // one delivery per key at a time: a same-key message finding the key busy is deferred and runs when the key frees, oldest first (with compaction: the key's current head)
+	ConcurrencyOrdered   = common.ConcurrencyOrdered   // exclusive, and a keyed message runs only after every earlier same-key message is resolved for the group -- a failed predecessor's retry goes first, dead does not hold the key
 
-	DeliveryLogModeOff      = stream.DeliveryLogModeOff
-	DeliveryLogModeFailures = stream.DeliveryLogModeFailures
-	DeliveryLogModeAll      = stream.DeliveryLogModeAll
+	DeliveryLogModeOff      = stream.DeliveryLogModeOff      // no rows at all
+	DeliveryLogModeFailures = stream.DeliveryLogModeFailures // every outcome except success
+	DeliveryLogModeAll      = stream.DeliveryLogModeAll      // every outcome, including a 'success' row per success
 
+	// OwnerAny lifts an owner-kind guard -- any kind is admitted, like the
+	// manager worker every owner declares.
 	OwnerAny           = common.OwnerAny
-	OwnerSystem        = common.OwnerSystem
-	OwnerStream        = common.OwnerStream
-	OwnerConsumerGroup = common.OwnerConsumerGroup
+	OwnerSystem        = common.OwnerSystem        // SystemId only
+	OwnerStream        = common.OwnerStream        // SystemId and StreamId
+	OwnerConsumerGroup = common.OwnerConsumerGroup // all three ids
 
+	// CursorPositionBeginning is the zero value: the oldest retained message.
 	CursorPositionBeginning = consume.CursorPositionBeginning
-	CursorPositionHead      = consume.CursorPositionHead
-	BindingInstalled        = consume.BindingInstalled
-	BindingJoined           = consume.BindingJoined
-	BindingWaiting          = consume.BindingWaiting
 
-	ScheduleMessagePending    = schedule.ScheduleMessagePending
-	ScheduleMessageDeferred   = schedule.ScheduleMessageDeferred
-	ScheduleMessageSucceeded  = schedule.ScheduleMessageSucceeded
-	ScheduleMessageFailed     = schedule.ScheduleMessageFailed
-	ScheduleMessageSuperseded = schedule.ScheduleMessageSuperseded
+	// CursorPositionHead is MAX(id) of the message log when the cursor row is
+	// written; a produce with a lower id that commits later is never read.
+	CursorPositionHead = consume.CursorPositionHead
+	BindingInstalled   = consume.BindingInstalled // the declared set is now the group's effective set
+	BindingJoined      = consume.BindingJoined    // the declared set was already stored
+	BindingWaiting     = consume.BindingWaiting   // a live instance still declares a different stored set
 
+	ScheduleMessagePending    = schedule.ScheduleMessagePending    // produced, not yet run
+	ScheduleMessageDeferred   = schedule.ScheduleMessageDeferred   // waiting for a previous message to finish running
+	ScheduleMessageSucceeded  = schedule.ScheduleMessageSucceeded  // ran to a 'success' delivery log row
+	ScheduleMessageFailed     = schedule.ScheduleMessageFailed     // raised without ever succeeding
+	ScheduleMessageSuperseded = schedule.ScheduleMessageSuperseded // dropped unrun -- a newer message replaced it
+
+	// NoInstanceTarget lifts the claim gate -- any number of instances can run.
 	NoInstanceTarget = worker.NoInstanceTarget
 
-	WorkerSuspended = metric.WorkerSuspended
-	WorkerClaimed   = metric.WorkerClaimed
-	WorkerFailing   = metric.WorkerFailing
-	WorkerUnclaimed = metric.WorkerUnclaimed
+	WorkerSuspended = metric.WorkerSuspended // target_instances = 0
+	WorkerClaimed   = metric.WorkerClaimed   // live instances without a recorded failure streak
+	WorkerFailing   = metric.WorkerFailing   // live instances report consecutive failures
+	WorkerUnclaimed = metric.WorkerUnclaimed // no live instance row and not suspended
 
-	MetricKindCounter          = metric.MetricKindCounter
-	MetricKindGauge            = metric.MetricKindGauge
-	MetricScopeSystem          = diagnostic.MetricScopeSystem
-	MetricScopeStream          = diagnostic.MetricScopeStream
-	MetricScopeConsumerGroup   = diagnostic.MetricScopeConsumerGroup
-	MetricScopeConsumerSession = diagnostic.MetricScopeConsumerSession
-	MetricScopeExporter        = diagnostic.MetricScopeExporter
-	MetricUnitMilliseconds     = metric.MetricUnitMilliseconds
-	AlertStatusActive          = alert.AlertStatusActive
-	AlertStatusResolved        = alert.AlertStatusResolved
-	AlertSeverityWarn          = alert.AlertSeverityWarn
+	MetricKindCounter          = metric.MetricKindCounter              // a running total, each measurement carries the new total
+	MetricKindGauge            = metric.MetricKindGauge                // a point-in-time level, each measurement replaces the last
+	MetricScopeSystem          = diagnostic.MetricScopeSystem          // one series per installation
+	MetricScopeStream          = diagnostic.MetricScopeStream          // one series per stream
+	MetricScopeConsumerGroup   = diagnostic.MetricScopeConsumerGroup   // one series per consumer group
+	MetricScopeConsumerSession = diagnostic.MetricScopeConsumerSession // one series per Consume call
+	MetricScopeExporter        = diagnostic.MetricScopeExporter        // one series per export collection, not stored
+	MetricUnitMilliseconds     = metric.MetricUnitMilliseconds         // milliseconds in UCUM
+	AlertStatusActive          = alert.AlertStatusActive               // the condition holds
+	AlertStatusResolved        = alert.AlertStatusResolved             // a later run found the condition gone
+	AlertSeverityWarn          = alert.AlertSeverityWarn               // degraded, not down -- an operator should learn of it eventually
 
-	MetricStreamName   = metric.MetricStreamName
+	// MetricStreamName is __system.metrics
+	MetricStreamName = metric.MetricStreamName
+
+	// ScheduleStreamName is __system.schedules -- the target stream of the system-owned
+	// schedules (the built-in alert checks); user schedules target their own.
 	ScheduleStreamName = schedule.ScheduleStreamName
-	AlertStreamName    = alert.AlertStreamName
+
+	// AlertStreamName is __system.alerts
+	AlertStreamName = alert.AlertStreamName
 )
 
 var (
+	// LifecycleContext returns the application-lifetime context to pass to the
+	// blocking verbs -- Consume, Manager().Run, SchedulerInstance.Schedule:
+	// cancelled on the first SIGINT/SIGTERM, which starts
+	// graceful wind-down (new work refused, queued work drains). A SECOND exit
+	// signal during the drain force-exits immediately (status 128+signum).
+	//
+	// log may be nil -- the warn-level default logger is used, which keeps the
+	// two graceful-shutdown info lines quiet and still surfaces a forced exit.
+	//
+	//	ctx, stop := common.LifecycleContext(nil)
+	//	defer stop()
 	LifecycleContext = common.LifecycleContext
-	MetaFromContext  = consume.MetaFromContext
-	Terminal         = consume.Terminal
-	Delay            = consume.Delay
-	Beginning        = consume.Beginning
-	Head             = consume.Head
-	NewMeasurement   = metric.NewMeasurement
+
+	// MetaFromContext retrieves MessageMeta from context within consumerFunc.
+	MetaFromContext = consume.MetaFromContext
+
+	// Terminal dead-letters this delivery now instead of retrying: cause stays
+	// reachable through errors.Is/As and renders after the code in last_error.
+	// Any diagnostic Permanent error classifies the same way; Terminal is the
+	// spelling for a cause that carries no classification of its own.
+	Terminal = consume.Terminal
+
+	// Delay runs this delivery again after delay without counting a failure: the
+	// row's can_run_after moves out by delay and its delays count goes up by one.
+	// Zero or less runs it on the next poll.
+	Delay = consume.Delay
+
+	// Beginning places a new group's cursor at the oldest retained message, so
+	// it reads history before live traffic. The default.
+	Beginning = consume.Beginning
+
+	// Head places a new group's cursor at the log's MAX(id) when its row is
+	// written, so it reads only messages produced after that.
+	Head = consume.Head
+
+	// NewMeasurement builds a custom measurement for the system metrics stream.
+	// name, a valid kind and unit, and a non-zero at are required; attributes
+	// may be nil. Names under the "sqlstreams." prefix are refused at produce time.
+	NewMeasurement = metric.NewMeasurement
 )

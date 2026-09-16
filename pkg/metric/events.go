@@ -4,6 +4,8 @@ import (
 	"github.com/allegedlyreliable/sqlstreams/pkg/common/diagnostic"
 )
 
+// EventMeasurementsCannotBeExported means the current collection omits a
+// rejected metric family while healthy families still export.
 var EventMeasurementsCannotBeExported = diagnostic.NewDiagnosticEvent("SQL0104",
 	"measurements cannot be exported",
 	"the current collection omits the rejected metric family; healthy families still export")

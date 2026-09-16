@@ -500,8 +500,11 @@ reaches through `sqlstreams` (the alias closure) states its contract.
   ClientConfig.AllowDestroy gate.
 - The path spelled is the caller's own (`client.Stream(name).Register`),
   never the machinery verb behind it.
-- An aliased declaration's public-contract comments stay with its owning
-  declaration.
+- An aliased declaration's public-contract comments are authored on its
+  owning declaration and copied to its alias or re-export in `client/` for
+  editor hover and Go documentation. Keep the copies in sync, including
+  documentation on re-exported constants and variables (functions, errors,
+  and events).
 
 # Part 3 -- Persistence
 

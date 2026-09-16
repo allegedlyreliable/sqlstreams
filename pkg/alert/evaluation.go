@@ -10,9 +10,13 @@ import (
 type AlertEvaluationState string
 
 const (
-	AlertEvaluationStateHealthy              AlertEvaluationState = "healthy"
-	AlertEvaluationStatePending              AlertEvaluationState = "pending"
-	AlertEvaluationStateActive               AlertEvaluationState = "active"
+	// AlertEvaluationStateHealthy means the evidence establishes a healthy condition.
+	AlertEvaluationStateHealthy AlertEvaluationState = "healthy"
+	// AlertEvaluationStatePending means an unhealthy condition has not met the required pending duration.
+	AlertEvaluationStatePending AlertEvaluationState = "pending"
+	// AlertEvaluationStateActive means an unhealthy condition meets the policy's activation requirements.
+	AlertEvaluationStateActive AlertEvaluationState = "active"
+	// AlertEvaluationStateInsufficientEvidence means the evidence cannot establish the condition's health.
 	AlertEvaluationStateInsufficientEvidence AlertEvaluationState = "insufficient_evidence"
 )
 

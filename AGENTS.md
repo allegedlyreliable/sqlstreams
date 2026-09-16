@@ -57,6 +57,13 @@ Before code:
 
 Public surface:
 
+- When adding an alias or re-export in `client/`, copy the owning
+  declaration's documentation onto it. When changing that documentation,
+  update both copies in the same change, including comments on constants
+  and variables (including functions, errors, and events). If source
+  documentation is missing, write it on the owning declaration first.
+  Review the copies for drift before finishing; maintain them directly,
+  without a generator or sync tool.
 - Documentation drives implementation for a feature a user consumes: the
   doc-site page IS the proposal -- write it, review it with the user, then
   build. The site documents shipped behavior only; anything ahead of the
