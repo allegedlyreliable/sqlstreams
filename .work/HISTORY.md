@@ -5,7 +5,7 @@ Dated ledger of what shipped, newest first — one entry per milestone.
 Entries before 2026-08-13 were reconstructed from the phase notes when this
 ledger was created; dates come from the phase git tags.
 
-## 2026-09-17 — v0.1.6 verification checkpoint [0805] [0812] [0814]
+## 2026-09-17 — v0.1.6 root release published [0805] [0812] [0814]
 
 Library source 2bd417e1 passes `just verify`. CI run
 [35274800349](https://github.com/allegedlyreliable/sqlstreams/actions/runs/35274800349)
@@ -47,8 +47,24 @@ Release changes:
   attribute filters return a usage error. Examples are self-contained, and
   the docs add an Overview board and improved phone navigation.
 
-Publication, matching OTel/CLI tags, installation checks, and the v0.1.6
-documentation deployment are pending.
+Root v0.1.6 names 2732e695. Pre-tag CI 35276192181 and tag CI 35276629543
+pass verification and the PostgreSQL 15–18 matrix. Release run 35276629662
+published all six archives and the Homebrew cask. All archive checksums match.
+The downloaded Darwin ARM64 binary and Homebrew upgrade report
+`sqlstreams version 0.1.6`. Windows package installation, version output,
+and uninstall passed before Chocolatey submission. Public-feed approval
+and installation remain pending. The GitHub release notes include the
+fresh-database restriction and the changes above.
+
+OTel, examples, .tests, .bench, and .tools now pin the published root v0.1.6.
+Standalone tidy/build pass with GOWORK=off, as do OTel vet and race tests.
+The Go Quickstart's matching pin builds and its documented producer/consumer
+commands produce and consume ids 1 and 2 on a disposable PostgreSQL instance.
+Its cursor reaches 2. Ctrl-C logs completed graceful shutdown, with go run
+returning exit 1 after the terminal interrupt. The user's database is unchanged.
+These dependency updates await maintainer commits in the main and Quickstart
+repositories. OTel/CLI tags, CLI module installation, and documentation
+deployment remain pending.
 
 ## 2026-09-17 — Informational worker-liveness reports with component-specific hints [0814]
 

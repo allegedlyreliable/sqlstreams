@@ -11,12 +11,19 @@ shipped work in HISTORY.md; decision rationale in DECISIONS.md ->
   detection on an isolated, fresh PostgreSQL 18.6 database.
 - Compatibility now pins v0.1.5. Release notes and the migration table state
   the fresh-database requirement for changed exception attempt counters.
-- Version references are prepared. Site checks pass, including 83 unit tests
-  and 45 browser tests against a fresh preview on a separate port.
-  The maintainer commits and pushes these changes. Wait for CI before tagging
-  v0.1.6. Include the fresh-database restriction in the GitHub release notes.
-- Follow RELEASE.md's root → OTel → CLI publication order, standalone checks,
-  dependent module and Quickstart updates, and installation checks.
+- Root v0.1.6 is published at 2732e695. Pre-tag CI 35276192181, tag CI
+  35276629543, and release run 35276629662 pass. All six archive checksums,
+  the local archive binary, and the Homebrew upgrade are verified. Windows
+  package checks pass and Chocolatey is submitted, pending moderation.
+  The published notes include the fresh-database restriction.
+- OTel and all four development modules pin root v0.1.6. Standalone
+  tidy/build and OTel vet/race tests pass. The external Go Quickstart's
+  updated pin builds and its fresh-database produce/consume walkthrough passes.
+- Await maintainer commits in both repositories. Then publish otel/v0.1.6,
+  update the CLI's root/OTel pins, run standalone checks, and have the
+  maintainer commit before tagging cmd/sqlstreams/v0.1.6. Verify go install.
+- Site checks pass, including 83 unit tests and 45 browser tests against a
+  fresh preview on a separate port. Version references are committed.
 - Obtain approval before site deployment. Publish and freeze v0-1-6 only
   after the release is available. Close out the committed tasks below and
   consolidate their decision records with the final release evidence.

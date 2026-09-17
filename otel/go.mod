@@ -3,7 +3,7 @@ module github.com/allegedlyreliable/sqlstreams/otel
 go 1.27.0
 
 require (
-	github.com/allegedlyreliable/sqlstreams v0.1.5
+	github.com/allegedlyreliable/sqlstreams v0.1.6
 	github.com/jackc/pgx/v5 v5.10.0
 	github.com/prometheus/client_golang v1.24.1
 	github.com/prometheus/otlptranslator v1.0.0
