@@ -5,7 +5,7 @@ Dated ledger of what shipped, newest first — one entry per milestone.
 Entries before 2026-08-13 were reconstructed from the phase notes when this
 ledger was created; dates come from the phase git tags.
 
-## 2026-09-17 — v0.1.6 root release published [0805] [0812] [0814]
+## 2026-09-17 — v0.1.6 root release published [0805] [0812] [0814] [0815]
 
 Library source 2bd417e1 passes `just verify`. CI run
 [35274800349](https://github.com/allegedlyreliable/sqlstreams/actions/runs/35274800349)
@@ -62,9 +62,17 @@ The Go Quickstart's matching pin builds and its documented producer/consumer
 commands produce and consume ids 1 and 2 on a disposable PostgreSQL instance.
 Its cursor reaches 2. Ctrl-C logs completed graceful shutdown, with go run
 returning exit 1 after the terminal interrupt. The user's database is unchanged.
-These dependency updates await maintainer commits in the main and Quickstart
-repositories. OTel/CLI tags, CLI module installation, and documentation
-deployment remain pending.
+Main-repository dependency updates landed in 723a4c9e. OTel v0.1.6 is published
+at that commit after CI 35278931468 passed. The CLI now pins published root
+and OTel v0.1.6 and passes standalone tidy, build, vet, and race tests.
+Its dependency update awaits a maintainer commit before tagging.
+The Quickstart dependency update remains uncommitted in its repository.
+CLI module installation and documentation deployment remain pending.
+
+Record [0815] consolidates the committed attempt, shutdown, public-config,
+example, CLI, and documentation changes. Completed task notes and the CLI
+review report are removed. The release task remains open for publication
+and deployment checks.
 
 ## 2026-09-17 — Informational worker-liveness reports with component-specific hints [0814]
 

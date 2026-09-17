@@ -26,3 +26,6 @@ No new build step or image component is needed for these two fixed uses.
 The files are 1,968 and 4,346 bytes, respectively. Each supplies twice the
 displayed width, with lossy compression and no additional variants for 3×
 screens. The two pages use distinct cache entries; repeated posts share one.
+
+The image names and twice-display sizing are superseded by
+[0815](0815-v016-delivery-client-and-documentation-alignment.md).

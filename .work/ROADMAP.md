@@ -16,10 +16,6 @@ the item is removed.
 
 ## Now
 
-- **manual review of cli**
-
-- **manual review of docs**
-
 - **Search-engine submission** -- after the doc-site sitemap is deployed,
   verify the canonical site property in Google Search Console and Bing
   Webmaster Tools, submit the sitemap in each service (or import the verified

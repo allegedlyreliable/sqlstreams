@@ -57,3 +57,6 @@ and ten Troubleshooting. Retired sources and per-code rendering are removed.
 Astro redirects retain 109 diagnostic URLs and 27 retired article URLs alongside
 the two existing board redirects. Only current articles enter navigation and
 search. Implementation is committed in b06a5d2c, and the user confirmed deployment.
+
+The four-board choice is superseded by [0815](0815-v016-delivery-client-and-documentation-alignment.md),
+which adds Overview and retains the article-group structure and writing rules.
