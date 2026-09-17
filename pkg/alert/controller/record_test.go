@@ -19,9 +19,10 @@ func TestAlertTransitionsLogAtTheirSeverity(t *testing.T) {
 		status   alert.AlertStatus
 		severity string
 		level    string
+		detail   string
 	}{
 		{name: "worker_liveness", status: alert.AlertStatusActive, severity: "info", level: "INFO"},
-		{name: "partition_count", status: alert.AlertStatusActive, severity: "warn", level: "WARN"},
+		{name: "partition_count", status: alert.AlertStatusActive, severity: "warn", level: "WARN", detail: "partition evidence"},
 		{name: "compaction_read_cost", status: alert.AlertStatusActive, severity: "warn", level: "WARN"},
 		{name: "metrics_collector_progress", status: alert.AlertStatusActive, severity: "warn", level: "WARN"},
 		{name: "worker_liveness", status: alert.AlertStatusResolved, severity: "info", level: "INFO"},
@@ -46,7 +47,7 @@ func TestAlertTransitionsLogAtTheirSeverity(t *testing.T) {
 			if !ok {
 				t.Fatalf("GetAlert(%s) = absent, want a built-in alert", test.name)
 			}
-			published, err := alert.NewAlert(test.name, owner, test.status, alert.AlertSeverity(definition.Severity), "condition observed", time.Now(), nil)
+			published, err := alert.NewAlert(test.name, owner, test.status, alert.AlertSeverity(definition.Severity), "condition observed", time.Now(), &alert.AlertOptions{Detail: test.detail})
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -64,6 +65,10 @@ func TestAlertTransitionsLogAtTheirSeverity(t *testing.T) {
 			}
 			if record["level"] != test.level || record["alert"] != test.name {
 				t.Errorf("logAlerts(%s) level, alert = %v, %v, want %s, %s", test.name, record["level"], record["alert"], test.level, test.name)
+			}
+			detail, present := record["detail"]
+			if present != (test.detail != "") || (present && detail != test.detail) {
+				t.Errorf("logAlerts(%s) detail = %v, present %t, want %q, present %t", test.name, detail, present, test.detail, test.detail != "")
 			}
 		})
 	}

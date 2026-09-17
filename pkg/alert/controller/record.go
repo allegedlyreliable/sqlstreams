@@ -94,8 +94,12 @@ func (c *AlertController) logAlerts(ctx context.Context, published *alert.Alert)
 	if published.Severity == alert.AlertSeverityInfo {
 		log = c.Logger.InfoContext
 	}
-	log(ctx, "alert active",
+	attributes := []any{
 		"alert", published.Name, "alert_message", published.Message,
-		"detail", published.Detail, "hint", published.Hint,
-		"owner", published.Owner.Name, "severity", published.Severity)
+		"hint", published.Hint, "owner", published.Owner.Name, "severity", published.Severity,
+	}
+	if published.Detail != "" {
+		attributes = append(attributes, "detail", published.Detail)
+	}
+	log(ctx, "alert active", attributes...)
 }

@@ -4,17 +4,52 @@ Sliding window of in-flight work only. Future work lives in ROADMAP.md;
 shipped work in HISTORY.md; decision rationale in DECISIONS.md ->
 .work/decisions/.
 
+## Overview board
+
+- Restore benchmarks.mdx and roadmap.mdx from b06a5d2c^ unchanged; both had
+  no redirect and README's /benchmarks/ link was a live 404.
+- Add a fifth board, Overview, first in the board list, listing quickstart,
+  why-sqlstreams, benchmarks, and roadmap. Quickstart and Why SQLStreams stay
+  homepage stickies and are also the board's first two articles.
+- Site CONVENTIONS updated: five boards, stickies own an Overview home,
+  Benchmark/Roadmap page rules. Close-out record supersedes 0813's "no fifth
+  board" line; HISTORY entry at close-out.
+
 ## Worker liveness severity
 
 - Approved: downgrade worker_liveness to INFO, including its activation log.
   Preserve evaluation, publication, and resolution. Other built-ins stay WARN.
-- Message wording and the processing-delay roadmap item are separate follow-ups.
+- Approved wording follow-up: name affected consumer groups or maintenance
+  activities, give the matching start-consumer or run-manager action, and
+  suggest deletion only for groups no longer needed. Distinguish partial
+  consumer failures. Keep worker-row evidence in Data and omit empty detail.
+- The processing-delay roadmap item is a separate follow-up.
 - Add the public AlertSeverityInfo constant and update the severity reference
   pages and generated diagnostic catalog.
 - Implemented. The new transition-log regression failed on worker liveness's
   WARN severity and log level before the change, then passed. Root build and
   targeted race tests for alert packages, diagnostic, and client pass. The
-  three changed reference pages pass remark. Ready for review, uncommitted.
+  three changed reference pages pass remark. Severity committed as 0ecd4ac6.
+- Wording revised to approved option B: one sentence per resource listing its
+  missing components (message consumer, retry consumer, consumer manager, or
+  named maintenance workers). Remove stopped-group inference and worker
+  suppression. Mixed reports keep both recovery actions. Unknown workers keep
+  their names. Empty detail is omitted and worker evidence is unchanged.
+- Verification: alert-package race tests, root build, Go formatting, and
+  targeted remark/Prettier checks pass. Wording is ready for review, uncommitted.
+- CI follow-up: run 35225531838 failed because the declaration-vocabulary
+  check still accepted only WARN. Update that check to accept INFO and WARN,
+  matching the approved severity vocabulary. The failure reproduced locally.
+- Fixed: the .tools build and full race-test suite pass. An overlay supplying
+  a deliberately unsupported severity still fails the vocabulary check.
+- Readability follow-up: alert construction now coordinates owner grouping,
+  summary creation, and evidence formatting. The summary separates owner-level
+  aggregation, individual worker descriptions, the message, and recovery hints.
+- Update message expectations in the existing behavior test for the approved
+  wording change. Preserve its checks of hints, severity, and retained evidence.
+  Cover several missing workers on one resource with different recovery actions.
+- Option B verification: alert-package race tests, root build, targeted vet,
+  Go formatting, and the changed reference page's remark/Prettier checks pass.
 
 ## Delivery attempt numbering
 

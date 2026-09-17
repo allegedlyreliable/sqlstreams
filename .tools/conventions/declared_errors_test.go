@@ -86,7 +86,9 @@ func TestAlertDescriptionAvoidsBannedWords(t *testing.T) {
 // this walk holds it to the pkg/alert vocabulary.
 func TestAlertDeclarationsCarryAlertVocabulary(t *testing.T) {
 	for _, registered := range diagnostic.Alerts() {
-		if alert.AlertSeverity(registered.Severity) != alert.AlertSeverityWarn {
+		switch alert.AlertSeverity(registered.Severity) {
+		case alert.AlertSeverityInfo, alert.AlertSeverityWarn:
+		default:
 			t.Errorf("%s severity %q is not an alert severity", registered.Code, registered.Severity)
 		}
 	}

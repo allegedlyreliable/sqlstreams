@@ -17,7 +17,7 @@ var AlertCompactionReadCost = diagnostic.NewDiagnosticAlert("SQL0095",
 
 var AlertWorkerLiveness = diagnostic.NewDiagnosticAlert("SQL0096",
 	"worker_liveness",
-	"a stream's worker rows have no live instance, so nothing runs its upkeep",
+	"a stream or consumer group has workers with no running instance",
 	diagnostic.MetricScopeStream, string(AlertSeverityInfo))
 
 var AlertMetricsCollectorProgress = diagnostic.NewDiagnosticAlert("SQL0101",
