@@ -8,9 +8,11 @@
 		postCount: number;
 		websiteHref: string;
 		personalText: string;
+		finalText: string;
 	};
 
-	let { author, role, joinedDate, postCount, websiteHref, personalText }: Props = $props();
+	let { author, role, joinedDate, postCount, websiteHref, personalText, finalText }: Props =
+		$props();
 </script>
 
 <div class="member-profile">
@@ -41,7 +43,7 @@
 		</dl>
 	</div>
 	<!-- little stanley reference for the cultured folks out there -->
-	<MemberPersonalText {personalText} />
+	<MemberPersonalText {personalText} {finalText} />
 </div>
 
 <style src="./member-profile.css"></style>

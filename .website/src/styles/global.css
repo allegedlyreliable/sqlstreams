@@ -73,6 +73,8 @@
 		--refused-red-pale: #fbeceb;
 		--refused-red-border: #eecdc9;
 		--veil-pitch: rgba(9, 12, 16, 0.92);
+		--flash-white: #ffffff;
+		--flash-black: #000000;
 
 		/* semantic -- what components consume */
 		--color-page: var(--page-blue-gray);
@@ -147,6 +149,8 @@
 		--border-panel-behind: var(--amber);
 		--color-panel-behind-text: var(--amber-dark);
 		--color-progress-veil: var(--surface-veil);
+		--color-profile-flash: color-mix(in srgb, var(--flash-white) 35%, var(--page-blue-gray));
+		--color-profile-flash-text: var(--flash-black);
 		--color-progress-track: var(--stripe-blue-dark);
 		--color-progress-fill: var(--amber);
 		--color-solved: var(--solved-green);
@@ -224,6 +228,8 @@
 		--z-notice: 3;
 		--z-profile-veil: 4;
 		--z-profile-text: 5;
+		--z-profile-square: 6;
+		--z-profile-flash: 7;
 
 		/* spacing scale -- closed; each step is named by its pixel value,
 		   and a new gap or padding adds its step here */
@@ -386,6 +392,8 @@
 		--color-console-error: var(--sticky-label-coral);
 		--color-panel-behind-text: var(--amber-light);
 		--color-progress-veil: var(--surface-veil-pitch);
+		--color-profile-flash: color-mix(in srgb, var(--flash-black) 35%, var(--page-pitch));
+		--color-profile-flash-text: var(--flash-white);
 		--color-progress-track: var(--stripe-coal-light);
 		--color-solved: var(--solved-moss);
 		--color-solved-ground: var(--solved-moss-ground);

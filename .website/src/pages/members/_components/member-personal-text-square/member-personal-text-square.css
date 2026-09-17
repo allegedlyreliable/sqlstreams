@@ -1,0 +1,6 @@
+.personal-text-square {
+	position: absolute;
+	top: 0;
+	left: 0;
+	background: var(--color-page);
+}

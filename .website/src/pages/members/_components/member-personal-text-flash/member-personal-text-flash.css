@@ -1,0 +1,39 @@
+.personal-text-flash {
+	display: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+	/* a flash is a translucent fade over the page, never a hard cut that
+	   blanks the text underneath; only the hold becomes opaque */
+	.personal-text-flash {
+		display: flex;
+		position: fixed;
+		inset: 0;
+		z-index: var(--z-profile-flash);
+		align-items: center;
+		justify-content: center;
+		background: var(--color-profile-flash);
+		opacity: 0;
+		transition: opacity 50ms ease-out;
+		pointer-events: none;
+	}
+
+	.personal-text-flash[data-flashing='true'] {
+		opacity: 0.45;
+	}
+
+	.personal-text-flash[data-held='true'] {
+		opacity: 1;
+		transition-duration: 100ms;
+	}
+
+	.personal-text-flash-text {
+		padding: var(--space-12);
+		font-family: var(--font-content);
+		font-size: clamp(24px, 4vw, 64px);
+		font-style: italic;
+		line-height: 1.5;
+		text-align: center;
+		color: var(--color-profile-flash-text);
+	}
+}

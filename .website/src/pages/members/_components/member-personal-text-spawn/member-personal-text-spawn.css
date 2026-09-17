@@ -1,0 +1,57 @@
+/* a point on the viewport, turned to face along the strip; the strip hangs
+   off it and only its transform ever changes */
+.personal-text-spawn {
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 0;
+	height: 0;
+	transform-origin: 0 0;
+	font-family: var(--font-content);
+	font-style: italic;
+	line-height: 1.5;
+	color: var(--color-text-muted);
+}
+
+/* the track's right edge is the text's head; it starts one entry length
+   behind the point, just past the edge the text rolls in from */
+.personal-text-spawn-track {
+	position: absolute;
+	top: 0;
+	right: var(--personal-text-spawn-entry);
+	display: flex;
+	width: max-content;
+	transform: translateY(-50%);
+}
+
+.personal-text-spawn-copy {
+	flex-shrink: 0;
+	white-space: pre;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+	/* roll in edge to edge, then loop by one copy's width from where the
+	   roll ended; two identical copies make the jump back invisible */
+	.personal-text-spawn-copy {
+		animation:
+			personal-text-spawn-roll var(--personal-text-spawn-roll-duration) linear forwards,
+			personal-text-spawn-loop var(--personal-text-spawn-loop-duration) linear
+				var(--personal-text-spawn-roll-duration) infinite;
+	}
+
+	@keyframes personal-text-spawn-roll {
+		to {
+			transform: translateX(var(--personal-text-spawn-distance));
+		}
+	}
+
+	@keyframes personal-text-spawn-loop {
+		from {
+			transform: translateX(var(--personal-text-spawn-distance));
+		}
+
+		to {
+			transform: translateX(calc(var(--personal-text-spawn-distance) + 100%));
+		}
+	}
+}

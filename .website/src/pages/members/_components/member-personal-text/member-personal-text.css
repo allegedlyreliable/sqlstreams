@@ -43,6 +43,21 @@
 	display: none;
 }
 
+.personal-text-spawn-layer {
+	position: fixed;
+	inset: 0;
+	z-index: var(--z-profile-text);
+	overflow: hidden;
+	pointer-events: none;
+}
+
+.personal-text-square-layer {
+	position: fixed;
+	inset: 0;
+	z-index: var(--z-profile-square);
+	pointer-events: none;
+}
+
 /* two identical copies in a row; sliding both by one copy's width lands the
    second where the first began, so the loop restarts invisibly */
 .personal-text-copy {
