@@ -144,6 +144,19 @@ documentation; the latter want a surface that has stopped moving.
   Compare immediate execution with a randomized initial delay, including the
   cost of postponing cleanup. Add scheduling configuration only if warranted.
 
+- **Make consumer backlog metrics reflect compaction and user expectations** --
+  `Cursor.Backlog` currently measures `Head - Committed`, but its name and
+  message-count description suggest messages awaiting consumption. With head
+  `13` and committed cursor `9`, it reports `4` even when compaction leaves
+  only one eligible message. Retained measurements sample the same distance.
+  - Decide how to distinguish cursor progress from remaining eligible messages
+    across live snapshots, retained metrics, and their displayed names and units.
+    Account for compaction, bindings, schema versions, and message-id gaps;
+    define how claimed messages and unresolved exceptions enter any work count.
+  - Establish measurement cost and compatibility before implementation. Make
+    the distinction visible to operators, including existing dashboards and
+    alerts, rather than relying on a documentation caveat.
+
 - **Alerts for delayed message processing and overdue retries** -- report
   consumer-group work that remains unprocessed beyond an acceptable duration,
   including when consumers are running but making no progress. Complement

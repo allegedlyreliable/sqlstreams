@@ -48,7 +48,12 @@
 	</span>
 	<span class="author-role">{role}</span>
 	<a class="avatar" href={`/members/${author}/`}
-		><img src="/cat-88.webp" width="44" height="44" alt={`${author} profile`} /></a
+		><img
+			src="/i-just-woke-up-like-this-66.webp"
+			width="44"
+			height="44"
+			alt={`${author} profile`}
+		/></a
 	>
 	{#if postCount !== null}
 		<span class="post-count">Posts: {postCount}</span>

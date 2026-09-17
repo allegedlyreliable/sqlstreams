@@ -14,6 +14,18 @@ shipped work in HISTORY.md; decision rationale in DECISIONS.md ->
 - Site CONVENTIONS updated: five boards, stickies own an Overview home,
   Benchmark/Roadmap page rules. Close-out record supersedes 0813's "no fifth
   board" line; HISTORY entry at close-out.
+- Phone header: Board Index, Reference, and Troubleshooting links hide under
+  the 639px collapse (`inPhoneNav` on each board); nav and version bar side
+  padding match the page content there.
+- Avatar swap: `public/i-just-woke-up-like-this.png` (500x500 RGBA) replaces
+  cat.png as the original; derivatives `-66.webp` (1,434 bytes) and
+  `-132.webp` (3,388 bytes) via Sharp resize + webp quality 75, effort 6,
+  alphaQuality 55. The user chose 1.5x display width over the 2x rule in
+  0764: a hint of pixelation on 2x screens suits the site's look, 1x was too
+  blocky, and 2x files at any quality only went soft. The removebg edge is
+  16% partial-alpha pixels, so alphaQuality matters as much as quality.
+  cat.png and its two derivatives deleted. Close-out record supersedes
+  0764's file names and 2x rule.
 
 ## Delivery attempt numbering
 
