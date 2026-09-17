@@ -10,7 +10,7 @@ type DiagnosticAlert struct {
 	Name        string
 	Description string // the condition the check detects
 	Scope       MetricScope
-	Severity    string // "warn"
+	Severity    string // "info" | "warn"
 }
 
 // NewDiagnosticAlert declares an alert and registers its code. The name must

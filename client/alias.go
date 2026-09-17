@@ -323,8 +323,7 @@ type (
 	// resolution are versions of one compacted message key.
 	AlertStatus = alert.AlertStatus
 
-	// AlertSeverity is how urgently an operator should act; every built-in
-	// alert is warn.
+	// AlertSeverity is how urgently an operator should act.
 	AlertSeverity = alert.AlertSeverity
 
 	// AlertEvaluationSnapshot describes retained evidence under one resolved policy.
@@ -402,6 +401,7 @@ const (
 	MetricUnitMilliseconds     = metric.MetricUnitMilliseconds         // milliseconds in UCUM
 	AlertStatusActive          = alert.AlertStatusActive               // the condition holds
 	AlertStatusResolved        = alert.AlertStatusResolved             // a later run found the condition gone
+	AlertSeverityInfo          = alert.AlertSeverityInfo               // informational -- no immediate operator action is required
 	AlertSeverityWarn          = alert.AlertSeverityWarn               // degraded, not down -- an operator should learn of it eventually
 
 	// MetricStreamName is __system.metrics

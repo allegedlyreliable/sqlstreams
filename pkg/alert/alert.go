@@ -17,11 +17,13 @@ const (
 	AlertStatusResolved AlertStatus = "resolved" // a later run found the condition gone
 )
 
-// AlertSeverity is how urgently an operator should act; every built-in
-// alert is warn.
+// AlertSeverity is how urgently an operator should act.
 type AlertSeverity string
 
-const AlertSeverityWarn AlertSeverity = "warn" // degraded, not down -- an operator should learn of it eventually
+const (
+	AlertSeverityInfo AlertSeverity = "info" // informational -- no immediate operator action is required
+	AlertSeverityWarn AlertSeverity = "warn" // degraded, not down -- an operator should learn of it eventually
+)
 
 // RecordOutcome is what one AlertController.Record call published.
 type RecordOutcome string
@@ -84,8 +86,10 @@ func NewAlert(name string, owner *common.Owner, status AlertStatus, severity Ale
 		return nil, fmt.Errorf("alert %q: status must be one of %q, %q, got %q", name, AlertStatusActive, AlertStatusResolved, status)
 	}
 
-	if severity != AlertSeverityWarn {
-		return nil, fmt.Errorf("alert %q: severity must be %q, got %q", name, AlertSeverityWarn, severity)
+	switch severity {
+	case AlertSeverityInfo, AlertSeverityWarn:
+	default:
+		return nil, fmt.Errorf("alert %q: severity must be one of %q, %q, got %q", name, AlertSeverityInfo, AlertSeverityWarn, severity)
 	}
 	if at.IsZero() {
 		return nil, fmt.Errorf("alert %q: at is required", name)

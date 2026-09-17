@@ -5,10 +5,69 @@ import (
 	"encoding/json"
 	"log/slog"
 	"testing"
+	"time"
 
 	"github.com/allegedlyreliable/sqlstreams/pkg/alert"
 	"github.com/allegedlyreliable/sqlstreams/pkg/common"
+	"github.com/allegedlyreliable/sqlstreams/pkg/common/diagnostic"
 )
+
+// Behavior: activation logs use the built-in alert's severity, while resolutions use INFO.
+func TestAlertTransitionsLogAtTheirSeverity(t *testing.T) {
+	for _, test := range []struct {
+		name     string
+		status   alert.AlertStatus
+		severity string
+		level    string
+	}{
+		{name: "worker_liveness", status: alert.AlertStatusActive, severity: "info", level: "INFO"},
+		{name: "partition_count", status: alert.AlertStatusActive, severity: "warn", level: "WARN"},
+		{name: "compaction_read_cost", status: alert.AlertStatusActive, severity: "warn", level: "WARN"},
+		{name: "metrics_collector_progress", status: alert.AlertStatusActive, severity: "warn", level: "WARN"},
+		{name: "worker_liveness", status: alert.AlertStatusResolved, severity: "info", level: "INFO"},
+		{name: "partition_count", status: alert.AlertStatusResolved, severity: "warn", level: "INFO"},
+	} {
+		t.Run(test.name+"/"+string(test.status), func(t *testing.T) {
+			// setup
+			var output bytes.Buffer
+			var controller AlertController
+			controller.Logger = slog.New(slog.NewJSONHandler(&output, &slog.HandlerOptions{Level: slog.LevelInfo}))
+			owner, err := common.NewStreamOwner(1, 42, "signup.welcome-email")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if test.name == "metrics_collector_progress" {
+				owner, err = common.NewSystemOwner(1)
+				if err != nil {
+					t.Fatal(err)
+				}
+			}
+			definition, ok := diagnostic.GetAlert(test.name)
+			if !ok {
+				t.Fatalf("GetAlert(%s) = absent, want a built-in alert", test.name)
+			}
+			published, err := alert.NewAlert(test.name, owner, test.status, alert.AlertSeverity(definition.Severity), "condition observed", time.Now(), nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			// test
+			controller.logAlerts(t.Context(), published)
+
+			// verify
+			if string(published.Severity) != test.severity {
+				t.Errorf("logAlerts(%s) severity = %s, want %s", test.name, published.Severity, test.severity)
+			}
+			var record map[string]any
+			if err := json.Unmarshal(output.Bytes(), &record); err != nil {
+				t.Fatalf("logAlerts(%s) output = %q, want one JSON record: %v", test.name, output.String(), err)
+			}
+			if record["level"] != test.level || record["alert"] != test.name {
+				t.Errorf("logAlerts(%s) level, alert = %v, %v, want %s, %s", test.name, record["level"], record["alert"], test.level, test.name)
+			}
+		})
+	}
+}
 
 // Behavior: insufficient evidence logs its cause without accessing persistence.
 func TestRecordClassifiesEvidenceWithoutWritingAlerts(t *testing.T) {

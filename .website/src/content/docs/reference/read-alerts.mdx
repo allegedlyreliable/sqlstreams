@@ -96,7 +96,7 @@ the evaluation.
 | `Name` | `string` | `name` | Alert name. |
 | `Owner` | `*Owner` | `owner` | [Resource identity](/reference/consumer-workers/#owner). |
 | `Status` | `AlertStatus` | `status` | `"active"` or `"resolved"`. |
-| `Severity` | `AlertSeverity` | `severity` | `"warn"` for built-ins. |
+| `Severity` | `AlertSeverity` | `severity` | `"info"` for worker liveness, `"warn"` for the other built-ins. |
 | `Message` | `string` | `message` | Summary of the condition. |
 | `Detail` | `string` | `detail` | Evidence explanation. |
 | `Hint` | `string` | `hint` | Suggested corrective action. |

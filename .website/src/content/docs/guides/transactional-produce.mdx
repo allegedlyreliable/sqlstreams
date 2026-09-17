@@ -22,7 +22,7 @@ in one PostgreSQL transaction. Both writes commit together, or neither does.
 ## Before you begin
 
 Use the Go project and running database from the [Quickstart](/quickstart/).
-Keep its `WelcomeEmail` payload and `signup.welcome-email` stream. You will
+Keep its `WelcomeEmailV1` payload and `signup.welcome-email` stream. You will
 change the producer in `cmd/produce/main.go`.
 
 ## 1. Create the application table
@@ -48,12 +48,12 @@ Replace the `producer.Produce` call, its error check, and the following
 
 ```go
 produced, err := producer.ProduceFunc(ctx,
-	func(ctx context.Context, tx sqlstreams.Tx) (*WelcomeEmail, error) {
+	func(ctx context.Context, tx sqlstreams.Tx) (*WelcomeEmailV1, error) {
 		if _, err := tx.Exec(ctx,
 			`INSERT INTO users (id) VALUES ($1) ON CONFLICT (id) DO NOTHING`, "user-123"); err != nil {
 			return nil, err
 		}
-		return &WelcomeEmail{UserId: "user-123"}, nil
+		return &WelcomeEmailV1{UserId: "user-123"}, nil
 	}, &sqlstreams.ProduceOptions{IdempotencyKey: "welcome-email:user-123"})
 if err != nil {
 	return err

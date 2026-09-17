@@ -90,7 +90,11 @@ func (c *AlertController) logAlerts(ctx context.Context, published *alert.Alert)
 			"alert", published.Name, "alert_message", published.Message, "owner", published.Owner.Name)
 		return
 	}
-	c.Logger.WarnContext(ctx, "alert active",
+	log := c.Logger.WarnContext
+	if published.Severity == alert.AlertSeverityInfo {
+		log = c.Logger.InfoContext
+	}
+	log(ctx, "alert active",
 		"alert", published.Name, "alert_message", published.Message,
 		"detail", published.Detail, "hint", published.Hint,
 		"owner", published.Owner.Name, "severity", published.Severity)

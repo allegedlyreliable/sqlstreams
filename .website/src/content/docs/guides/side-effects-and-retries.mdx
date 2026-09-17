@@ -68,13 +68,13 @@ import (
 	sqlstreams "github.com/allegedlyreliable/sqlstreams/client"
 )
 
-type RewardEarned struct {
+type RewardEarnedV1 struct {
 	RewardId string `json:"reward_id"`
 	UserId   string `json:"user_id"`
 	Points   int    `json:"points"`
 }
 
-func (RewardEarned) SchemaVersion() int { return 1 }
+func (RewardEarnedV1) SchemaVersion() int { return 1 }
 
 func main() {
 	if err := run(); err != nil {
@@ -98,7 +98,7 @@ func run() error {
 		return err
 	}
 
-	rewards := client.Stream[RewardEarned]("rewards.earned")
+	rewards := client.Stream[RewardEarnedV1]("rewards.earned")
 	if _, err := rewards.Register(ctx, nil); err != nil {
 		return err
 	}
@@ -107,7 +107,7 @@ func run() error {
 		return err
 	}
 
-	produced, err := producer.Produce(ctx, &RewardEarned{
+	produced, err := producer.Produce(ctx, &RewardEarnedV1{
 		RewardId: "signup:user-123",
 		UserId:   "user-123",
 		Points:   10,
@@ -149,13 +149,13 @@ import (
 	sqlstreams "github.com/allegedlyreliable/sqlstreams/client"
 )
 
-type RewardEarned struct {
+type RewardEarnedV1 struct {
 	RewardId string `json:"reward_id"`
 	UserId   string `json:"user_id"`
 	Points   int    `json:"points"`
 }
 
-func (RewardEarned) SchemaVersion() int { return 1 }
+func (RewardEarnedV1) SchemaVersion() int { return 1 }
 
 func main() {
 	if err := run(); err != nil {
@@ -179,7 +179,7 @@ func run() error {
 		return err
 	}
 
-	rewards := client.Stream[RewardEarned]("rewards.earned")
+	rewards := client.Stream[RewardEarnedV1]("rewards.earned")
 	registered, err := rewards.Get(ctx)
 	if err != nil {
 		return err
@@ -192,7 +192,7 @@ func run() error {
 		return err
 	}
 
-	return consumer.Consume(ctx, func(ctx context.Context, reward *RewardEarned) error {
+	return consumer.Consume(ctx, func(ctx context.Context, reward *RewardEarnedV1) error {
 		err := client.InTransaction(ctx, func(ctx context.Context, tx sqlstreams.Tx) error {
 			inserted, err := tx.Exec(ctx,
 				`INSERT INTO reward_credits (reward_id, user_id, points)

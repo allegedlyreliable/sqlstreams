@@ -73,11 +73,11 @@ import sqlstreams "github.com/allegedlyreliable/sqlstreams/client"
 A message is a struct with a schema version.
 
 ```go
-type VideoUploaded struct {
+type VideoUploadedV1 struct {
 	VideoId string `json:"video_id"`
 }
 
-func (VideoUploaded) SchemaVersion() int { return 1 } // increment on breaking changes
+func (VideoUploadedV1) SchemaVersion() int { return 1 } // increment on breaking changes
 ```
 
 [Produce](examples/01-produce-only/)
@@ -89,11 +89,11 @@ defer stop()
 pool, _ := sqlstreams.NewPostgresPool(ctx, "user", "password", "localhost", "db", nil)
 client, _ := sqlstreams.NewClient(ctx, pool, nil)
 
-uploads := client.Stream[VideoUploaded]("videos.uploaded")
+uploads := client.Stream[VideoUploadedV1]("videos.uploaded")
 uploads.Register(ctx, nil)
 
 producer, _ := uploads.Producer().Register(ctx, nil)
-producer.Produce(ctx, &VideoUploaded{VideoId: "video-42"}, nil)
+producer.Produce(ctx, &VideoUploadedV1{VideoId: "video-42"}, nil)
 ```
 
 [Consume](examples/02-consume-only/)
@@ -101,7 +101,7 @@ producer.Produce(ctx, &VideoUploaded{VideoId: "video-42"}, nil)
 ```go
 transcoder := uploads.Consumer("transcoder")
 consumer, _ := transcoder.Register(ctx, nil)
-consumer.Consume(ctx, func(ctx context.Context, video *VideoUploaded) error {
+consumer.Consume(ctx, func(ctx context.Context, video *VideoUploadedV1) error {
 	fmt.Println("transcoding", video.VideoId)
 	return nil
 }, nil)

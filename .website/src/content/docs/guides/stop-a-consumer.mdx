@@ -18,7 +18,7 @@ that order visible so you can check it in a running process.
 ## Before you begin
 
 Use the local Go project and PostgreSQL database from the [Quickstart](/quickstart/).
-Its producer writes `WelcomeEmail` messages to the `signup.welcome-email`
+Its producer writes `WelcomeEmailV1` messages to the `signup.welcome-email`
 stream. This guide keeps that stream and the `email-sender` consumer group.
 
 ## 1. Connect shutdown to the consumer's lifetime
@@ -39,11 +39,11 @@ import (
 	sqlstreams "github.com/allegedlyreliable/sqlstreams/client"
 )
 
-type WelcomeEmail struct {
+type WelcomeEmailV1 struct {
 	UserId string `json:"user_id"`
 }
 
-func (WelcomeEmail) SchemaVersion() int { return 1 }
+func (WelcomeEmailV1) SchemaVersion() int { return 1 }
 
 func main() {
 	if err := run(); err != nil {
@@ -70,7 +70,7 @@ func run() error {
 		return err
 	}
 
-	emails := client.Stream[WelcomeEmail]("signup.welcome-email")
+	emails := client.Stream[WelcomeEmailV1]("signup.welcome-email")
 	registered, err := emails.Get(sessionCtx)
 	if err != nil {
 		return err
@@ -89,7 +89,7 @@ func run() error {
 	return err
 }
 
-func receiveEmail(ctx context.Context, email *WelcomeEmail) error {
+func receiveEmail(ctx context.Context, email *WelcomeEmailV1) error {
 	metadata, _ := sqlstreams.MetaFromContext(ctx)
 	fmt.Printf("started message %d for %s\n", metadata.Id, email.UserId)
 

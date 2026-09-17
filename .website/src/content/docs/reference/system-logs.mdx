@@ -100,12 +100,14 @@ uses a Debug message rather than `SQL0109`.
 
 ```text title="Alert evaluation and transitions"
 level=DEBUG msg="alert evidence is insufficient -- recorded alert unchanged" alert={alert} owner={owner} owner_kind={owner_kind} system_id={system_id} stream_id={stream_id} group_id={group_id} detail={detail}
+level=INFO msg="alert active" alert=worker_liveness alert_message={alert_message} detail={detail} hint={hint} owner={owner} severity=info
 level=WARN msg="alert active" alert={alert} alert_message={alert_message} detail={detail} hint={hint} owner={owner} severity={severity}
 level=INFO msg="alert resolved" alert={alert} alert_message={alert_message} owner={owner}
 ```
 
 After a committed alert state transition, the check logs `alert active` at
-Warn or `alert resolved` at Info. These lines have no separate SQL event code.
+the alert's severity: Info for worker liveness and Warn for the other built-ins.
+It logs `alert resolved` at Info. These lines have no separate SQL event code.
 Active reminders with unchanged status do not repeat transition logs.
 
 ## Suppression

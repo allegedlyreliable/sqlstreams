@@ -4,6 +4,18 @@ Sliding window of in-flight work only. Future work lives in ROADMAP.md;
 shipped work in HISTORY.md; decision rationale in DECISIONS.md ->
 .work/decisions/.
 
+## Worker liveness severity
+
+- Approved: downgrade worker_liveness to INFO, including its activation log.
+  Preserve evaluation, publication, and resolution. Other built-ins stay WARN.
+- Message wording and the processing-delay roadmap item are separate follow-ups.
+- Add the public AlertSeverityInfo constant and update the severity reference
+  pages and generated diagnostic catalog.
+- Implemented. The new transition-log regression failed on worker liveness's
+  WARN severity and log level before the change, then passed. Root build and
+  targeted race tests for alert packages, diagnostic, and client pass. The
+  three changed reference pages pass remark. Ready for review, uncommitted.
+
 ## Delivery attempt numbering
 
 - Implement approved option A: attempts stores the current/next zero-based

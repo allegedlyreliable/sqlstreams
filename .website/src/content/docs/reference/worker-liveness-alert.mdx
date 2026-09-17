@@ -19,13 +19,17 @@ owned by its consumer groups. The alert belongs to the stream.
 | Property | Value |
 | --- | --- |
 | Code | `SQL0096` |
-| Severity | `warn` |
+| Severity | `info` |
 | Owner | Stream. |
 | Evidence | Retained `sqlstreams.stream.workers.unclaimed` measurements and their worker details. |
 | Unhealthy condition | At least one unclaimed worker. |
 | Default activation | Consecutive unhealthy samples spanning `2m`. |
 | Default evaluation schedule | `@every 1m`. |
 | Active reminders | Every `4h` by default while the condition remains active. |
+
+Activation logs at INFO, which the default WARN-level logger hides. The
+alert is still published to `__system.alerts` and available through the API
+and CLI. Its routing key uses the `info` severity segment.
 
 ## Read the latest report
 
