@@ -126,6 +126,7 @@ identify the database or application version that needs correcting.
 | v0.1.2 | v1 | v1 | v0.1.0-rc.1 | Chocolatey packaging change only; retains the same checkpoint result with unchanged library and schema. |
 | v0.1.4 | v1 | v1 | v0.1.2 | Round-trip passed on 2026-09-14 against source 4da16369 with the race detector enabled; release source 40c98b58 adds checkpoint records only. |
 | v0.1.5 | v1 | v1 | v0.1.4 | Round-trip and all four signal cases passed on a fresh database on 2026-09-14 at source fa9d3c15; race detector enabled for compatibility. Library and schema unchanged from v0.1.4. |
+| v0.1.6 | v1 | v1 | v0.1.5 (round-trip only) | Fresh database required for changed exception attempt counters. On 2026-09-17 at source 2bd417e1, all five signal cases and the prior client's five-message round-trip passed on PostgreSQL 18.6 with race detection. This does not verify an existing-database upgrade or mixed-version consumers. |
 
 ## Release maintenance and deprecation
 

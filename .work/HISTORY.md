@@ -5,6 +5,51 @@ Dated ledger of what shipped, newest first — one entry per milestone.
 Entries before 2026-08-13 were reconstructed from the phase notes when this
 ledger was created; dates come from the phase git tags.
 
+## 2026-09-17 — v0.1.6 verification checkpoint [0805] [0812] [0814]
+
+Library source 2bd417e1 passes `just verify`. CI run
+[35274800349](https://github.com/allegedlyreliable/sqlstreams/actions/runs/35274800349)
+also passes verification and the PostgreSQL 15–18 integration matrix.
+All five signal cases and the v0.1.5 client's five-message compatibility
+round-trip pass with race detection against a fresh PostgreSQL 18.6 database.
+The signal and compatibility recipe commands ran in an isolated Linux
+container because the user's Quickstart database occupies localhost:5432.
+That database was left untouched. The prior client emitted its known canceled
+range-commit warning during shutdown, fixed in the current build.
+
+Site formatting, lint, type, prose, generated-data, build, and all 83 unit
+checks pass. All 45 browser checks pass across Chromium, Firefox, and WebKit
+against a fresh preview on port 49326. The browser step ran separately with
+a temporary configuration because the usual port was occupied and Astro
+detached its preview process. Existing development servers were preserved.
+Fixed reference-navigation formatting and two stale sandbox SQL comments
+found by the existing checks. No test assertions changed.
+
+v0.1.6 requires a fresh database. Exception attempt counters now advance on
+failure, requested delay, or lease expiry, without consuming an attempt for
+deferral or a fresh claim. Existing counters have no automatic conversion.
+Both schema versions remain v1, so version checks do not reject mixed builds.
+The compatibility round-trip does not verify an existing-database upgrade.
+
+Release changes:
+
+- Completed consumer work is recorded during graceful shutdown. Canceled
+  startup alert checks stop without warnings.
+- Worker-liveness reports use INFO and name missing components. Update
+  bindings that select their old `warn` routing-key segment to select `info`.
+- CLI environment variables are `SQLSTREAMS_DATABASE_URL` and
+  `SQLSTREAMS_SCHEMA`. Replace `SQLSTREAMS_ADMIN_DATABASE_URL` and
+  `SQLSTREAMS_ADMIN_SCHEMA` in existing shell configuration.
+- Public configuration structs and copied comments improve editor hover.
+  Code importing owning-package config types must use the `sqlstreams` types
+  at client boundaries.
+- CLI help and documentation use consistent wording. Conflicting metric
+  attribute filters return a usage error. Examples are self-contained, and
+  the docs add an Overview board and improved phone navigation.
+
+Publication, matching OTel/CLI tags, installation checks, and the v0.1.6
+documentation deployment are pending.
+
 ## 2026-09-17 — Informational worker-liveness reports with component-specific hints [0814]
 
 Library changes committed as 0ecd4ac6 and d1fb803c. Matching documentation,

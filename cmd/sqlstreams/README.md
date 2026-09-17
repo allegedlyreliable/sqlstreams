@@ -18,11 +18,11 @@ On Windows, install the latest approved CLI with Chocolatey:
 choco install sqlstreams
 ```
 
-Download other platform archives from [GitHub Releases](https://github.com/allegedlyreliable/sqlstreams/releases/tag/v0.1.5).
+Download other platform archives from [GitHub Releases](https://github.com/allegedlyreliable/sqlstreams/releases/tag/v0.1.6).
 Or install the CLI with Go:
 
 ```sh
-go install github.com/allegedlyreliable/sqlstreams/cmd/sqlstreams@v0.1.5
+go install github.com/allegedlyreliable/sqlstreams/cmd/sqlstreams@v0.1.6
 ```
 
 ## Connect

@@ -4,6 +4,23 @@ Sliding window of in-flight work only. Future work lives in ROADMAP.md;
 shipped work in HISTORY.md; decision rationale in DECISIONS.md ->
 .work/decisions/.
 
+## Release v0.1.6
+
+- Source 2bd417e1 passes `just verify` and CI's PostgreSQL 15–18 matrix.
+  Five signal cases and the v0.1.5 compatibility round-trip pass with race
+  detection on an isolated, fresh PostgreSQL 18.6 database.
+- Compatibility now pins v0.1.5. Release notes and the migration table state
+  the fresh-database requirement for changed exception attempt counters.
+- Version references are prepared. Site checks pass, including 83 unit tests
+  and 45 browser tests against a fresh preview on a separate port.
+  The maintainer commits and pushes these changes. Wait for CI before tagging
+  v0.1.6. Include the fresh-database restriction in the GitHub release notes.
+- Follow RELEASE.md's root → OTel → CLI publication order, standalone checks,
+  dependent module and Quickstart updates, and installation checks.
+- Obtain approval before site deployment. Publish and freeze v0-1-6 only
+  after the release is available. Close out the committed tasks below and
+  consolidate their decision records with the final release evidence.
+
 ## Documentation consistency and accuracy
 
 - Review root Markdown, user-facing client comments and their owning

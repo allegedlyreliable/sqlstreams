@@ -1,5 +1,5 @@
-github.com/allegedlyreliable/sqlstreams v0.1.4 h1:o97idHBiRC6QaHKumNzMbQlFOejof6fZ/hbOivGaeNY=
-github.com/allegedlyreliable/sqlstreams v0.1.4/go.mod h1:VLfHx2OFpTPRMx9sn7D8JMEC8nQK8howQ1vbxcM2u5c=
+github.com/allegedlyreliable/sqlstreams v0.1.5 h1:Sgn6I3S4sq10sPyPjCzCSMAGpABcapTDgZgAhe7TcG0=
+github.com/allegedlyreliable/sqlstreams v0.1.5/go.mod h1:VLfHx2OFpTPRMx9sn7D8JMEC8nQK8howQ1vbxcM2u5c=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=

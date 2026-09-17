@@ -9,7 +9,7 @@ export const createDeliveryLogSqlTemplate = `
 			id BIGSERIAL PRIMARY KEY,
 			consumer_group_id BIGINT NOT NULL,
 			message_id BIGINT NOT NULL,
-			attempt INT NOT NULL,                 -- the run this event belongs to; a claim handed back at the key gate logs under the number it returned
+			attempt INT NOT NULL,                 -- zero-based delivery attempt; deferred/superseded events do not advance it
 			status TEXT NOT NULL DEFAULT 'failure',
 			error TEXT NOT NULL,
 			attempted_at TIMESTAMPTZ NOT NULL DEFAULT NOW()

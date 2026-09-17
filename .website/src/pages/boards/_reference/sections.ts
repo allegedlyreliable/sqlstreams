@@ -28,11 +28,7 @@ export const sections: ReferenceSection[] = [
 	{
 		id: 'client',
 		title: 'Client',
-		ids: [
-      'reference/pool', 
-      'reference/client', 
-      'reference/lifecycle-context',
-    ],
+		ids: ['reference/pool', 'reference/client', 'reference/lifecycle-context'],
 	},
 	{
 		id: 'consumer-groups',
@@ -75,10 +71,7 @@ export const sections: ReferenceSection[] = [
 	{
 		id: 'maintenance',
 		title: 'Maintenance',
-		ids: [
-      'reference/stream-version-health', 
-      'reference/maintenance'
-    ],
+		ids: ['reference/stream-version-health', 'reference/maintenance'],
 	},
 	{
 		id: 'schedules',

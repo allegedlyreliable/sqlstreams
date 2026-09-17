@@ -61,7 +61,7 @@ I'd love to use Kafka for my [billion dollar, AI powered TODO app](https://githu
 Add it to your module. You need a Postgres.
 
 ```sh
-go get github.com/allegedlyreliable/sqlstreams@v0.1.5
+go get github.com/allegedlyreliable/sqlstreams@v0.1.6
 ```
 
 Import the client from the same module:
@@ -145,7 +145,7 @@ choco install sqlstreams
 Or install the CLI with Go:
 
 ```sh
-go install github.com/allegedlyreliable/sqlstreams/cmd/sqlstreams@v0.1.5
+go install github.com/allegedlyreliable/sqlstreams/cmd/sqlstreams@v0.1.6
 ```
 
 The binary goes into `GOBIN`, or `$(go env GOPATH)/bin` when `GOBIN` is unset.
