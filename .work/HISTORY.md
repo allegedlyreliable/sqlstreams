@@ -5,6 +5,23 @@ Dated ledger of what shipped, newest first — one entry per milestone.
 Entries before 2026-08-13 were reconstructed from the phase notes when this
 ledger was created; dates come from the phase git tags.
 
+## 2026-09-17 — Informational worker-liveness reports with component-specific hints [0814]
+
+Library changes committed as 0ecd4ac6 and d1fb803c. Matching documentation,
+the diagnostic catalog, and the future alert roadmap item landed with 27e68295.
+Worker liveness publishes and logs at INFO, so the default WARN logger hides
+its activation. Other alerts remain WARN. Evaluation and publication continue.
+
+Reports give each resource one sentence naming its missing components, with
+start-consumer/delete-group or run-manager guidance as appropriate. Worker
+evidence remains in Data, and empty detail is omitted from activation logs.
+Delayed-processing and overdue-retry alerts remain future work in ROADMAP.
+
+Validation: root build, targeted vet, alert/client/diagnostic race tests,
+.tools build and race tests, and targeted documentation checks passed. The
+conventions check initially rejected INFO; its fix accepts INFO and WARN and
+still rejects a deliberately unsupported severity supplied through an overlay.
+
 ## 2026-09-16 — Four-board documentation rework [0813]
 
 Committed as b06a5d2c, with deployment confirmed by the user. The site now has

@@ -2,6 +2,7 @@ import type { Board } from '../../_board/model';
 
 export const board: Board = {
 	grouped: true,
+	inPhoneNav: true,
 	title: 'Concepts',
 	slug: 'concepts',
 	description:

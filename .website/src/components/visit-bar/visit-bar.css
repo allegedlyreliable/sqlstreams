@@ -38,7 +38,12 @@
 	gap: var(--space-4) var(--space-8);
 }
 
+/* side padding matches the page content's below the collapse */
 @media (max-width: 639px) {
+	.visit-bar {
+		padding-inline: var(--space-12);
+	}
+
 	.whats-new-area {
 		display: none;
 	}

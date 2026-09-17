@@ -2,6 +2,7 @@ import type { Board } from '../../_board/model';
 
 export const board: Board = {
 	grouped: false,
+	inPhoneNav: false,
 	title: 'Troubleshooting',
 	slug: 'troubleshooting',
 	description: 'Start with a symptom or code, identify its cause, and recover.',

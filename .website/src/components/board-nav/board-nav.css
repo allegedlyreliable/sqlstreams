@@ -21,6 +21,20 @@
 	color: var(--color-chrome-bar-link-current);
 }
 
+/* below the collapse the bar's side padding matches the page content's, so
+   its first link and the breadcrumb share one left edge; the phone header
+   keeps the reading boards and the Board Index and lookup boards stay one
+   tap away through the breadcrumb and Jump to */
+@media (max-width: 639px) {
+	.board-nav {
+		padding-inline: var(--space-12);
+	}
+
+	.board-nav a[data-phone-hidden] {
+		display: none;
+	}
+}
+
 /* a thumb needs more face than a pointer */
 @media (pointer: coarse) {
 	.board-nav a {

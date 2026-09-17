@@ -326,6 +326,13 @@ preprocessor, no utility framework, no third-party token pack.
   record's evidence; Roadmap lists proposed features only, each linking its
   GitHub issue, and never describes a proposal as shipped. Neither page
   carries `group` frontmatter.
+- The header nav lists the Board Index, every board in board order, Search,
+  and GitHub. A board's `inPhoneNav` flag decides whether its link survives
+  the 640px layout collapse: Overview, Concepts, and Guides do; Board Index,
+  Reference, and Troubleshooting do not. The Board Index stays one tap away
+  through the breadcrumb, and the hidden boards through Jump to. The link is
+  hidden with CSS, never omitted from the markup, so the desktop and phone
+  headers are one component.
 - Every board introduction is one sentence stating its purpose. Omit
   cross-board placement rules and repeated navigation from the intro.
   Overview owns product orientation, a first success, measured throughput,

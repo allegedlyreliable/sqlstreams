@@ -11,3 +11,5 @@ phase: "14a"
 **Decision.** `AlertController.Record` is the whole pipeline: read the head, `classify`, produce, and log WARN/INFO only when what was published differs in status from the head it replaced. Edges are derived from durable state, never remembered in-process. A nil finding still flows all the way through `Record` so an active head resolves rather than lingering.
 
 **Consequences.** The pipeline is restart-proof and idempotent: a re-run reads the same head and publishes nothing new, and a repeat republish refreshes the head silently without logging a false edge. Invariant created: a run that finds nothing must still call `Record(ctx, name, owner, nil)` for every owner — short-circuiting the nil finding would strand active alerts unresolved.
+
+Partly superseded by [0814]: activation logs follow alert severity, including INFO for worker liveness; status-change gating and INFO resolutions remain.

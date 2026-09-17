@@ -5,6 +5,7 @@
 	type NavLink = {
 		label: string;
 		href: string;
+		inPhoneNav: boolean;
 	};
 
 	type Props = {
@@ -15,16 +16,24 @@
 	let { current }: Props = $props();
 
 	const links: NavLink[] = [
-		{ label: 'Board Index', href: '/' },
-		...boards.map((board) => ({ label: board.title, href: boardHref(board) })),
-		{ label: 'Search', href: '/search/' },
-		{ label: 'GitHub', href: repositoryUrl },
+		{ label: 'Board Index', href: '/', inPhoneNav: false },
+		...boards.map((board) => ({
+			label: board.title,
+			href: boardHref(board),
+			inPhoneNav: board.inPhoneNav,
+		})),
+		{ label: 'Search', href: '/search/', inPhoneNav: true },
+		{ label: 'GitHub', href: repositoryUrl, inPhoneNav: true },
 	];
 </script>
 
 <nav class="board-nav" aria-label="Board">
 	{#each links as link (link.label)}
-		<a href={link.href} aria-current={link.label === current ? 'page' : undefined}>
+		<a
+			href={link.href}
+			aria-current={link.label === current ? 'page' : undefined}
+			data-phone-hidden={link.inPhoneNav ? undefined : ''}
+		>
 			{link.label}
 		</a>
 	{/each}

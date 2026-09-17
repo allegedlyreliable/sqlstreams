@@ -13,3 +13,5 @@ phase: "pre-v1"
 **Consequences.** A produce-only deployment learns at `RegisterProducer` that nothing runs its topic's rows, and a deployment with a manager gets the durable half — a dark consumer group now surfaces in `vulkan alert list`, which no mechanism reported before. Accepted noise: a process that produces then consumes logs VK0063 once on a cold start, since `Register` runs before `Consume` claims anything and an instance row lingers only its 30s TTL. Costs: every deployment carries a third alert schedule, worker row, and consumer group, and the alert overlaps the worker gauges and the manager's suspended-worker Error line — three surfaces for one fact, each for a different reader. `examples/phase_1/workerlivenesslab` covers both halves; guides/client.mdx's manager section documents it.
 
 Partly superseded by [0808]: the producer's register-time pass no longer evaluates worker_liveness; the alert and its schedule stand.
+
+Partly superseded by [0814]: worker-liveness severity is INFO, and reports name missing components with matching recovery hints.

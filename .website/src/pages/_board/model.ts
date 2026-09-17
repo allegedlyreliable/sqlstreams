@@ -1,5 +1,7 @@
 export type Board = {
 	grouped: boolean;
+	// false drops the board from the header nav under the 640px layout collapse
+	inPhoneNav: boolean;
 	title: string;
 	slug: string;
 	description: string;

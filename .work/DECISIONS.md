@@ -609,3 +609,4 @@ in `.work/DECISION_MAP.md` routes a question to its records.
 - 0809 2026-09-14 accepted (pre-v1) — CLI database URL uses SQLSTREAMS_DATABASE_URL
 - 0812 2026-09-14 accepted (pre-v1) — Supported PostgreSQL majors follow the community support window
 - 0813 2026-09-16 accepted (pre-v1) — Documentation uses four boards and grouped articles
+- 0814 2026-09-17 accepted (pre-v1) — Worker liveness is informational and names missing components
