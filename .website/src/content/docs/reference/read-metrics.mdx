@@ -117,8 +117,9 @@ default, with jitter. Configure its rate through
 [`SystemConfig.MetricCollector`](/reference/system-registration/#metriccollectorworkerconfig).
 Consumer-session counters are recorded by the running consumer instance.
 
-The system metrics stream uses a `24h` retention setting. Cleanup operates
-on partitions, so it is not an exact per-measurement expiry. Compaction means
+The system metrics stream uses a `24h` retention setting. Background cleanup
+drops eligible partitions and sweeps expired rows, so it is not an exact
+per-measurement expiry. Compaction means
 metrics consumers may skip intermediate observations.
 
 ## CLI

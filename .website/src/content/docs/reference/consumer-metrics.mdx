@@ -77,7 +77,7 @@ recording and retention.
 | --- | --- | --- | --- |
 | `Ready` | `int64` | `ready` | Retryable rows, including those whose retry delay has not elapsed. |
 | `Inflight` | `int64` | `inflight` | Rows leased to an exception retry attempt. |
-| `Deferred` | `int64` | `deferred` | Rows waiting for their message key's lease. |
+| `Deferred` | `int64` | `deferred` | Rows waiting for a message-key lease or an ordered predecessor. |
 | `Dead` | `int64` | `dead` | Dead-lettered rows. |
 | `OldestUnresolvedAge` | `time.Duration` | `oldest_unresolved_age` | Age since creation of the oldest ready, inflight, or deferred row. `0` when none exist. |
 

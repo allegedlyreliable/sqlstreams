@@ -32,7 +32,7 @@ type (
 	// - a field has been renamed
 	// - a field has been removed
 	//
-	// A consumer group reads only rows at its Message type's version.
+	// A consumer instance reads only rows at its Message type's version.
 	Versioned = common.Versioned
 
 	// RawPayload is a message payload kept as the JSON bytes the row stores,
@@ -46,17 +46,15 @@ type (
 	// row's own facts.
 	StoredMessage[Message Versioned] = common.StoredMessage[Message]
 
-	// MessageOptions are the per-message knobs a producer may REQUEST and a
-	// consumer may CLAMP. Any unset field means "the consumer decides".
-	//
-	// Resolution is per field:
-	// - consumer clamp > produced message > consumer defaults > system defaults
-	// Messages REQUEST, consumers PROTECT THEMSELVES.
+	// MessageOptions requests processing settings for one message.
+	// Unset fields inherit producer defaults, then consumer group defaults.
+	// The group's numeric bounds and concurrency override apply when consumed.
 	MessageOptions = common.MessageOptions
 
-	// RetryPolicy is an exponential backoff curve. ClientConfig.Retry applies it
-	// to the client's own Postgres calls; MessageOptions.Retry applies it to a
-	// message's redelivery. Zero fields take the defaults.
+	// RetryPolicy configures exponential backoff. ClientConfig.Retry applies to
+	// supported internal database operations. MessageOptions.Retry applies to
+	// message redelivery. Zero fields select defaults, except MaxDelays, where
+	// zero means unlimited requested delays.
 	RetryPolicy = common.RetryPolicy
 
 	// ConcurrencyPolicy is a message's concurrency policy.
@@ -74,21 +72,16 @@ type (
 	// ship one), or anything else that implements these four methods.
 	Logger = logging.Logger
 
-	// DiagnosticError is the one error shape:
-	// - code
-	// - recovery
-	// - problem
-	// - fix
-	// - diagnose queries fixed at declaration
-	// - values
-	// - wrapped cause attached per raise via With and Wrap
+	// DiagnosticError describes a named failure with a diagnostic code,
+	// recovery classification, problem, fix, and diagnostic queries.
+	// With and Wrap attach values and a cause without changing the declaration.
 	DiagnosticError = diagnostic.DiagnosticError
 
 	// DiagnosticEvent is a declared operator-actionable log event: the static message
 	// a call site logs and the code that rides in its "code" attribute.
 	DiagnosticEvent = diagnostic.DiagnosticEvent
 
-	// Query is one declared diagnose query: the label names what the query
+	// DiagnosticQuery is one declared diagnostic query: the label names what the query
 	// answers, the SQL answers it against the reader's own database. The library
 	// never runs it -- the fix says what to change, a query says what to look at.
 	DiagnosticQuery = diagnostic.DiagnosticQuery
@@ -96,7 +89,7 @@ type (
 	// DiagnosticRecovery states whether an unchanged retry of the operation can succeed.
 	DiagnosticRecovery = diagnostic.DiagnosticRecovery
 
-	// DiagnosticKind names a Declaration's kind.
+	// DiagnosticKind identifies an error, log event, metric, or alert declaration.
 	DiagnosticKind = diagnostic.DiagnosticKind
 
 	// Querier is what pool, conn, and tx can all do, minus transaction control
@@ -128,7 +121,7 @@ type (
 	BatcherConfig = batcher.BatcherConfig
 
 	// MetricProducerInstance produces custom measurements with routing and
-	// compaction keys derived from their metric name and attributes.
+	// message keys derived from their metric name and attributes.
 	MetricProducerInstance = producer.MetricProducerInstance
 
 	// ProduceResult is one produce call's outcome.
@@ -139,11 +132,10 @@ type (
 	// ConsumerConfig at Register. Sparse: zero fields take the defaults.
 	ConsumeOptions = consumer.ConsumeOptions
 
-	// ConsumerFunc handles one delivered message. It should be idempotent --
-	// redelivery after a crash or timeout is normal. nil records success; a
-	// plain error retries under the message's RetryPolicy; consume.Terminal
-	// dead-letters now; consume.Delay runs it again later without counting a
-	// failure.
+	// ConsumerFunc processes one delivered message. It must be safe to repeat
+	// after a crash or timeout. Returning nil records success. An ordinary error
+	// retries under the message's RetryPolicy. Terminal marks the message dead.
+	// Delay requests another attempt later without counting a failure.
 	ConsumerFunc[Message Versioned] = consumer.ConsumerFunc[Message]
 
 	// CursorPosition is a place in a stream's message log a group's cursor is set
@@ -228,8 +220,8 @@ type (
 	// system. Every destroy is refused unless ClientConfig.AllowDestroy is set.
 	DestroyOptions = admin.DestroyOptions
 
-	// StreamVersionHealth is one payload version's retire verdict on a stream: safe
-	// once no compaction head points at it and every group has read past it.
+	// StreamVersionHealth reports whether a payload version can be retired.
+	// Safe requires no compaction heads, unread messages, or unresolved exceptions.
 	StreamVersionHealth = stream.StreamVersionHealth
 
 	// PartitionCountAlertConfig declares how the partition_count alert is
@@ -281,13 +273,12 @@ type (
 	// CursorSnapshot is the group's read/commit position against the message log.
 	CursorSnapshot = metric.CursorSnapshot
 
-	// ExceptionSnapshot is the group's delivery rows counted by status.
+	// ExceptionSnapshot counts the group's exception-queue rows by status.
 	ExceptionSnapshot = metric.ExceptionSnapshot
 
-	// AbandonedRoutineSnapshot is derived from the __system.metrics event stream
-	// for one (stream, group) -- no in-process counter is kept anywhere, every
-	// number here comes from pairing abandoned/cleared events already on the
-	// stream.
+	// AbandonedRoutineSnapshot pairs retained abandoned and cleared events on
+	// __system.metrics for one stream and consumer group. Counts describe the
+	// retained window, not lifetime totals.
 	AbandonedRoutineSnapshot = metric.AbandonedRoutineSnapshot
 
 	// Measurement is one value of one metric at one time, on the __system.metrics
@@ -425,7 +416,7 @@ var (
 	// log may be nil -- an info-level logger reports graceful shutdown starting
 	// and completing, and warns when a second signal forces an exit.
 	//
-	//	ctx, stop := common.LifecycleContext(nil)
+	//	ctx, stop := LifecycleContext(nil)
 	//	defer stop()
 	LifecycleContext = common.LifecycleContext
 

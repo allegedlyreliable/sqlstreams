@@ -5,7 +5,7 @@ import (
 )
 
 // ClientConfig supplies construction-time settings. NewClient captures values
-// and copies Retry; later edits do not reconfigure the client. Logger is shared.
+// and copies Retry. Later edits do not reconfigure the client. Logger is shared.
 type ClientConfig struct {
 	// Schema - the Postgres namespace holding every sqlstreams table.
 	// Default: "sqlstreams".
@@ -14,7 +14,8 @@ type ClientConfig struct {
 	// same database share nothing.
 	Schema string
 
-	// AllowDestroy - whether this client may destroy streams at all.
+	// AllowDestroy - permits destroying streams, consumer groups, schedules,
+	// and the system through this client. Each operation retains its own guards.
 	// Default: false.
 	//
 	// A service that only ever registers streams should never opt in --
@@ -28,19 +29,20 @@ type ClientConfig struct {
 	DisableManager bool
 
 	// Logger - your own *slog.Logger or anything satisfying Logger.
-	// Held once on the datastore NewClient builds; no config below the
-	// client carries one.
+	// Shared by the client's database operations and workers.
 	// Default: text lines to stderr, warn level and up.
 	Logger Logger
 
-	// Retry - transient-error retry policy for every Postgres call the
-	// client makes, never a message's redelivery. Held once, like Logger.
-	// Default: common.NewDefaultRetryPolicy().
+	// Retry - transient-error retry policy for supported internal database
+	// operations. It does not govern message redelivery or retry caller-owned
+	// transactions. Operations without idempotency protection stop when the
+	// commit outcome is unknown.
+	// Default: 6 attempts, 1s initial delay, 5m maximum delay, exponent 2.
 	Retry *RetryPolicy
 }
 
-// WithDefaults fills Schema; Logger and Retry resolve in
-// PostgresDatastoreConfig, their single owner.
+// WithDefaults fills an empty Schema with "sqlstreams".
+// NewClient resolves Logger and Retry defaults during construction.
 func (c *ClientConfig) WithDefaults() *ClientConfig {
 	if c.Schema == "" {
 		c.Schema = datastore.DefaultSchema

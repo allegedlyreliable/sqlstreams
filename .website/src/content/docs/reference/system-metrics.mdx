@@ -79,7 +79,7 @@ only after every source read and measurement write in a collector pass
 succeeds. A partial pass can update other measurements without advancing
 this value.
 
-The collector normally runs every `30s`, with jitter. Alert-check series
+The collector runs every `30s` by default, with jitter. Alert-check series
 are recorded by their own checks. See [collection and retention](/reference/read-metrics/#collection-and-retention)
 for shared timing and freshness rules.
 

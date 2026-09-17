@@ -11,14 +11,14 @@ type ConsumerGroupSnapshot struct {
 	ConsumerGroup string `json:"group"` // whose picture this is
 
 	Cursor            CursorSnapshot           `json:"cursor"`             // the group's cursor row against the message log
-	Exceptions        ExceptionSnapshot        `json:"exceptions"`         // the group's delivery rows counted by status
+	Exceptions        ExceptionSnapshot        `json:"exceptions"`         // the group's exception rows counted by status
 	OpenLeases        int64                    `json:"open_leases"`        // the group's lease rows
 	AbandonedRoutines AbandonedRoutineSnapshot `json:"abandoned_routines"` // the group's abandoned/cleared events on __system.metrics
 }
 
 // CursorSnapshot is the group's read/commit position against the message log.
 type CursorSnapshot struct {
-	Head      int64 `json:"head"`      // highest message id ever appended -- the log frontier
+	Head      int64 `json:"head"`      // highest retained message id, or zero when the log is empty
 	Claimed   int64 `json:"claimed"`   // cursor.claimed -- the read frontier
 	Committed int64 `json:"committed"` // cursor.committed -- everything <= this is done/dead
 
@@ -26,12 +26,12 @@ type CursorSnapshot struct {
 	Inflight int64 `json:"inflight"` // Claimed - Committed -- claimed but not yet resolved
 }
 
-// ExceptionSnapshot is the group's delivery rows counted by status.
+// ExceptionSnapshot counts the group's exception-queue rows by status.
 type ExceptionSnapshot struct {
 	Ready    int64 `json:"ready"`    // retryable, will be reclaimed
 	Inflight int64 `json:"inflight"` // currently leased out to a retry attempt
-	Deferred int64 `json:"deferred"` // waiting for their message key's lease to free
-	Dead     int64 `json:"dead"`     // DLQ size
+	Deferred int64 `json:"deferred"` // waiting for a message-key lease or an ordered predecessor
+	Dead     int64 `json:"dead"`     // dead-lettered exception rows
 
 	OldestUnresolvedAge time.Duration `json:"oldest_unresolved_age"` // age of the oldest ready/inflight/deferred row; 0 if none outstanding
 }
@@ -43,7 +43,7 @@ type ConsumerGroupLag struct {
 	Committed            int64  `json:"committed"`             // the group's committed cursor id
 	Head                 int64  `json:"head"`                  // the log's max id when read
 	Lag                  int64  `json:"lag"`                   // Head - Committed, floored at 0
-	UnresolvedExceptions int64  `json:"unresolved_exceptions"` // delivery rows still 'ready', 'inflight', or 'deferred'
+	UnresolvedExceptions int64  `json:"unresolved_exceptions"` // exception rows still 'ready', 'inflight', or 'deferred'
 }
 
 // Lag returns the group's drain progress.

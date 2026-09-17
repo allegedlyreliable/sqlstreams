@@ -11,7 +11,7 @@ the hassle of setting up and maintaining an unfamiliar message broker.
 
 SQLStreams **is not** designed for many enterprise use cases. While latency
 and throughput should, in theory, be sufficient for most use cases at low
-to medium scale, if you have extreme reliability, distribution, throughput,
+to medium scale, if you have extreme reliability, throughput,
 or governance constraints, look elsewhere.
 
 Always weigh your options for current and future success. And give these
@@ -27,7 +27,7 @@ So, with that out of the way, let's really answer the question "Why SQLStreams?"
 ## Background
 
 <ThreadAside label="NOTE" title="Gotta go fast">
-If you are already familiar the differences between a **log** and a **queue** you can skip this part.
+If you are already familiar with the differences between a **log** and a **queue** you can skip this part.
 </ThreadAside>
 
 Let's first set some understanding. Queues and logs are different and they each excel at different
@@ -42,7 +42,7 @@ the log, and even if something reads that data, it stays there. This naturally l
 like a cursor to keep track of where the reader of the log is. These two seemingly simple differences
 from a queue lead to some interesting outcomes like replay, independent consumers, and history.
 
-## It's a message Log
+## It's a message log
 
 <ThreadAside label="NOTE" title="Gotta go fast">
 If you are already familiar with Kafka you can skip this part.
@@ -80,15 +80,15 @@ When you start off using a message **log**, the emails, activity feed, and promo
 stream, each with its own consumer group. As long as you've retained that history, you can use it to add new features
 or rebuild existing ones as requirements change.
 
-## It's a message Log... AND a retry queue
+## It's a message log... AND a retry queue
 
 By design, queues and logs solve similar but distinct problem sets, and SQLStreams tries to utilize both
 where they each naturally shine.
 
-A **Stream** in SQLStreams is both a message log AND a retry queue. When you *produce* a message onto
-a stream, it is stored in an append-only `message_log` table. From here, you can have many independent
+A **stream** in SQLStreams is both a message log AND a retry queue. When you *produce* a message onto
+a stream, it is stored in an append-only `message_log_<stream_id>` table. From here, you can have many independent
 consumer groups read and act on that data in real time. However, if an error occurs in your consumer,
-the message, by default, will be stored in an `exception_queue` and retried till it either succeeds or is
+the message, by default, will be stored in an `exception_queue_<stream_id>` table and retried until it either succeeds or is
 marked *dead*.
 
 The automatic combination of these two gives, in my opinion, the most natural user experience for how

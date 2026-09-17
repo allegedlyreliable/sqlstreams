@@ -106,7 +106,8 @@ the evaluation.
 
 One alert name and owner identify one retained series. Active reminders and
 later resolution reports share that identity. Alert retention is configured
-as `7d` at system registration, with partition-based cleanup.
+as `7d` at system registration. Background cleanup drops eligible partitions
+and sweeps expired rows, so reports do not disappear exactly at that age.
 
 ### AlertDefinition
 

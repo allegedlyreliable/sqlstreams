@@ -19,7 +19,7 @@ type ProducerConfig struct {
 	Message *common.MessageOptions
 
 	// Batch - knobs for the shared-transaction batching of concurrent Produce
-	// calls. See batcher.BatcherConfig for fields and defaults.
+	// calls. See BatcherConfig for fields and defaults.
 	Batch batcher.BatcherConfig
 
 	// SlowProduceThreshold - a produce call running longer than this logs a

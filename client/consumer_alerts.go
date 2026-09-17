@@ -49,8 +49,8 @@ func (h *ConsumerAlertsHandle) Latest(ctx context.Context) ([]*Alert, error) {
 	return alerts, nil
 }
 
-// Alert names one alert owned by the consumer group. It performs no I/O. No
-// built-in is group-owned today, so this is the handle's only read.
+// Alert names one alert owned by the consumer group. It performs no I/O.
+// No built-in alert is currently group-owned.
 func (h *ConsumerAlertsHandle) Alert(name string) *AlertHandle {
 	return newAlertHandle(h.client, name, h.streamName, h.groupName)
 }

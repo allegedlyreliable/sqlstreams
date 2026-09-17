@@ -1,8 +1,6 @@
+// Package sqlstreams provides message streams, consumer groups, and schedules
+// backed by Postgres. A Client uses an application-owned pgx pool.
 package sqlstreams
-
-// Package sqlstreams is the one client over a Postgres pool: registration objects
-// built once, ambient config held once, and every verb delegated to the
-// package that owns it.
 
 import (
 	"context"
@@ -17,6 +15,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+// Client provides access to one SQLStreams installation in a PostgreSQL schema.
 type Client struct {
 	disableManager bool
 
@@ -30,8 +29,9 @@ type Client struct {
 
 // NewClient builds every registration object over pool and pings it once, so a wrong
 // address or credential fails here instead of at the first query. The pool
-// stays the caller's -- sqlstreams never closes it. cfg may be nil or sparse. Settings are captured at construction, including a copy of Retry;
-// later edits to cfg do not reconfigure the client. The supplied logger is shared.
+// stays the caller's. SQLStreams never closes it. cfg may be nil or sparse.
+// Settings are captured at construction, including a copy of Retry.
+// Later edits to cfg do not reconfigure the client. The supplied logger is shared.
 func NewClient(ctx context.Context, pool *pgxpool.Pool, cfg *ClientConfig) (*Client, error) {
 	if pool == nil {
 		return nil, errors.New("pool must not be nil")
@@ -94,13 +94,12 @@ func NewClient(ctx context.Context, pool *pgxpool.Pool, cfg *ClientConfig) (*Cli
 }
 
 // InTransaction opens one transaction, runs transactionFunc against it, and
-// commits -- the way to publish to multiple targets atomically via ProduceInTx.
+// commits. Use ProduceInTx to produce to multiple streams atomically.
 //
-// It does not retry -- a transient blip or an ambiguous commit failure
-// surfaces to you as-is. Wrap your own retry loop around it if you want one;
-// only you know what's safe to rerun in your closure. Rerunning the whole
-// closure is dedup-safe ONLY under caller-supplied IdempotencyKeys -- unset
-// keys mint fresh per call, so a rerun double-publishes.
+// It does not retry. A commit error can leave the outcome uncertain.
+// Caller-supplied IdempotencyKeys protect message inserts across calls while
+// those keys are retained. They do not deduplicate other callback work.
+// Retrying requires every part of the callback to be safe to repeat.
 func (c *Client) InTransaction(ctx context.Context, transactionFunc TransactionFunc) error {
 	return datastore.InTransaction(ctx, c.ds, transactionFunc)
 }

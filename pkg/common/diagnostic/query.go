@@ -4,7 +4,7 @@ import (
 	"strings"
 )
 
-// Query is one declared diagnose query: the label names what the query
+// DiagnosticQuery is one declared diagnostic query: the label names what the query
 // answers, the SQL answers it against the reader's own database. The library
 // never runs it -- the fix says what to change, a query says what to look at.
 type DiagnosticQuery struct {

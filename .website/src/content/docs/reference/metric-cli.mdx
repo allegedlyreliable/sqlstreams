@@ -44,13 +44,13 @@ sqlstreams metric history sqlstreams.consumer.cursor.backlog \
 
 | Flag | Default | Effect |
 | --- | --- | --- |
-| `--attribute` | No filter | Repeatable key/value filters. All pairs must match. Repeating a key uses its last supplied value. |
+| `--attribute` | No filter | Repeatable key/value filters. All pairs must match. Repeating an identical pair is accepted. Conflicting values for the same key exit `2`. |
 | `--series-limit` | `10` | Positive maximum attribute sets to display. |
 | `--limit` | `10` | `history` only. Positive maximum measurements per series, newest message id first. |
 
 Attribute filters are partial. Omitted attributes can vary across matching
 series, unlike the Go API's exact-series selector. An empty filter value
-also matches a missing attribute. Selection starts from currently retained
+requires the attribute to exist with an empty value. Selection starts from currently retained
 series heads, then `history` reads each selected series.
 
 ### JSON result

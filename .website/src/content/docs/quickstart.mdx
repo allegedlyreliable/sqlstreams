@@ -6,7 +6,7 @@ slop: none
 
 import ThreadAside from '../../components/thread-aside/thread-aside.svelte';
 
-This quickstart will walk you through how to get everything setup to run
+This quickstart will walk you through how to get everything set up to run
 a basic producer and consumer using SQLStreams.
 
 If you just want the end result, clone [this](https://github.com/allegedlyreliable/sqlstreams-quickstart-go).
@@ -28,7 +28,7 @@ go get github.com/allegedlyreliable/sqlstreams@v0.1.5
 mkdir -p cmd/produce cmd/consume
 ```
 
-Next lets create our docker compose file for running Postgres.
+Next, let's create our Docker Compose file for running Postgres.
 
 ```sh
 touch compose.yaml
@@ -62,7 +62,7 @@ volumes:
 Spin it up
 
 ```sh
-docker compose up -d
+docker compose up -d --wait
 ```
 
 ## 2. Produce a message
@@ -228,11 +228,11 @@ received welcome email request for user-123
 ```
 
 <ThreadAside label="NOTE" title="Blocking Consumer">
-The consumer is blocking and will keep waiting for messages. 
+The consumer is blocking and will keep waiting for messages.
 Press Ctrl-C to stop it.
 </ThreadAside>
 
-And thats it. You can have a seperate terminal session run the 
+And that's it. You can have a separate terminal session run the
 producer and watch the consumer `consume` the `produced` messages in
 real time.
 

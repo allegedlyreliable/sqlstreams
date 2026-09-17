@@ -11,7 +11,7 @@ import (
 )
 
 // MetricProducerInstance produces custom measurements with routing and
-// compaction keys derived from their metric name and attributes.
+// message keys derived from their metric name and attributes.
 type MetricProducerInstance struct {
 	instance *ProducerInstance[metric.Measurement]
 }

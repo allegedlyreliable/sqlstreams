@@ -31,16 +31,16 @@ the client or CLI.
 
 ## Replay an existing consumer group
 
-**Problem:** A handler can succeed while doing the wrong thing. Fixing its
+**Problem:** A consumer handler can succeed while doing the wrong thing. Fixing its
 code does not revisit messages the group has already processed.
 
 For example, a bad deploy makes `search-indexer` omit prices from orders
-101–200. The handler returned success, so there is nothing to retry. The
-corrected handler needs to read those messages again.
+101–200. The consumer handler returned success, so there is nothing to retry. The
+corrected consumer handler needs to read those messages again.
 
 **Solution:** Rewind an existing group to a message id or timestamp and
-process its retained history again. Other groups keep their progress;
-anything the rewound group's handler does may happen again.
+process its retained history again. Other groups keep their progress.
+Anything the rewound group's consumer handler does may happen again.
 
 [Upvote or discuss](https://github.com/allegedlyreliable/sqlstreams/issues/13).
 
@@ -63,7 +63,7 @@ skipped, even when their data is still useful.
 
 For example, `search-indexer` now reads version 2, which stores prices in
 cents. Retained orders 101–200 use version 1, which stored prices in dollars.
-The new handler needs a conversion before it can rebuild those records.
+The new consumer handler needs a conversion before it can rebuild those records.
 
 **Solution:** Let consumers read older versions through converters you
 provide. You define how the old fields map to the new ones, without a
@@ -85,12 +85,12 @@ to know which groups exist.
 
 ## Lease renewal
 
-**Problem:** A long-running handler can outlive its lease while still making
+**Problem:** A long-running consumer handler can outlive its lease while still making
 progress. Making every lease longer gives it more time, but also makes crash
 recovery slower.
 
-**Solution:** Let the handler report progress and extend its lease. Renewal
-would depend on progress reported by the handler, with a maximum runtime so
-a stuck handler cannot hold a message forever.
+**Solution:** Let the consumer handler report progress and extend its lease. Renewal
+would depend on progress reported by the consumer handler, with a maximum runtime so
+a stuck consumer handler cannot hold a message forever.
 
 [Upvote or discuss](https://github.com/allegedlyreliable/sqlstreams/issues/17).

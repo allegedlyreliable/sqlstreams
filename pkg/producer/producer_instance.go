@@ -16,12 +16,11 @@ import (
 	"github.com/allegedlyreliable/sqlstreams/pkg/stream"
 )
 
-// ProducerInstance is a registered producer: it appends messages to the stream
-// Register resolved. Shutdown is per call -- a cancelled ctx refuses that
-// call's message, the instance itself never stops accepting work.
+// ProducerInstance produces messages on the stream resolved at registration.
+// Cancellation applies to individual calls. The instance has no shutdown method.
 type ProducerInstance[Message common.Versioned] struct {
 	Stream *stream.Stream  // the stream row Register resolved
-	Config *ProducerConfig // the resolved config every verb reads -- not the caller's struct
+	Config *ProducerConfig // resolved settings retained from registration
 	Logger logging.Logger  // bound to the stream; the batcher logs through it
 
 	controller *controller.ProduceController
@@ -58,20 +57,7 @@ func NewProducerInstance[Message common.Versioned](resolvedStream *stream.Stream
 	}, nil
 }
 
-// Produce appends message to the stream, returning once it is durably
-// committed. Concurrent calls share transactions: batched under load,
-// committed alone (no added latency) at idle.
-//
-// Cancelling ctx stops the wait, not the message -- it still commits with
-// its batch, so the outcome is ambiguous. To retry across that ambiguity
-// (or your own crash) without double-publishing, supply an IdempotencyKey:
-// the rerun dedups against whatever actually landed, reported as
-// ProduceResult.Duplicate == true.
-//
-// options may be nil for the defaults. Returns ErrPayloadNotEncodable for
-// a message json.Marshal rejects, and ErrPartitionCreationBehind or
-// ErrPartitionLockTimeout when the id lands past the created partitions
-// and the write path cannot create the next one in time.
+// Produce appends a message and returns after commit.
 func (p *ProducerInstance[Message]) Produce(ctx context.Context, message *Message, options *produce.ProduceOptions) (*ProduceResult[Message], error) {
 	defer p.warnSlowProduce(ctx, time.Now())
 	ctx = logging.WithLogBuffer(ctx)
@@ -104,18 +90,7 @@ func (p *ProducerInstance[Message]) Produce(ctx context.Context, message *Messag
 	return NewProduceResult(appended.Message, appended.Id, appended.Duplicate)
 }
 
-// ProduceBatch appends every item in ONE transaction, returning once all are
-// durably committed -- none land unless all do. Results are in argument
-// order. A batch never shares its transaction with concurrent Produce calls
-// or other batches.
-//
-// Items must not set an IdempotencyKey (see NewProduceItem), so nothing
-// dedups across calls: retrying past a ctx cancelled mid-commit (or your
-// own crash) can publish every item twice, exactly as with unkeyed Produce.
-//
-// Empty items is an error before any transaction opens. An error from one
-// item is wrapped as `item N: ...` with N its index in items, and Produce's
-// declared errors apply per item.
+// ProduceBatch appends all items in one transaction.
 func (p *ProducerInstance[Message]) ProduceBatch(ctx context.Context, items ...*ProduceItem[Message]) ([]*ProduceResult[Message], error) {
 	if len(items) == 0 {
 		return nil, errors.New("items must not be empty")
@@ -151,9 +126,8 @@ func (p *ProducerInstance[Message]) ProduceBatch(ctx context.Context, items ...*
 	return results, nil
 }
 
-// ProduceFunc appends the message returned by producerFunc, which runs inside
-// the message's transaction -- your writes commit or roll back with it.
-// options may be nil for the defaults.
+// ProduceFunc runs producerFunc and produces its payload in one transaction.
+// The callback may run more than once.
 func (p *ProducerInstance[Message]) ProduceFunc(ctx context.Context, producerFunc produce.ProducerFunc[Message], options *produce.ProduceOptions) (*ProduceResult[Message], error) {
 	defer p.warnSlowProduce(ctx, time.Now())
 
@@ -174,37 +148,14 @@ func (p *ProducerInstance[Message]) ProduceFunc(ctx context.Context, producerFun
 	return NewProduceResult(appended.Message, appended.Id, appended.Duplicate)
 }
 
-// ProduceInTx appends message inside a transaction the caller owns -- it
-// commits or rolls back with everything else in tx.
-//
-// The message's IdempotencyKey stays locked until tx resolves -- any other
-// call reusing that key blocks the whole time. Keep transactions that reuse
-// keys short.
-//
-// For optimal performance call this LAST in your transaction. Producing
-// effectively takes a lock on consumer progress for the whole stream: claims
-// cannot advance past this message until tx commits, and every statement
-// after this call extends how long that lock is held.
-//
-// Producing several compacted message keys in one transaction locks each key's
-// compaction_head row until tx resolves. Two transactions taking the same
-// keys in reverse order deadlock: Postgres kills one (40P01, a full
-// rollback) and InTransaction never reruns your transactionFunc -- retry it
-// yourself. Ordering these calls by message key avoids the cycle;
-// batched Produce sorts the same way, so a consistent order composes.
-//
-// options may be nil for the defaults.
+// ProduceInTx inserts message in the caller's transaction without committing.
 func (p *ProducerInstance[Message]) ProduceInTx(ctx context.Context, tx iDatastore.Tx, message *Message, options *produce.ProduceOptions) (*ProduceResult[Message], error) {
 	passthrough := func(context.Context, iDatastore.Tx) (*Message, error) { return message, nil }
 	return p.ProduceFuncInTx(ctx, tx, passthrough, options)
 }
 
-// ProduceFuncInTx appends the message returned by producerFunc, which runs
-// inside a transaction the caller owns -- your writes commit or roll back
-// with everything else in tx. Every transaction rule on ProduceInTx applies
-// here unchanged.
-//
-// options may be nil for the defaults.
+// ProduceFuncInTx runs producerFunc and produces its payload in the caller's
+// transaction. It does not commit.
 func (p *ProducerInstance[Message]) ProduceFuncInTx(ctx context.Context, tx iDatastore.Tx, producerFunc produce.ProducerFunc[Message], options *produce.ProduceOptions) (*ProduceResult[Message], error) {
 	defer p.warnSlowProduce(ctx, time.Now())
 

@@ -29,7 +29,7 @@ group's attempts, errors, or processing progress.
 | `CreatedAt` | `time.Time` | `created_at` | The message's stored creation timestamp. |
 | `RoutingKey` | `string` | `routing_key` | The produced routing key, or an empty string when absent. |
 | `MessageKey` | `string` | `message_key` | The produced message key, or an empty string when absent. |
-| `CompactionRank` | `int64` | `compaction_rank` | The stored compaction rank. Zero for an uncompacted message. |
+| `CompactionRank` | `int64` | `compaction_rank` | The stored compaction rank. Zero can mean an uncompacted message or a compacted message with rank zero. This field alone does not identify compaction. |
 
 ## Read operations
 

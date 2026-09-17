@@ -8,8 +8,8 @@ import (
 	"github.com/allegedlyreliable/sqlstreams/pkg/system"
 )
 
-// SystemHandle is a handle on the singleton system, holding no row. Get is the
-// comma-ok read; every other verb returns the not-registered error itself.
+// SystemHandle addresses this installation's system without holding a row.
+// Register can create the system. Get returns (nil, nil) when it is absent.
 type SystemHandle struct {
 	client *Client
 }
@@ -53,7 +53,7 @@ func (s *SystemHandle) MigrateStreams(ctx context.Context, targetVersion int64) 
 }
 
 // Destroy permanently deletes every stream, schedule, consumer group,
-// worker, and the shared control-plane tables. Refused unless
+// worker, and the shared tables. Refused unless
 // ClientConfig.AllowDestroy is set.
 func (s *SystemHandle) Destroy(ctx context.Context, options *DestroyOptions) error {
 	return s.client.admin.DestroySystem(ctx, options)

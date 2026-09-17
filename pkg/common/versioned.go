@@ -9,7 +9,7 @@ package common
 // - a field has been renamed
 // - a field has been removed
 //
-// A consumer group reads only rows at its Message type's version.
+// A consumer instance reads only rows at its Message type's version.
 type Versioned interface {
 	SchemaVersion() int
 }

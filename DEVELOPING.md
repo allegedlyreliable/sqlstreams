@@ -18,7 +18,7 @@ are gitignored. Keep the Postgres defaults: examples and e2e tests use them.
 
 ## Run
 
-Load `.env` into your shell for Compose and direct Go commands; `just` loads it itself.
+Load `.env` into your shell for Compose and direct Go commands. `just` loads it itself.
 
 ```sh
 set -a
@@ -53,7 +53,7 @@ go test -race ./client
 ```
 
 Replace `./client` with the packages you touched. Nested modules have
-their own `go.mod`; root `./...` does not include them.
+their own `go.mod`. Root `./...` does not include them.
 
 Run database integration tests from the repo root:
 

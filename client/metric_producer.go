@@ -6,6 +6,7 @@ import (
 	"github.com/allegedlyreliable/sqlstreams/pkg/producer"
 )
 
+// MetricProducerHandle selects the system metrics stream for a custom producer.
 type MetricProducerHandle struct {
 	client *Client
 }

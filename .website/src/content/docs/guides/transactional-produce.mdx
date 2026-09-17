@@ -10,11 +10,12 @@ import ThreadAside from '../../../components/thread-aside/thread-aside.svelte';
 Suppose you are building a user signup flow where you want to send a welcome
 email after successful signup.
 
-Seems simple but what happens if your applicate saves and stores the account
-but fails before sending the email.
+Seems simple, but what happens if your application saves the account
+but fails before sending the email?
 
-Distrubuted systems like to call this problem and solution the **transactional outbox**.
-SQLStreams solves this simply.
+The **transactional outbox** pattern addresses this gap between saving data
+and requesting downstream work.
+And SQLStreams solves this simply.
 
 Use `ProduceFunc` to save the user and a message requesting the welcome email
 in one PostgreSQL transaction. Both writes commit together, or neither does.

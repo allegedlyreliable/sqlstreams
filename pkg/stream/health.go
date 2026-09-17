@@ -4,8 +4,8 @@ import (
 	"github.com/allegedlyreliable/sqlstreams/pkg/metric"
 )
 
-// StreamVersionHealth is one payload version's retire verdict on a stream: safe
-// once no compaction head points at it and every group has read past it.
+// StreamVersionHealth reports whether a payload version can be retired.
+// Safe requires no compaction heads, unread messages, or unresolved exceptions.
 type StreamVersionHealth struct {
 	Stream          *Stream                                `json:"stream"`
 	Version         int                                    `json:"version"`

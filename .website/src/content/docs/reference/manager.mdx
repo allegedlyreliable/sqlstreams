@@ -46,7 +46,7 @@ The manager coordinates declared maintenance, schedules, cursor advancement,
 metric collection, and alert evaluation. A declaration must exist and permit
 instances before its worker can run.
 
-`Consume` normally runs this manager alongside its session. Setting
+By default, `Consume` runs this manager alongside a cancellable session. Setting
 `ClientConfig.DisableManager` disables that automatic manager, while explicit
 `Manager.Run` remains available. It does not disable the consumer's stream janitor.
 
@@ -60,8 +60,8 @@ retry cycle.
 sqlstreams manager run
 ```
 
-Runs until shutdown is requested. Use the [shutdown context](/reference/lifecycle-context/)
-contract for signal behavior. Manager CLI flags can also enable metrics serving.
+Runs until shutdown is requested. See [Manager commands](/reference/manager-cli/)
+for its signal behavior and metrics endpoint options.
 
 ## Errors
 

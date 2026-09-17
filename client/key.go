@@ -20,7 +20,7 @@ func (t *StreamHandle[Message]) Key(messageKey string) *KeyHandle[Message] {
 }
 
 // CompactionHead returns the key's current compaction head, or
-// ErrCompactionHeadNotFound if no compacted message was produced under it.
+// ErrCompactionHeadNotFound if no current head remains.
 func (k *KeyHandle[Message]) CompactionHead(ctx context.Context) (*StoredMessage[Message], error) {
 	return k.client.admin.GetCompactionHead[Message](ctx, k.streamName, k.messageKey)
 }
@@ -31,7 +31,8 @@ func (k *KeyHandle[Message]) LockCompactionHead(ctx context.Context, tx Tx) (*St
 	return k.client.admin.LockCompactionHead[Message](ctx, tx, k.streamName, k.messageKey)
 }
 
-// Messages returns the key's retained messages, newest first.
+// Messages returns the key's retained messages in descending message-id order,
+// including older compacted messages. limit must be positive.
 func (k *KeyHandle[Message]) Messages(ctx context.Context, limit int) ([]*StoredMessage[Message], error) {
 	return k.client.admin.ListKeyMessages[Message](ctx, k.streamName, k.messageKey, limit)
 }

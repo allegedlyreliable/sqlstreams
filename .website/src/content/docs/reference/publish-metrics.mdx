@@ -74,7 +74,7 @@ manually built object.
 | Validation or operation fails | `(nil, err)`. |
 
 Custom metrics appear in `Latest` and `History`, but never in `Definitions`.
-The producer supplies routing and compaction keys automatically. There is
+The producer supplies routing and message keys and enables compaction. There is
 no caller-supplied idempotency key, so repeating a call can add another observation.
 
 ## Consume measurements

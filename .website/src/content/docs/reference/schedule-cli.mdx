@@ -25,7 +25,7 @@ sqlstreams scheduler messages <name> [--limit 20]
 | Command | Output | Absence or empty results |
 | --- | --- | --- |
 | `list` | Table of schedules ordered by name. Quiet prints names. JSON returns [schedule objects](/reference/schedule-object/). | Empty list exits `0`, with JSON `[]`. |
-| `get` | One registration. Quiet suppresses output. | Absent schedule exits `1`, with JSON `null`. |
+| `get` | One registration. Quiet suppresses result output. Diagnostics still appear on stderr. | Absent schedule exits `1`, with JSON `null`. |
 | `status` | [Retained outcome counts](/reference/schedule-messages/) per matching consumer group. | No matching groups exits `0`, with JSON `[]`. Absent schedule exits `1`. |
 | `messages` | Newest message outcomes, one row per message and matching group. | Empty results exit `0`, with JSON `[]`. Absent schedule exits `1`. |
 

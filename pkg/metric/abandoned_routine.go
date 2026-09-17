@@ -2,10 +2,9 @@ package metric
 
 import "time"
 
-// AbandonedRoutineSnapshot is derived from the __system.metrics event stream
-// for one (stream, group) -- no in-process counter is kept anywhere, every
-// number here comes from pairing abandoned/cleared events already on the
-// stream.
+// AbandonedRoutineSnapshot pairs retained abandoned and cleared events on
+// __system.metrics for one stream and consumer group. Counts describe the
+// retained window, not lifetime totals.
 type AbandonedRoutineSnapshot struct {
 	Outstanding         int64         `json:"outstanding"`            // abandoned events with no matching cleared
 	Total               int64         `json:"total"`                  // distinct abandoned keys currently in the window

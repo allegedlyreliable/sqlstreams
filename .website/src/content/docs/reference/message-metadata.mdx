@@ -50,7 +50,7 @@ func printPayment(ctx context.Context, payment *PaymentRequestedV1) error {
 | `Id` | `int64` | `message_id` | The message id. |
 | `RoutingKey` | `string` | `routing_key` | The produced routing key. Empty when none was supplied. |
 | `MessageKey` | `string` | `message_key` | The produced message key. Empty when none was supplied. |
-| `CompactionRank` | `int64` | `compaction_rank` | The message's rank under its key. Zero for an uncompacted message. |
+| `CompactionRank` | `int64` | `compaction_rank` | The message's rank under its key. Zero can mean an uncompacted message or a compacted message with rank zero. This field alone does not identify compaction. |
 | `CreatedAt` | `time.Time` | `created_at` | The message's creation time. |
 | `ScheduledAt` | `time.Time` | `scheduled_at` | The scheduled time represented by this message. Zero for other messages. |
 | `Attempts` | `int` | `attempts` | Zero-based delivery attempt. Waiting for an ordered predecessor or a busy message key does not advance it. Failures, handler-requested delays, and expired exception leases advance it. |

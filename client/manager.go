@@ -12,9 +12,11 @@ func (c *Client) Manager() *ManagerHandle {
 	return &ManagerHandle{client: c}
 }
 
-// Run claims the system's manager row and reconciles every worker row in the
-// deployment until ctx cancels, then returns nil. Safe to run N-way -- the row
-// admits one reconcile loop at a time.
+// Run maintains registered streams, produces scheduled messages, collects
+// metrics, and runs built-in alert consumers until ctx is cancelled.
+// It does not run application consumer handlers. Cancellation returns nil.
+// Multiple processes may call Run. A database lease admits one reconciliation
+// loop at a time. An unregistered system returns ErrNotRegistered.
 func (m *ManagerHandle) Run(ctx context.Context) error {
 	return m.client.manager.Run(ctx)
 }

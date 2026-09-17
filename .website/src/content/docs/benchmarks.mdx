@@ -37,7 +37,7 @@ can come along after me and either confirm or challenge the results.
 
 <ThreadAside label="NOTE" title="You calling me a liar">
 Because benchmarks have somewhat of a history of being *contentious* I have tried my best to give as much
-info as possible such that they are reproducable. If you try to benchmark yourself and get drastically different
+info as possible such that they are reproducible. If you try to benchmark yourself and get drastically different
 results please let me know in whatever way you want.
 </ThreadAside>
 
@@ -50,14 +50,14 @@ The idea is to get the maximum **sustainable** producer / consumer throughput fo
 To do that a single `orders` stream is created. An arbitrary number of producers and consumers
 can be used to find the global maximum. The one caveat being only a single consumer group.
 
-To make sure we measure the maximum **sustainable** throughput we have artifically low retention
+To make sure we measure the maximum **sustainable** throughput we have artificially low retention
 and cleanup task polling. This in theory should only make the results worse and I'm okay with that.
 
 ### Methodology
 
 The sustained max throughput benchmark consists of three consecutive 30-minute runs.
 They each used the same frozen binary and configuration. The database was recreated
-between runs however the PostgresSQL instance itself was not restarted or recreated.
+between runs however the PostgreSQL instance itself was not restarted or recreated.
 
 Each run retains its environment, effective
 settings, raw counters, backlog and storage samples, logs, and verdict.
@@ -270,12 +270,12 @@ This should go without saying but history has proven otherwise.
 
 | Setting | Value |
 | --- | --- |
-| Handler concurrency | 4 |
+| Consumer handler concurrency | 4 |
 | Claim polling | 100 ms |
-| Handler timeout | 30 seconds |
+| Consumer handler timeout | 30 seconds |
 | Maximum retries | 3 (resolved default; exception consumers suspended) |
 
-Consumer handlers perform no application work; they update benchmark counters and return success.
+Consumer handlers update benchmark counters and return success. They perform no application work.
 
 ##### Stream
 
@@ -290,7 +290,7 @@ The [benchmark system](https://github.com/allegedlyreliable/sqlstreams/tree/main
 
 | Setting | Value | Description |
 | --- | --- | --- |
-| HandlerFailRate | `0` | No injected handler failures. |
+| HandlerFailRate | `0` | No injected consumer handler failures. |
 | DisableExceptionConsumers | `true` | Suspends exception consumers by setting worker targets to zero. |
 | DisableMessageRecording | `true` | Keeps aggregate counters instead of per-message records. |
 

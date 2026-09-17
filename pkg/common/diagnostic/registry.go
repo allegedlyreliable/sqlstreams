@@ -16,7 +16,7 @@ type Declaration interface {
 	GetKind() DiagnosticKind
 }
 
-// DiagnosticKind names a Declaration's kind.
+// DiagnosticKind identifies an error, log event, metric, or alert declaration.
 type DiagnosticKind string
 
 const (

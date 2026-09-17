@@ -8,9 +8,10 @@ import (
 
 const MIN_DELAY = 0
 
-// RetryPolicy is an exponential backoff curve. ClientConfig.Retry applies it
-// to the client's own Postgres calls; MessageOptions.Retry applies it to a
-// message's redelivery. Zero fields take the defaults.
+// RetryPolicy configures exponential backoff. ClientConfig.Retry applies to
+// supported internal database operations. MessageOptions.Retry applies to
+// message redelivery. Zero fields select defaults, except MaxDelays, where
+// zero means unlimited requested delays.
 type RetryPolicy struct {
 	// MaxRetries - for message redelivery, retries after attempt 0, excluding
 	// handler-requested delays. For Postgres calls, total attempts including

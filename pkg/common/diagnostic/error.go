@@ -16,14 +16,9 @@ const (
 	RecoveryPermanent DiagnosticRecovery = "permanent" // attempt unchanged -> retry cannot succeed
 )
 
-// DiagnosticError is the one error shape:
-// - code
-// - recovery
-// - problem
-// - fix
-// - diagnose queries fixed at declaration
-// - values
-// - wrapped cause attached per raise via With and Wrap
+// DiagnosticError describes a named failure with a diagnostic code,
+// recovery classification, problem, fix, and diagnostic queries.
+// With and Wrap attach values and a cause without changing the declaration.
 type DiagnosticError struct {
 	code     string
 	recovery DiagnosticRecovery

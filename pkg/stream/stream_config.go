@@ -8,7 +8,8 @@ import (
 // StreamConfig is Register's spec -- separate from Stream so Register can grow
 // (retention, etc.) without a signature change.
 type StreamConfig struct {
-	// PartitionSize - rows per partition.
+	// PartitionSize - message-id interval per partition. Gaps in allocated
+	// ids mean a partition can contain fewer rows.
 	// Default: 1_000_000.
 	//
 	// Lower values give finer-grained retention drops at the cost of more

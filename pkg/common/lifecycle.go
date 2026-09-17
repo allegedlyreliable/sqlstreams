@@ -19,7 +19,7 @@ import (
 // log may be nil -- an info-level logger reports graceful shutdown starting
 // and completing, and warns when a second signal forces an exit.
 //
-//	ctx, stop := common.LifecycleContext(nil)
+//	ctx, stop := LifecycleContext(nil)
 //	defer stop()
 func LifecycleContext(log logging.Logger) (context.Context, context.CancelFunc) {
 	if log == nil {

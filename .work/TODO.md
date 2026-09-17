@@ -4,6 +4,26 @@ Sliding window of in-flight work only. Future work lives in ROADMAP.md;
 shipped work in HISTORY.md; decision rationale in DECISIONS.md ->
 .work/decisions/.
 
+## Documentation consistency and accuracy
+
+- Review root Markdown, user-facing client comments and their owning
+  declarations, and website content against the current implementation.
+- Correct resource lookup contracts, transaction and idempotency scope,
+  compaction ranking, metric filters, output behavior, and retention wording.
+  Keep mirrored comments aligned and preserve authored narrative and policy.
+- Restore the documented release policy at the existing upgrade-guide anchor.
+  Check internal links, examples, documentation rendering, and touched packages.
+- Documentation-only changes. No database or release operations.
+- Verified 600 internal links across 12 root Markdown files and 96 website
+  pages. Compared 190 re-export comments and eight mirrored structs with
+  their owners. Corrected two existing field-comment differences.
+- Root build, targeted vet and race tests, alias/default convention checks,
+  site build, Remark, and Vale pass. Five complete documentation programs
+  and the transactional guide's composed example compile against this checkout.
+- Changed Go files have identical non-comment tokens to HEAD. No runtime
+  behavior changed. External research links and dated benchmark evidence
+  remain historical references. Awaiting review and commit.
+
 ## CLI help alignment
 
 - Final wording pass uses distinct latest/history descriptions and examples,

@@ -25,7 +25,7 @@ sqlstreams stream config get <name> [key]
 | Command | Output | Empty or absent result |
 | --- | --- | --- |
 | `list` | Registrations ordered by name. JSON is an array of [stream objects](/reference/stream-object/). Quiet prints names only. | Empty list exits `0`, with JSON `[]`. |
-| `get` | One registration. Quiet suppresses output. | Absent stream exits `1`, with JSON `null`. |
+| `get` | One registration. Quiet suppresses result output. Diagnostics still appear on stderr. | Absent stream exits `1`, with JSON `null`. |
 | `health` | [Payload-version retirement evidence](/reference/stream-version-health/), as a table or JSON array. | Empty stream gives `[]` and exits `0`. Absence exits `1`. |
 | `config get` | Config keys with compiled defaults and current values. Optional key selects one. | Absent stream exits `1`. Unknown key exits `2`. |
 

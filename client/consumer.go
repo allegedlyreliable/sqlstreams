@@ -7,8 +7,8 @@ import (
 )
 
 // ConsumerHandle is a consumer group named on its stream, holding no row.
-// Get is the comma-ok read; every other verb returns the not-found error
-// itself.
+// Register can create the group. Get returns (nil, nil) when the stream or
+// group is absent.
 type ConsumerHandle[Message Versioned] struct {
 	streamName string
 	name       string
@@ -51,8 +51,9 @@ func (h *ConsumerHandle[Message]) Workers(ctx context.Context) ([]*Worker, error
 }
 
 // Destroy permanently deletes the group: its cursor, bindings, leases,
-// delivery rows, group-owned workers and schedules. The stream and its
-// messages are untouched. Refused unless ClientConfig.AllowDestroy is set.
+// exception and delivery-log rows, group-owned workers and schedules.
+// The stream and its messages are untouched.
+// Refused unless ClientConfig.AllowDestroy is set.
 func (h *ConsumerHandle[Message]) Destroy(ctx context.Context, options *DestroyOptions) error {
 	return h.client.admin.DestroyConsumer(ctx, h.streamName, h.name, options)
 }

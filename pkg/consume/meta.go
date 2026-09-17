@@ -13,7 +13,7 @@ type MessageMeta struct {
 	Id             int64     `json:"message_id"`
 	RoutingKey     string    `json:"routing_key"`     // "" if the producer set none
 	MessageKey     string    `json:"message_key"`     // "" if the producer set none
-	CompactionRank int64     `json:"compaction_rank"` // the message's rank under its key; 0 for an uncompacted message
+	CompactionRank int64     `json:"compaction_rank"` // zero for uncompacted messages and compacted messages with rank zero
 	CreatedAt      time.Time `json:"created_at"`
 	ScheduledAt    time.Time `json:"scheduled_at"` // the scheduled time a schedule's message is for; zero on every other message
 

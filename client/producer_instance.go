@@ -8,8 +8,8 @@ import (
 	"github.com/allegedlyreliable/sqlstreams/pkg/producer"
 )
 
-// ProducerInstance is a registered producer: it appends messages to the
-// stream its ProducerHandle.Register resolved.
+// ProducerInstance produces messages on the stream resolved at registration.
+// Cancellation applies to individual calls. The instance has no shutdown method.
 type ProducerInstance[Message Versioned] struct {
 	instance *producer.ProducerInstance[Message]
 }
@@ -21,12 +21,12 @@ func newProducerInstance[Message Versioned](instance *producer.ProducerInstance[
 	return &ProducerInstance[Message]{instance: instance}, nil
 }
 
-// Produce appends message, returning once it is durably committed.
+// Produce appends a message and returns after commit.
 func (p *ProducerInstance[Message]) Produce(ctx context.Context, message *Message, options *ProduceOptions) (*ProduceResult[Message], error) {
 	return p.instance.Produce(ctx, message, (*produce.ProduceOptions)(options))
 }
 
-// ProduceBatch appends every item in one transaction -- none land unless all do.
+// ProduceBatch appends all items in one transaction.
 func (p *ProducerInstance[Message]) ProduceBatch(ctx context.Context, items ...*ProduceItem[Message]) ([]*ProduceResult[Message], error) {
 	converted := make([]*producer.ProduceItem[Message], len(items))
 	for i, item := range items {
@@ -40,19 +40,19 @@ func (p *ProducerInstance[Message]) ProduceBatch(ctx context.Context, items ...*
 	return p.instance.ProduceBatch(ctx, converted...)
 }
 
-// ProduceFunc appends the message producerFunc returns from inside the
-// message's own transaction.
+// ProduceFunc runs producerFunc and produces its payload in one transaction.
+// The callback may run more than once.
 func (p *ProducerInstance[Message]) ProduceFunc(ctx context.Context, producerFunc ProducerFunc[Message], options *ProduceOptions) (*ProduceResult[Message], error) {
 	return p.instance.ProduceFunc(ctx, producerFunc, (*produce.ProduceOptions)(options))
 }
 
-// ProduceInTx appends message inside a transaction the caller owns.
+// ProduceInTx inserts message in the caller's transaction without committing.
 func (p *ProducerInstance[Message]) ProduceInTx(ctx context.Context, tx Tx, message *Message, options *ProduceOptions) (*ProduceResult[Message], error) {
 	return p.instance.ProduceInTx(ctx, tx, message, (*produce.ProduceOptions)(options))
 }
 
-// ProduceFuncInTx appends the message producerFunc returns, inside a
-// transaction the caller owns.
+// ProduceFuncInTx runs producerFunc and produces its payload in the caller's
+// transaction. It does not commit.
 func (p *ProducerInstance[Message]) ProduceFuncInTx(ctx context.Context, tx Tx, producerFunc ProducerFunc[Message], options *ProduceOptions) (*ProduceResult[Message], error) {
 	return p.instance.ProduceFuncInTx(ctx, tx, producerFunc, (*produce.ProduceOptions)(options))
 }

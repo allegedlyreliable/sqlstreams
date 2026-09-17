@@ -6,11 +6,18 @@ import (
 	"time"
 )
 
+// PostgresConnectionConfig configures the pool created by NewPostgresPool.
 type PostgresConnectionConfig struct {
-	Port           int           // Default: 5432.
-	MaxConns       int           // optional; if > 0 sets the pool's max size. default pgx pool is max(4, numCPU), which caps high worker counts.
-	ConnectTimeout time.Duration // optional; mirrors pgconn.Config.ConnectTimeout. Zero means pgx's own default (no timeout).
-	TLSConfig      *tls.Config   // optional; mirrors pgconn.Config.TLSConfig. Nil means pgx's own default DSN negotiation (sslmode "prefer": attempt TLS, fall back to plaintext) since this package never sets sslmode itself.
+	Port int // Default: 5432.
+	// MaxConns sets the pool size when positive. Zero preserves pgx's default.
+	MaxConns int
+	// ConnectTimeout sets the connection timeout when positive.
+	// Zero preserves the parsed pgx connection settings.
+	ConnectTimeout time.Duration
+	// TLSConfig replaces the parsed TLS configuration when non-nil.
+	// It does not replace pgx's fallback settings. Use a pgx connection URL
+	// to configure sslmode and fallback behavior explicitly.
+	TLSConfig *tls.Config
 }
 
 // WithDefaults fills Port (5432) -- the one knob that's a protocol constant.

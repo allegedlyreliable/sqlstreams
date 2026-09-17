@@ -33,9 +33,9 @@ type ConsumerConfig struct {
 	// Default: "" (honor each message's own policy).
 	ConcurrencyOverride common.ConcurrencyPolicy
 
-	// Start - where a group's cursor is placed when Register creates it;
-	// a group that already has a cursor row keeps its position.
-	// Default: consume.Beginning() -- the oldest retained message.
+	// Start - where a group's cursor is placed when Register creates it.
+	// A group that already has a cursor row keeps its position.
+	// Default: Beginning() -- the oldest retained message.
 	Start consume.CursorPosition
 
 	// Bindings - the group's whole pattern set, declared on every Register.

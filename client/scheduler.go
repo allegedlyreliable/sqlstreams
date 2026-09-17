@@ -7,8 +7,7 @@ import (
 )
 
 // SchedulerHandle is a schedule's name plus the client, holding no row.
-// Get is the comma-ok read; every other verb returns the not-found error
-// itself.
+// Register can create the schedule. Get returns (nil, nil) when it is absent.
 type SchedulerHandle struct {
 	name   string
 	client *Client
@@ -63,7 +62,10 @@ func (s *SchedulerHandle) Status(ctx context.Context) ([]*ScheduleConsumerGroupS
 	return s.client.admin.ScheduleStatus(ctx, s.name)
 }
 
-// Messages returns the schedule's produced messages, newest first.
+// Messages returns retained outcomes for the newest limit messages, with
+// one row per message and matching consumer group. Results are ordered by
+// descending message id, then group name. limit must be positive.
+// No matching groups means no result rows.
 func (s *SchedulerHandle) Messages(ctx context.Context, limit int) ([]*ScheduleMessageStatus, error) {
 	return s.client.admin.ScheduleMessages(ctx, s.name, limit)
 }

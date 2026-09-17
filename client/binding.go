@@ -5,7 +5,8 @@ import (
 )
 
 // BindingHandle is a consumer group's binding declaration,
-// named on its stream and group, holding no row. Get is the comma-ok read.
+// named on its stream and group, holding no row. Get returns (nil, nil)
+// when no declaration exists.
 type BindingHandle struct {
 	streamName string
 	groupName  string

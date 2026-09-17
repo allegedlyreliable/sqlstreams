@@ -53,7 +53,7 @@ fmt.Println(result.Id, result.Duplicate)
 | Field | Type | Default | Description |
 | --- | --- | --- | --- |
 | `Enable` | `bool` | `false` | Makes this a compacted message. Requires a `MessageKey`. Cannot be combined with requested `ConcurrencyOrdered`. |
-| `Rank` | `int64` | `0` | Within one payload schema version, higher rank selects the current message. Equal ranks use message id as a tiebreaker. A higher schema version takes precedence over rank. Zero uses message-id order. Must be zero when Enable is `false`. |
+| `Rank` | `int64` | `0` | Within one payload schema version, higher rank selects the current message. Equal ranks use message id as a tiebreaker. A higher schema version takes precedence over rank. Keeping every rank at zero uses message-id order within each schema version. Must be zero when Enable is `false`. |
 
 ## Returns
 

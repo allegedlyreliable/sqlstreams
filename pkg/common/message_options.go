@@ -5,15 +5,12 @@ import (
 	"time"
 )
 
-// MessageOptions are the per-message knobs a producer may REQUEST and a
-// consumer may CLAMP. Any unset field means "the consumer decides".
-//
-// Resolution is per field:
-// - consumer clamp > produced message > consumer defaults > system defaults
-// Messages REQUEST, consumers PROTECT THEMSELVES.
+// MessageOptions requests processing settings for one message.
+// Unset fields inherit producer defaults, then consumer group defaults.
+// The group's numeric bounds and concurrency override apply when consumed.
 type MessageOptions struct {
 	// Concurrency - concurrency policy for this message's message key.
-	// Requires a message key -- Exclusive without one errors at produce time.
+	// Exclusive and ordered require a message key when requested at produce time.
 	// Default: ConcurrencyParallel (same-key deliveries may overlap).
 	Concurrency ConcurrencyPolicy `json:"concurrency,omitempty"`
 

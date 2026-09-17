@@ -8,7 +8,7 @@ Pin compatibility to the prior tag ([setup](.tools/compat/go.mod)).
 ```sh
 just verify
 just signal-e2e
-just compat-lab # Use refused when the registry requires it.
+just compat-lab
 ```
 
 ## 2. Record
@@ -44,7 +44,7 @@ with `GOWORK=off`, then have the maintainer commit before tagging.
 
 ## 5. Check
 
-Verify downloads, installation, and CLI version; record outcomes in HISTORY.
+Verify downloads, installation, and CLI version. Record outcomes in HISTORY.
 Chocolatey public-feed installation waits for approval.
 
 ## 6. Docs — when versioning

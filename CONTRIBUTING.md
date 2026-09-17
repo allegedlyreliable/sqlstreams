@@ -41,12 +41,14 @@ missing, and labels it. Ideally, do not start coding work until the label lands:
 2. Open a [feature issue](https://github.com/allegedlyreliable/sqlstreams/issues/new?template=feature.yml)
    describing the problem, not a solution.
 3. Wait for `accepted`.
-4. The maintainer writes the decision record.
-5. Create/Open the implementation pull request.
+4. Agree on the design with the maintainer. User-facing features start with a
+   Proposed documentation page.
+5. Open the implementation pull request. The maintainer records the final
+   decision when the work is committed.
 
 ## Pull requests
 
-The pull request template's checklist is the two lists below.
+Use the pull request template and the requirements below.
 
 ### Every pull request
 

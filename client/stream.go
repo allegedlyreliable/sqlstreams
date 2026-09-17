@@ -8,8 +8,8 @@ import (
 
 // StreamHandle is the stream's name plus the client, holding no row. Message
 // is the payload type every handle under it reads and writes.
-// Every verb resolves the name when called; Get is
-// the comma-ok read, every other verb returns the not-found error itself.
+// Database operations resolve the name when called. Register can create the
+// stream. Get returns (nil, nil) when it is absent.
 type StreamHandle[Message Versioned] struct {
 	name   string
 	client *Client
@@ -28,7 +28,8 @@ func (c *Client) Stream[Message Versioned](name string) *StreamHandle[Message] {
 }
 
 // Register declares the named stream, creating its tables on first
-// registration. Idempotent; cfg may be nil or sparse.
+// registration. Repeated registration applies the supplied configuration.
+// cfg may be nil or sparse for the defaults.
 func (t *StreamHandle[Message]) Register(ctx context.Context, cfg *StreamConfig) (*Stream, error) {
 	return t.client.admin.RegisterStream(ctx, t.name, (*stream.StreamConfig)(cfg))
 }
@@ -51,7 +52,7 @@ func (t *StreamHandle[Message]) MigrationVersion(ctx context.Context) (int64, er
 }
 
 // Rename changes the registered name and returns the updated stream. This handle
-// keeps its old name; registered instances keep working through the stream id.
+// keeps its old name. Registered instances keep working through the stream id.
 // Returns ErrStreamNotFound for an absent stream or ErrStreamNameTaken on conflict.
 func (t *StreamHandle[Message]) Rename(ctx context.Context, newName string) (*Stream, error) {
 	return t.client.admin.RenameStream(ctx, t.name, newName)
@@ -64,8 +65,8 @@ func (t *StreamHandle[Message]) Destroy(ctx context.Context, options *DestroyOpt
 }
 
 // Health reports each payload version's retirement verdict, read live from
-// the stream's log, compaction heads, and consumer group cursors. An
-// unregistered stream returns ErrStreamNotFound.
+// the stream's log, compaction heads, consumer group cursors, and unresolved
+// exceptions. An unregistered stream returns ErrStreamNotFound.
 func (t *StreamHandle[Message]) Health(ctx context.Context) ([]*StreamVersionHealth, error) {
 	return t.client.admin.StreamHealth(ctx, t.name)
 }

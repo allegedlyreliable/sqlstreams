@@ -28,7 +28,7 @@ flowchart LR
 ```
 
 > [!NOTE]
-> System Manager is normally embedded within a running consumer and uses a poor man's leader election for singleton efficiency.
+> By default, `Consume` runs the system manager alongside its session. A database lease lets one manager reconcile maintenance workers at a time.
 
 ## Where to start reading the code
 
@@ -53,11 +53,11 @@ Nested modules with their own `go.mod`:
 | `.bench` | benchmark scenarios and their runner |
 | `.tools` | convention tests, compatibility checks, doc-site exports |
 
-Library packages are one of three kinds; all except `client/` live under `pkg/`:
+Library packages are one of three kinds. All except `client/` live under `pkg/`:
 
 | Kind | Packages |
 | --- | --- |
-| shared by everything | `common` (Owner, Message, RetryPolicy, errors, logging), `datastore` (pool, transactions) |
+| shared by everything | `common` (Owner, StoredMessage, RetryPolicy, errors, logging), `datastore` (pool, transactions) |
 | one per resource or activity | `stream`, `produce`, `consume`, `compaction`, `schedule`, `worker`, `metric`, `alert`, `system`, `migrate` |
 | the three boxes on the left, no SQL of their own | `client/` (package `sqlstreams`), `producer`, `consumer`, `scheduler`, `systemmanager`, `admin` |
 
@@ -78,11 +78,12 @@ the checks under `alert`.
 
 ## Everywhere
 
-- Errors, events, metrics, and alerts are declared with a `SQLnnnn` code
+- Named diagnostics for errors, events, metrics, and alerts have a `SQLnnnn` code
   in each package's `errors.go`, `events.go`, `metrics.go`, and
   `alerts.go`. `sqlstreams explain` reads them.
-- `DatastoreRetry` wraps every public datastore method. Transient errors
-  are retried. Permanent ones are not.
+- `DatastoreRetry` retries supported internal database operations after
+  transient errors. Caller-owned transactions are not retried, and operations
+  without idempotency protection stop when the commit outcome is unknown.
 - Configs hold optional fields only, filled by `WithDefaults()` then
   checked by `Validate()`.
 - Per-stream tables are named only through the functions in `pkg/stream`.

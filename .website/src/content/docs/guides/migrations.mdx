@@ -127,6 +127,18 @@ identify the database or application version that needs correcting.
 | v0.1.4 | v1 | v1 | v0.1.2 | Round-trip passed on 2026-09-14 against source 4da16369 with the race detector enabled; release source 40c98b58 adds checkpoint records only. |
 | v0.1.5 | v1 | v1 | v0.1.4 | Round-trip and all four signal cases passed on a fresh database on 2026-09-14 at source fa9d3c15; race detector enabled for compatibility. Library and schema unchanged from v0.1.4. |
 
+## Release maintenance and deprecation
+
+Only the latest stable release receives fixes. Bug and security fixes ship
+in a new release, with no promised backports to older release lines.
+
+Before removing or incompatibly changing a supported public API, SQLStreams
+announces the deprecation in release notes, marks affected Go declarations
+with `Deprecated:`, and documents the replacement and migration steps.
+The API remains available through at least one subsequent minor release,
+including during v0.x development. An urgent security exception states its
+reason and migration steps in the release notes.
+
 ## Related topics
 
 - [Migrate database schemas](/reference/schema-migrations/) — Migration API,

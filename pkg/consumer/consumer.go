@@ -23,11 +23,10 @@ import (
 	workercontroller "github.com/allegedlyreliable/sqlstreams/pkg/worker/controller"
 )
 
-// ConsumerFunc handles one delivered message. It should be idempotent --
-// redelivery after a crash or timeout is normal. nil records success; a
-// plain error retries under the message's RetryPolicy; consume.Terminal
-// dead-letters now; consume.Delay runs it again later without counting a
-// failure.
+// ConsumerFunc processes one delivered message. It must be safe to repeat
+// after a crash or timeout. Returning nil records success. An ordinary error
+// retries under the message's RetryPolicy. Terminal marks the message dead.
+// Delay requests another attempt later without counting a failure.
 type ConsumerFunc[Message common.Versioned] func(ctx context.Context, message *Message) error
 
 // Consumer runs a consumer group on one stream. Failed messages retry with

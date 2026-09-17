@@ -17,7 +17,7 @@
     ·
     <a href="#usage">Usage</a>
     ·
-    <a href="#ARCHITECTURE">Architecture</a>
+    <a href="ARCHITECTURE.md">Architecture</a>
     ·
     <a href="https://sqlstreams.io">Documentation</a>
     ·
@@ -32,7 +32,7 @@
 
 I use Kafka, you use Kafka, your mom uses Kafka. *Kafka is great.*
 
-**Buuuuuut....** running and maintaing a Kafka cluster is not fun.
+**Buuuuuut....** running and maintaining a Kafka cluster is not fun.
 
 I'd love to use Kafka for my [billion dollar, AI powered TODO app](https://github.com/agentstax/tomorrows-todo-today) but my mental state cannot handle another `"no brokers available"` error.
 
@@ -47,7 +47,7 @@ I'd love to use Kafka for my [billion dollar, AI powered TODO app](https://githu
   <em>for some reason or another.</em>
 </p>
 
-**SQLStreams is a pure SQL library that uses Postgres as its broker.**
+**SQLStreams is a Go library that uses Postgres as its broker.**
 
 - It's a message log AND a retry queue 🤓, and it does [~68k messages/s](https://sqlstreams.io/benchmarks/) on my laptop 😎.
 - You get consumer groups, replay, retention and compaction without running a traditional broker.
@@ -134,7 +134,6 @@ Install the CLI on macOS with Homebrew:
 
 ```sh
 brew install --cask allegedlyreliable/tap/sqlstreams
-
 ```
 
 Install the CLI on Windows with Chocolatey:
@@ -161,10 +160,10 @@ sqlstreams --version
 export SQLSTREAMS_DATABASE_URL=postgres://user:password@localhost/db
 
 sqlstreams stream list                              # every registered stream
-sqlstreams stream get videos.uploaded               # one specific stream's info
+sqlstreams stream get videos.uploaded               # one stream's registration
 sqlstreams explain SQL0022                          # what an error code means, the fix, the SQL
-sqlstreams metric list                              # current value of every built-in metric
-sqlstreams alert list                               # what's active right now
+sqlstreams metric list                              # latest retained value of each metric series
+sqlstreams alert list                               # retained active and resolved alerts
 sqlstreams manager run --metrics-address :9464      # run upkeep process, serve Prometheus /metrics
 # ...many more
 ```
