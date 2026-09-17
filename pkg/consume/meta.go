@@ -17,8 +17,9 @@ type MessageMeta struct {
 	CreatedAt      time.Time `json:"created_at"`
 	ScheduledAt    time.Time `json:"scheduled_at"` // the scheduled time a schedule's message is for; zero on every other message
 
-	// Attempts is the retry position: 0 on the cursor path, 1 on the first
-	// exception claim. A deferred message can reach 1 before its handler runs.
+	// Attempts is the zero-based delivery attempt. Deferrals leave it unchanged;
+	// failures, requested delays, and expired exception leases advance it.
+	// Cursor-range recovery can replay 0, so this is not an exact invocation count.
 	Attempts int `json:"attempts"`
 	Delays   int `json:"delays"` // later runs the handler requested so far
 

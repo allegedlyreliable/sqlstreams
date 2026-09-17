@@ -122,7 +122,7 @@ func (o *MessageOptions) WithDefaults() *MessageOptions {
 		o.Retry = &RetryPolicy{}
 	}
 	if o.Retry.MaxRetries == 0 {
-		o.Retry.MaxRetries = 3 // redelivery caps at 3 attempts by default -- the Policy default of 6 is tuned for internal retries
+		o.Retry.MaxRetries = 3 // three retries after the initial delivery; the policy default of 6 is for Postgres calls
 	}
 	o.Retry = o.Retry.WithDefaults()
 	return o

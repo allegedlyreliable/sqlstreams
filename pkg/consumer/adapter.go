@@ -43,28 +43,30 @@ func toMessageConsumerConfig(cfg *ConsumerConfig, options *ConsumeOptions) *mess
 
 func toExceptionConsumerConfig(cfg *ConsumerConfig, options *ConsumeOptions) *exceptionconsumer.ExceptionConsumerConfig {
 	return &exceptionconsumer.ExceptionConsumerConfig{
-		BatchLimit:            options.BatchLimit,
-		ClaimPollRate:         options.ClaimPollRate,
-		QueueMargin:           options.QueueMargin,
-		RecordMargin:          options.RecordMargin,
-		TimeoutGrace:          options.TimeoutGrace,
-		SlowDispatchThreshold: options.SlowDispatchThreshold,
-		InstanceTTL:           options.InstanceTTL,
-		ConfigRefreshInterval: options.ConfigRefreshInterval,
-		Message:               cfg.Message,
-		MessageMin:            cfg.MessageMin,
-		MessageMax:            cfg.MessageMax,
-		ConcurrencyOverride:   cfg.ConcurrencyOverride,
+		BatchLimit:              options.BatchLimit,
+		ClaimPollRate:           options.ClaimPollRate,
+		QueueMargin:             options.QueueMargin,
+		RecordMargin:            options.RecordMargin,
+		TimeoutGrace:            options.TimeoutGrace,
+		ExceptionInitialBackoff: cfg.ExceptionInitialBackoff,
+		SlowDispatchThreshold:   options.SlowDispatchThreshold,
+		InstanceTTL:             options.InstanceTTL,
+		ConfigRefreshInterval:   options.ConfigRefreshInterval,
+		Message:                 cfg.Message,
+		MessageMin:              cfg.MessageMin,
+		MessageMax:              cfg.MessageMax,
+		ConcurrencyOverride:     cfg.ConcurrencyOverride,
 	}
 }
 
 func toExceptionConsumerWorkerConfig(declared *ConsumerConfig) *workercontroller.WorkerConfig {
 	return &workercontroller.WorkerConfig{
 		Metadata: &exceptionconsumer.ExceptionConsumerMetadata{
-			Message:             declared.Message,
-			MessageMin:          declared.MessageMin,
-			MessageMax:          declared.MessageMax,
-			ConcurrencyOverride: declared.ConcurrencyOverride,
+			Message:                 declared.Message,
+			MessageMin:              declared.MessageMin,
+			MessageMax:              declared.MessageMax,
+			ConcurrencyOverride:     declared.ConcurrencyOverride,
+			ExceptionInitialBackoff: declared.ExceptionInitialBackoff,
 		},
 	}
 }

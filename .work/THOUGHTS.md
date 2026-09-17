@@ -1,6 +1,7 @@
 # Public API
 
-Need to update SQLSTREAMS_ADMIN_SCHEMA to SQLSTREAMS_SCHEMA
+Need to change this Warning to include 'or destroy consumer group with example command'
+time=2026-09-16T19:40:01.459-04:00 level=WARN msg="alert active" schema=sqlstreams worker=alert.worker_liveness group=alert.worker_liveness alert=worker_liveness alert_message="stream \"signup.welcome-email\" has no live instance on 6 of its worker rows" detail="Nothing is running: email-sender-beginning (exception_consumer, manager, message_consumer), email-sender-head (exception_consumer, manager, message_consumer). A worker row with no live instance does no work: expired partitions are not dropped, exceptions are not retried, and the group's cursor stops advancing." hint="Run \"sqlstreams manager run\" in a process that stays up, or start a consumer on the stream -- either one claims these rows." owner=signup.welcome-email severity=warn
 
 # Docs
 

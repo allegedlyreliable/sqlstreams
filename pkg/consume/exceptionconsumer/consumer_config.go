@@ -11,11 +11,12 @@ import (
 // worker row runs on. pkg/consumer resolves and validates the whole config once,
 // then builds this -- so WithDefaults here only backstops a direct caller.
 type ExceptionConsumerConfig struct {
-	BatchLimit    int // exceptions claimed per poll
-	ClaimPollRate time.Duration
-	QueueMargin   time.Duration // lease padding for time a claimed item sits queued before a worker starts on it
-	RecordMargin  time.Duration // lease padding for recording success/failure after consumerFunc returns
-	TimeoutGrace  time.Duration // scheduling slack for a consumerFunc that DID respect ctx.Done() to unwind before the hard cutoff abandons it
+	BatchLimit              int // exceptions claimed per poll
+	ClaimPollRate           time.Duration
+	QueueMargin             time.Duration // lease padding for time a claimed item sits queued before a worker starts on it
+	RecordMargin            time.Duration // lease padding for recording success/failure after consumerFunc returns
+	TimeoutGrace            time.Duration // scheduling slack for a consumerFunc that DID respect ctx.Done() to unwind before the hard cutoff abandons it
+	ExceptionInitialBackoff time.Duration // backoff after the first failure, including a first run deferred from the cursor path. Default: 5s.
 
 	SlowDispatchThreshold time.Duration // a delivery dispatch running longer than this logs a warn line with its duration -- 0 disables
 
@@ -31,6 +32,9 @@ type ExceptionConsumerConfig struct {
 }
 
 func (c *ExceptionConsumerConfig) WithDefaults() *ExceptionConsumerConfig {
+	if c.ExceptionInitialBackoff == 0 {
+		c.ExceptionInitialBackoff = 5 * time.Second
+	}
 	if c.BatchLimit == 0 {
 		c.BatchLimit = 1
 	}
@@ -64,6 +68,9 @@ func (c *ExceptionConsumerConfig) WithDefaults() *ExceptionConsumerConfig {
 }
 
 func (c *ExceptionConsumerConfig) Validate() error {
+	if c.ExceptionInitialBackoff <= 0 {
+		return fmt.Errorf("ExceptionInitialBackoff must be > 0, got %v", c.ExceptionInitialBackoff)
+	}
 	if c.BatchLimit < 1 {
 		return fmt.Errorf("BatchLimit must be >= 1, got %d", c.BatchLimit)
 	}
@@ -111,5 +118,6 @@ func (c *ExceptionConsumerConfig) withMetadata(metadata *ExceptionConsumerMetada
 	applied.MessageMin = metadata.MessageMin
 	applied.MessageMax = metadata.MessageMax
 	applied.ConcurrencyOverride = metadata.ConcurrencyOverride
+	applied.ExceptionInitialBackoff = metadata.ExceptionInitialBackoff
 	return applied.WithDefaults()
 }

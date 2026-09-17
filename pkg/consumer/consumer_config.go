@@ -42,7 +42,7 @@ type ConsumerConfig struct {
 	// Default: nil (the whole stream).
 	Bindings []string
 
-	ExceptionInitialBackoff time.Duration // can_run_after delay when an exception/terminal row is first written (Commit/PartialCommit) -- Message.Retry takes over on later retries. Default: 5s.
+	ExceptionInitialBackoff time.Duration // can_run_after delay after the first failed delivery, including an initially deferred message -- Message.Retry takes over on later retries. Default: 5s.
 	MaxRangeReclaims        int           // past this many reclaims a range is POISON -- quarantined into the exception window instead of handed out again. Default: 3.
 }
 

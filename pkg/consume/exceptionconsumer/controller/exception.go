@@ -51,7 +51,7 @@ func (c *ExceptionConsumerGroupController) Kill(ctx context.Context, streamId in
 }
 
 // Claim claims 'ready', expired 'inflight', and 'deferred' rows up
-// to maxRetries attempts. A leased message key excludes its rows.
+// to maxRetries retries after attempt zero. A leased message key excludes its rows.
 func (c *ExceptionConsumerGroupController) Claim(ctx context.Context, streamId int64, groupId int64, schemaVersion int64, limit int, maxRetries int, leaseDuration time.Duration, deliveryLogMode stream.DeliveryLogMode) ([]ClaimedException, error) {
 	if streamId <= 0 {
 		return nil, fmt.Errorf("streamId must be > 0, got %d", streamId)
@@ -105,10 +105,13 @@ func (c *ExceptionConsumerGroupController) RecordSuccess(ctx context.Context, ex
 	return c.datastore.RecordSuccess(ctx, toExceptionQueueRow(exception), deliveryLogMode, toKeyLease(keyClaim))
 }
 
-// RecordFailure resets the row as 'ready' with retryPolicy's
-// backoff so it can be retried.
+// RecordFailure advances the next attempt and resets the row as 'ready'.
+// The first failure uses initialBackoff; later failures use retryPolicy.
 // A non-nil keyClaim frees the key in the same transaction.
-func (c *ExceptionConsumerGroupController) RecordFailure(ctx context.Context, retryPolicy *common.RetryPolicy, exception *ClaimedException, failureErr error, deliveryLogMode stream.DeliveryLogMode, keyClaim *keyleasecontroller.KeyLeaseClaim) error {
+func (c *ExceptionConsumerGroupController) RecordFailure(ctx context.Context, retryPolicy *common.RetryPolicy, initialBackoff time.Duration, exception *ClaimedException, failureErr error, deliveryLogMode stream.DeliveryLogMode, keyClaim *keyleasecontroller.KeyLeaseClaim) error {
+	if initialBackoff <= 0 {
+		return fmt.Errorf("initialBackoff must be > 0, got %v", initialBackoff)
+	}
 	if retryPolicy == nil {
 		return errors.New("retryPolicy must not be nil")
 	}
@@ -119,7 +122,7 @@ func (c *ExceptionConsumerGroupController) RecordFailure(ctx context.Context, re
 		return errors.New("failureErr must not be nil")
 	}
 
-	return c.datastore.RecordFailure(ctx, retryPolicy, toExceptionQueueRow(exception), failureErr, deliveryLogMode, toKeyLease(keyClaim))
+	return c.datastore.RecordFailure(ctx, retryPolicy, initialBackoff, toExceptionQueueRow(exception), failureErr, deliveryLogMode, toKeyLease(keyClaim))
 }
 
 // RecordDelayed resets the row 'ready' after the handler's requested delay,
@@ -149,8 +152,7 @@ func (c *ExceptionConsumerGroupController) RecordTerminal(ctx context.Context, e
 	return c.datastore.RecordTerminal(ctx, toExceptionQueueRow(exception), failureErr, deliveryLogMode, toKeyLease(keyClaim))
 }
 
-// RecordSuperseded never runs the row again: the claim's attempts
-// increment is decremented back and the log row lands at that attempt.
+// RecordSuperseded never runs the row again and leaves its attempt unchanged.
 func (c *ExceptionConsumerGroupController) RecordSuperseded(ctx context.Context, exception *ClaimedException, deliveryLogMode stream.DeliveryLogMode) error {
 	if exception == nil {
 		return errors.New("exception must not be nil")
@@ -160,9 +162,8 @@ func (c *ExceptionConsumerGroupController) RecordSuperseded(ctx context.Context,
 }
 
 // RecordDeferred returns the row to 'deferred' -- its key was busy at the
-// gate, so no run started. The claim's attempts increment is decremented
-// back, the log row lands at that attempt, and the row's concurrency is
-// set to the policy the gate resolved.
+// gate, so no run started. Its attempt stays unchanged, and the row's
+// concurrency is set to the policy the gate resolved.
 func (c *ExceptionConsumerGroupController) RecordDeferred(ctx context.Context, exception *ClaimedException, concurrency common.ConcurrencyPolicy, deliveryLogMode stream.DeliveryLogMode) error {
 	if exception == nil {
 		return errors.New("exception must not be nil")

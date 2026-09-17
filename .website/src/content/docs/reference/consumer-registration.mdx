@@ -63,7 +63,7 @@ existing group's settings follow the [update timing](#behavior) below.
 | `ConcurrencyOverride` | `ConcurrencyPolicy` | `""` | Overrides the produced message's concurrency policy when set. Accepts `ConcurrencyParallel`, `ConcurrencyExclusive`, or `ConcurrencyOrdered`. |
 | `Start` | [`CursorPosition`](#cursorposition) | `Beginning()` | Starting position for a new group. Ignored when the group already has a cursor. |
 | `Bindings` | `[]string` | `nil` | Routing-key patterns selecting the group's messages. `nil` selects the whole stream. Each registration declares the full set, replacing the prior set when it can be installed. |
-| `ExceptionInitialBackoff` | `time.Duration` | `5s` | Initial wait before a newly recorded exception can run. Positive after defaults. |
+| `ExceptionInitialBackoff` | `time.Duration` | `5s` | Wait after the first failed delivery, including a message whose first run was deferred. Positive after defaults. |
 | `MaxRangeReclaims` | `int` | `3` | Limit on reclaiming the same range of messages after lease expiry. When the reclaim count reaches this limit, its messages move to exception processing. At least 1. |
 
 ### MessageOptions

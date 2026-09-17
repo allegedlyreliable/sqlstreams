@@ -9,9 +9,9 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-// Claim claims 'ready', expired 'inflight', and 'deferred' rows whose
-// failures (attempts - delays) are under maxRetries. A leased message key
-// excludes its rows.
+// Claim claims 'ready', expired 'inflight', and 'deferred' rows within the
+// retry budget. Only an expired lease advances attempts at claim time.
+// A leased message key excludes its rows.
 func (d *ExceptionConsumerGroupDatastore) Claim(ctx context.Context, streamId int64, groupId int64, schemaVersion int64, limit int, maxRetries int, leaseDuration time.Duration, deliveryLogMode stream.DeliveryLogMode) ([]ExceptionQueueRow, error) {
 	var claimed []ExceptionQueueRow
 	err := d.DatastoreRetry.WrapNonIdempotent(ctx, func() error {
@@ -33,13 +33,13 @@ func (d *ExceptionConsumerGroupDatastore) claim(ctx context.Context, streamId in
 					status = 'inflight',
 					lease_token = gen_random_uuid(),
 					lease_expires_at = now() + make_interval(secs => $3),
-					attempts = attempts + 1,
+					attempts = attempts + CASE WHEN status = 'inflight' THEN 1 ELSE 0 END,
 					updated_at = now()
 				WHERE (consumer_group_id, message_id) IN
 				(
 					SELECT d.consumer_group_id, d.message_id FROM %[1]s.%[2]s d
 					WHERE d.consumer_group_id = $1
-						AND d.attempts - d.delays < $5
+						AND d.attempts - d.delays + CASE WHEN d.status = 'inflight' THEN 1 ELSE 0 END <= $5
 						-- a row at another payload version stays put -- never decoded by this group
 						AND EXISTS (
 							SELECT 1 FROM %[1]s.%[3]s v
@@ -106,7 +106,7 @@ func (d *ExceptionConsumerGroupDatastore) claim(ctx context.Context, streamId in
 				SELECT d.consumer_group_id, d.message_id, d.status, d.attempts
 				FROM %[1]s.%[2]s d
 				WHERE d.consumer_group_id = $1
-					AND d.attempts - d.delays < $5
+					AND d.attempts - d.delays + CASE WHEN d.status = 'inflight' THEN 1 ELSE 0 END <= $5
 					-- a row at another payload version stays put -- never decoded by this group
 					AND EXISTS (
 						SELECT 1 FROM %[1]s.%[3]s v
@@ -147,16 +147,15 @@ func (d *ExceptionConsumerGroupDatastore) claim(ctx context.Context, streamId in
 					status = 'inflight',
 					lease_token = gen_random_uuid(),
 					lease_expires_at = now() + make_interval(secs => $3),
-					attempts = d.attempts + 1,
+					attempts = d.attempts + CASE WHEN e.status = 'inflight' THEN 1 ELSE 0 END,
 					updated_at = now()
 				FROM eligible e
 				WHERE d.consumer_group_id = e.consumer_group_id
 					AND d.message_id = e.message_id
 				RETURNING d.consumer_group_id, d.message_id, d.attempts, d.delays, d.lease_token, d.lease_expires_at
 			), expired_logged AS (
-				-- an expired 'inflight' row is a claim nobody recorded: its
-				-- current attempt number is provably absent from the log (any
-				-- recorded outcome would have moved the row off 'inflight')
+				-- the lease ended without an outcome; record its abandoned
+				-- attempt before advancing the number for the replacement
 				INSERT INTO %[1]s.%[4]s (consumer_group_id, message_id, attempt, status, error)
 				SELECT e.consumer_group_id, e.message_id, e.attempts, 'expired', 'delivery lease expired before an outcome was recorded'
 				FROM eligible e

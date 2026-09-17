@@ -182,7 +182,7 @@ func TestOutcomeVerbsWithStaleLeaseTokenAreLeaseLost(t *testing.T) {
 
 	// test
 	successErr := exceptions.RecordSuccess(ctx, &stale, stream.DeliveryLogModeAll, nil)
-	failureErr := exceptions.RecordFailure(ctx, retry, &stale, errors.New("handler returned an error"), stream.DeliveryLogModeAll, nil)
+	failureErr := exceptions.RecordFailure(ctx, retry, time.Hour, &stale, errors.New("handler returned an error"), stream.DeliveryLogModeAll, nil)
 	delayedErr := exceptions.RecordDelayed(ctx, time.Hour, &stale, errors.New("handler asked to run later"), stream.DeliveryLogModeAll, nil)
 	terminalErr := exceptions.RecordTerminal(ctx, &stale, errors.New("handler returned a terminal error"), stream.DeliveryLogModeAll, nil)
 	supersededErr := exceptions.RecordSuperseded(ctx, &stale, stream.DeliveryLogModeAll)
@@ -244,7 +244,7 @@ func TestOutcomeVerbsResolveTheClaimedRow(t *testing.T) {
 
 	// test
 	successErr := exceptions.RecordSuccess(ctx, &claimed[0], stream.DeliveryLogModeOff, nil)
-	failureErr := exceptions.RecordFailure(ctx, retry, &claimed[1], errors.New("handler returned an error"), stream.DeliveryLogModeOff, nil)
+	failureErr := exceptions.RecordFailure(ctx, retry, time.Hour, &claimed[1], errors.New("handler returned an error"), stream.DeliveryLogModeOff, nil)
 	terminalErr := exceptions.RecordTerminal(ctx, &claimed[2], errors.New("handler returned a terminal error"), stream.DeliveryLogModeOff, nil)
 
 	// verify
@@ -289,8 +289,8 @@ func TestOutcomeVerbsResolveTheClaimedRow(t *testing.T) {
 }
 
 // invariant (retry budget): a delay, a supersede, and a deferral are not
-// failures -- a delay counts in delays beside attempts, the other two hand
-// back the attempt the claim took -- and each logs at the claim's attempt.
+// failures -- a delay advances both counters, while the other two leave
+// the attempt unchanged. Every log names the attempt that produced it.
 func TestDelayedSupersededAndDeferredKeepTheRetryBudget(t *testing.T) {
 	// setup
 	groups, consumer := newMessageConsumerDatastore(t)
@@ -312,23 +312,23 @@ func TestDelayedSupersededAndDeferredKeepTheRetryBudget(t *testing.T) {
 	supersededErr := exceptions.RecordSuperseded(ctx, &claimed[1], stream.DeliveryLogModeFailures)
 	deferredErr := exceptions.RecordDeferred(ctx, &claimed[2], common.ConcurrencyExclusive, stream.DeliveryLogModeFailures)
 
-	// verify: the claim took each row to attempt 1
+	// verify: claiming fresh rows left them at attempt 0
 	if delayedErr != nil || supersededErr != nil || deferredErr != nil {
 		t.Fatalf("RecordDelayed, RecordSuperseded, RecordDeferred = %v, %v, %v; want nil, nil, nil", delayedErr, supersededErr, deferredErr)
 	}
 	var logged int
-	if err := groups.Datastore.Pool.QueryRow(ctx, "SELECT count(*) FROM "+logs+" WHERE consumer_group_id = $1 AND attempt = 1 AND (message_id, status) IN ((1, 'delayed'), (2, 'superseded'), (3, 'deferred'))", consumer.Id).Scan(&logged); err != nil {
+	if err := groups.Datastore.Pool.QueryRow(ctx, "SELECT count(*) FROM "+logs+" WHERE consumer_group_id = $1 AND attempt = 0 AND (message_id, status) IN ((1, 'delayed'), (2, 'superseded'), (3, 'deferred'))", consumer.Id).Scan(&logged); err != nil {
 		t.Fatal(err)
 	}
 	if logged != 3 {
-		t.Fatalf("delivery log rows at attempt 1 with the outcome's status = %d, want 3", logged)
+		t.Fatalf("delivery log rows at attempt 0 with the outcome's status = %d, want 3", logged)
 	}
 	deferred, err := exceptions.Claim(ctx, consumer.StreamId, consumer.Id, 1, 100, 10, time.Minute, stream.DeliveryLogModeFailures)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(deferred) != 1 || deferred[0].MessageId != 3 || deferred[0].Attempts != 1 {
-		t.Fatalf("Claim after the outcomes = %+v, want the deferred message 3 back at attempt 1", deferred)
+	if len(deferred) != 1 || deferred[0].MessageId != 3 || deferred[0].Attempts != 0 {
+		t.Fatalf("Claim after the outcomes = %+v, want the deferred message 3 still at attempt 0", deferred)
 	}
 
 	// test: the delay passes
@@ -341,8 +341,8 @@ func TestDelayedSupersededAndDeferredKeepTheRetryBudget(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(delayed) != 1 || delayed[0].MessageId != 1 || delayed[0].Attempts != 2 || delayed[0].Delays != 1 {
-		t.Fatalf("Claim after the delay = %+v, want the delayed message 1 at attempt 2 with 1 delay", delayed)
+	if len(delayed) != 1 || delayed[0].MessageId != 1 || delayed[0].Attempts != 1 || delayed[0].Delays != 1 {
+		t.Fatalf("Claim after the delay = %+v, want the delayed message 1 at attempt 1 with 1 delay", delayed)
 	}
 }
 

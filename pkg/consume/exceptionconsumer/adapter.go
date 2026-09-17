@@ -8,10 +8,11 @@ import (
 
 func toExceptionConsumerMetadata(cfg *ExceptionConsumerConfig) *ExceptionConsumerMetadata {
 	return &ExceptionConsumerMetadata{
-		Message:             cfg.Message,
-		MessageMin:          cfg.MessageMin,
-		MessageMax:          cfg.MessageMax,
-		ConcurrencyOverride: cfg.ConcurrencyOverride,
+		Message:                 cfg.Message,
+		MessageMin:              cfg.MessageMin,
+		MessageMax:              cfg.MessageMax,
+		ConcurrencyOverride:     cfg.ConcurrencyOverride,
+		ExceptionInitialBackoff: cfg.ExceptionInitialBackoff,
 	}
 }
 

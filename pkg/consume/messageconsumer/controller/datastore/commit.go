@@ -150,7 +150,7 @@ func deliveryStatement(streamId int64, schema string) string {
 			$3,
 			NULLIF($7, ''),
 			$8,
-			0,
+			$9,
 			$6,
 			now() + make_interval(secs => $5),
 			$4
@@ -175,14 +175,14 @@ func queueOutcomes(batch *pgx.Batch, deliverySql string, logSql string, groupId 
 	for _, outcome := range outcomes {
 		switch outcome.Kind {
 		case OutcomeException:
-			batch.Queue(deliverySql, groupId, outcome.MessageId, "ready", outcome.Err, initialBackoff.Seconds(), 0, outcome.MessageKey, outcome.Concurrency)
+			batch.Queue(deliverySql, groupId, outcome.MessageId, "ready", outcome.Err, initialBackoff.Seconds(), 0, outcome.MessageKey, outcome.Concurrency, 1)
 		case OutcomeTerminal:
-			batch.Queue(deliverySql, groupId, outcome.MessageId, "dead", outcome.Err, initialBackoff.Seconds(), 0, outcome.MessageKey, outcome.Concurrency)
+			batch.Queue(deliverySql, groupId, outcome.MessageId, "dead", outcome.Err, initialBackoff.Seconds(), 0, outcome.MessageKey, outcome.Concurrency, 0)
 			terminals++
 		case OutcomeDeferred:
-			batch.Queue(deliverySql, groupId, outcome.MessageId, "deferred", nil, 0.0, 0, outcome.MessageKey, outcome.Concurrency)
+			batch.Queue(deliverySql, groupId, outcome.MessageId, "deferred", nil, 0.0, 0, outcome.MessageKey, outcome.Concurrency, 0)
 		case OutcomeDelayed:
-			batch.Queue(deliverySql, groupId, outcome.MessageId, "ready", outcome.Err, outcome.Delay.Seconds(), 1, outcome.MessageKey, outcome.Concurrency)
+			batch.Queue(deliverySql, groupId, outcome.MessageId, "ready", outcome.Err, outcome.Delay.Seconds(), 1, outcome.MessageKey, outcome.Concurrency, 1)
 		}
 		if deliveryLogMode != stream.DeliveryLogModeOff {
 			batch.Queue(logSql, groupId, outcome.MessageId, outcomeLogStatus(outcome.Kind), outcome.Err)

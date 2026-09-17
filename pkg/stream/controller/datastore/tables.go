@@ -104,7 +104,7 @@ func (d *StreamDatastore) createStreamTables(ctx context.Context, tx pgx.Tx, id 
 			status TEXT NOT NULL,                             -- 'ready' | 'processing' | 'inflight' | 'deferred' | 'done' | 'dead'
 			message_key TEXT,                                 -- the message's key; NULL = keyless
 			concurrency TEXT NOT NULL,                        -- 'parallel' | 'exclusive' -- the policy the group resolved for the message when it wrote the row
-			attempts INT NOT NULL DEFAULT 0,                  -- runs so far; the retry budget is attempts - delays
+			attempts INT NOT NULL DEFAULT 0,                  -- current/next zero-based delivery attempt; deferrals do not advance it
 			delays INT NOT NULL DEFAULT 0,                    -- later runs the handler requested, never counted as failures
 			can_run_after TIMESTAMPTZ NOT NULL DEFAULT NOW(), -- backoff between retries, or the handler's requested delay
 			last_error TEXT,
@@ -143,7 +143,7 @@ func (d *StreamDatastore) createStreamTables(ctx context.Context, tx pgx.Tx, id 
 			id BIGSERIAL PRIMARY KEY,
 			consumer_group_id BIGINT NOT NULL,
 			message_id BIGINT NOT NULL,
-			attempt INT NOT NULL,                 -- the run this event belongs to; a claim handed back at the key gate logs under the number it returned
+			attempt INT NOT NULL,                 -- zero-based delivery attempt; deferred/superseded events do not advance it
 			status TEXT NOT NULL DEFAULT 'failure',
 			error TEXT NOT NULL,
 			attempted_at TIMESTAMPTZ NOT NULL DEFAULT NOW()

@@ -53,7 +53,7 @@ func printPayment(ctx context.Context, payment *PaymentRequestedV1) error {
 | `CompactionRank` | `int64` | `compaction_rank` | The message's rank under its key. Zero for an uncompacted message. |
 | `CreatedAt` | `time.Time` | `created_at` | The message's creation time. |
 | `ScheduledAt` | `time.Time` | `scheduled_at` | The scheduled time represented by this message. Zero for other messages. |
-| `Attempts` | `int` | `attempts` | Runs counted before this invocation. Zero on the first invocation. |
+| `Attempts` | `int` | `attempts` | Zero-based delivery attempt. Waiting for an ordered predecessor or a busy message key does not advance it. Failures, handler-requested delays, and expired exception leases advance it. |
 | `Delays` | `int` | `delays` | Consumer handler-requested later runs counted so far, separately from failed attempts. |
 | `Options` | [`*MessageOptions`](/reference/consumer-registration/#messageoptions) | `options` | Resolved options for this invocation, with group defaults and bounds applied. For example, `Options.Timeout` is the effective processing timeout. |
 
@@ -64,6 +64,22 @@ delay processing. The [consumer handler's return value](/reference/consume/#mess
 determines the message's outcome.
 
 </ThreadAside>
+
+## Delivery attempt numbering
+
+An ordered message that waited without running starts at attempt `0`.
+Claiming a ready or deferred exception leaves its attempt number unchanged.
+A recorded failure or requested delay advances the next attempt; a delay also
+increments `Delays`, so it does not consume the failure budget. Delivery logs
+record the attempt that produced the outcome, before the counter advances.
+
+An expired exception lease advances the attempt because the prior run's outcome
+is unknown. Cursor-range recovery can replay attempt `0`; this number is not an
+exact count of handler invocations across crashes. `MaxRetries: 3` still permits
+attempt `0` and three retries, excluding requested delays.
+
+This pre-v1 change requires a fresh database for testing. Existing exception
+rows use different counter semantics; do not mix consumers from both versions.
 
 ## Related topics
 

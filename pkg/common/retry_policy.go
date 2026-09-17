@@ -12,8 +12,9 @@ const MIN_DELAY = 0
 // to the client's own Postgres calls; MessageOptions.Retry applies it to a
 // message's redelivery. Zero fields take the defaults.
 type RetryPolicy struct {
-	// MaxRetries - failed attempts allowed, the first included: a Postgres
-	// call gives up, a delivery dead-letters, once it is reached.
+	// MaxRetries - for message redelivery, retries after attempt 0, excluding
+	// handler-requested delays. For Postgres calls, total attempts including
+	// the first. Exhaustion stops retrying or dead-letters the delivery.
 	// Default: 6 (3 as a consumer's Message.Retry).
 	MaxRetries int `json:"max_retries,omitempty"`
 

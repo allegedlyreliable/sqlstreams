@@ -4,6 +4,47 @@ Sliding window of in-flight work only. Future work lives in ROADMAP.md;
 shipped work in HISTORY.md; decision rationale in DECISIONS.md ->
 .work/decisions/.
 
+## Delivery attempt numbering
+
+- Implement approved option A: attempts stores the current/next zero-based
+  delivery attempt. A fresh exception claim does not increment it; failures,
+  requested delays, and expired leases advance it. Deferrals do not.
+- Keep the existing delivery budget: MaxRetries retries after the initial
+  attempt, with handler-requested delays excluded. First failures on either
+  path use ExceptionInitialBackoff; later failures use the retry curve.
+- Pre-v1 baseline change: use a fresh database, not mixed old/new consumers
+  over existing exception rows. No automatic conversion of ambiguous historical
+  counters or edits to the user's quickstart database.
+- Existing tests whose expected counters encode claim-time increments will
+  change to the approved outcome-time semantics; lease and ordering assertions
+  stay intact. Record the new regression failing before the implementation.
+- The ordered-successor regression failed at attempt 1 before the change in
+  all three delivery-log modes; it now passes at 0, including repeated deferral.
+  Existing exception outcome assertions now expect the unchanged claim number
+  and increments on recorded delays; RecordFailure calls pass initial backoff.
+- Verification: consumer and stream PostgreSQL integration suites pass with
+  race detection, including outcome/backoff/expiry history checks. Targeted
+  root race tests and vet pass. A separate PostgreSQL instance reproduced the
+  quickstart handler calls user-1:0, user-1:1, user-2:0, user-2:1 and stored
+  failure:0/success:1 for both messages, with no remaining exception rows.
+  Temporary driver: `/tmp/sqlstreams-attempt-check.z635ajza/`.
+- Expand attempt integration coverage from expected delivery behavior:
+  first outcomes record zero; failure/delay advance the next attempt;
+  deferral, success, terminal, and supersession do not advance it. Delays
+  preserve the failure budget and backoff position. Each expired lease
+  advances once; live polling, renewal, stale results, and duplicate outcomes
+  cannot advance it. Counters belong to each message and consumer group.
+- Cover cursor retries, partial commits, range replays/surrender/quarantine,
+  ordered successors, zero/final retry limits, and stored delivery history
+  across off/failures/all logging modes in attempt_test.go.
+- Expanded attempt_test.go from 3 to 15 scenarios (60 leaf cases across
+  logging modes). The complete consume PostgreSQL integration suite passes
+  with `go test -race -count=1 ./integration/consume`. No production changes
+  or changes to existing test expectations were needed for this expansion.
+  The new cursor-success test initially supplied an outcome the production
+  caller omits outside all mode; corrected its input, retaining the expected
+  empty success history in failures/off modes.
+
 ## Public config hover
 
 - Accepted option B: explicit public ProducerConfig,

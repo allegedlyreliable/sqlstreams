@@ -172,7 +172,7 @@ func (r *exceptionRunner[Message]) processException(ctx context.Context, cfg *Ex
 		switch {
 		case err != nil:
 			// a failed key-lease claim counts as this attempt's own failure
-			return r.recordFailure(ctx, exception, resolvedOptions, err, nil)
+			return r.recordFailure(ctx, exception, resolvedOptions, cfg.ExceptionInitialBackoff, err, nil)
 		case claim.Verdict == keyleasecontroller.KeyLeaseSuperseded:
 			return r.recordSuperseded(ctx, exception)
 		case claim.Verdict == keyleasecontroller.KeyLeaseBusy:
@@ -200,7 +200,7 @@ func (r *exceptionRunner[Message]) processException(ctx context.Context, cfg *Ex
 		return r.recordDelayed(ctx, exception, resolvedOptions, err, keyClaim)
 	}
 	if err != nil {
-		return r.recordFailure(ctx, exception, resolvedOptions, err, keyClaim)
+		return r.recordFailure(ctx, exception, resolvedOptions, cfg.ExceptionInitialBackoff, err, keyClaim)
 	}
 
 	return r.recordSuccess(ctx, exception, keyClaim)
@@ -221,7 +221,7 @@ func (r *exceptionRunner[Message]) recordSuccess(ctx context.Context, exception 
 	return r.absorbLostLease(ctx, exception, err)
 }
 
-func (r *exceptionRunner[Message]) recordFailure(ctx context.Context, exception *controller.ClaimedException, resolvedOptions *common.MessageOptions, runErr error, keyClaim *keyleasecontroller.KeyLeaseClaim) error {
+func (r *exceptionRunner[Message]) recordFailure(ctx context.Context, exception *controller.ClaimedException, resolvedOptions *common.MessageOptions, initialBackoff time.Duration, runErr error, keyClaim *keyleasecontroller.KeyLeaseClaim) error {
 	// out of attempts -- this failure is terminal, not another retry
 	if exception.Attempts-exception.Delays >= resolvedOptions.Retry.MaxRetries {
 		return r.recordTerminal(ctx, exception, runErr, keyClaim)
@@ -230,7 +230,7 @@ func (r *exceptionRunner[Message]) recordFailure(ctx context.Context, exception 
 	recordCtx, cancel := r.recordContext(ctx, keyClaim)
 	defer cancel()
 
-	err := r.consumers.RecordFailure(recordCtx, resolvedOptions.Retry, exception, runErr, r.Stream.DeliveryLogMode, keyClaim)
+	err := r.consumers.RecordFailure(recordCtx, resolvedOptions.Retry, initialBackoff, exception, runErr, r.Stream.DeliveryLogMode, keyClaim)
 	if err == nil {
 		r.Metrics.RecordReady(1)
 	}

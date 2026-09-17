@@ -54,16 +54,17 @@ func (d *ExceptionConsumerGroupDatastore) recordSuccess(ctx context.Context, exc
 }
 
 // RecordFailure resets the row 'ready' with retryPolicy's backoff so it can
-// be retried. Exhausted attempts are the caller's call -- it records those
+// be retried. The first failure uses initialBackoff; later ones use the
+// retry curve. Exhausted attempts are the caller's call -- it records those
 // through RecordTerminal instead.
 // A non-nil keyClaim frees the key in the same transaction.
-func (d *ExceptionConsumerGroupDatastore) RecordFailure(ctx context.Context, retryPolicy *common.RetryPolicy, exception *ExceptionQueueRow, failureErr error, deliveryLogMode stream.DeliveryLogMode, keyClaim *KeyLease) error {
+func (d *ExceptionConsumerGroupDatastore) RecordFailure(ctx context.Context, retryPolicy *common.RetryPolicy, initialBackoff time.Duration, exception *ExceptionQueueRow, failureErr error, deliveryLogMode stream.DeliveryLogMode, keyClaim *KeyLease) error {
 	return d.DatastoreRetry.WrapIdempotent(ctx, func() error {
-		return d.recordFailure(ctx, retryPolicy, exception, failureErr, deliveryLogMode, keyClaim)
+		return d.recordFailure(ctx, retryPolicy, initialBackoff, exception, failureErr, deliveryLogMode, keyClaim)
 	})
 }
 
-func (d *ExceptionConsumerGroupDatastore) recordFailure(ctx context.Context, retryPolicy *common.RetryPolicy, exception *ExceptionQueueRow, failureErr error, deliveryLogMode stream.DeliveryLogMode, keyClaim *KeyLease) error {
+func (d *ExceptionConsumerGroupDatastore) recordFailure(ctx context.Context, retryPolicy *common.RetryPolicy, initialBackoff time.Duration, exception *ExceptionQueueRow, failureErr error, deliveryLogMode stream.DeliveryLogMode, keyClaim *KeyLease) error {
 	// clears the lease so it's claimable as a fresh 'ready' retry once can_run_after passes.
 	var sql string
 	if deliveryLogMode == stream.DeliveryLogModeOff {
@@ -72,6 +73,7 @@ func (d *ExceptionConsumerGroupDatastore) recordFailure(ctx context.Context, ret
 			UPDATE %[1]s.%[2]s
 			SET
 				status = 'ready',
+				attempts = attempts + 1,
 				lease_token = NULL,
 				lease_expires_at = NULL,
 				last_error = $3,
@@ -88,6 +90,7 @@ func (d *ExceptionConsumerGroupDatastore) recordFailure(ctx context.Context, ret
 				UPDATE %[1]s.%[2]s
 				SET
 					status = 'ready',
+					attempts = attempts + 1,
 					lease_token = NULL,
 					lease_expires_at = NULL,
 					last_error = $3,
@@ -104,7 +107,11 @@ func (d *ExceptionConsumerGroupDatastore) recordFailure(ctx context.Context, ret
 		`, d.Datastore.Schema, stream.ExceptionQueueTable(exception.StreamId), stream.DeliveryLogTable(exception.StreamId))
 	}
 
-	args := []any{exception.ConsumerGroupId, exception.MessageId, failureErr.Error(), retryPolicy.CalculateDelay(exception.Attempts - exception.Delays - 1).Seconds(), exception.LeaseToken}
+	delay := initialBackoff
+	if exception.Attempts > exception.Delays {
+		delay = retryPolicy.CalculateDelay(exception.Attempts - exception.Delays - 1)
+	}
+	args := []any{exception.ConsumerGroupId, exception.MessageId, failureErr.Error(), delay.Seconds(), exception.LeaseToken}
 	if deliveryLogMode != stream.DeliveryLogModeOff {
 		args = append(args, exception.Attempts)
 	}
@@ -133,6 +140,7 @@ func (d *ExceptionConsumerGroupDatastore) recordDelayed(ctx context.Context, del
 			UPDATE %[1]s.%[2]s
 			SET
 				status = 'ready',
+				attempts = attempts + 1,
 				delays = delays + 1,
 				lease_token = NULL,
 				lease_expires_at = NULL,
@@ -150,6 +158,7 @@ func (d *ExceptionConsumerGroupDatastore) recordDelayed(ctx context.Context, del
 				UPDATE %[1]s.%[2]s
 				SET
 					status = 'ready',
+					attempts = attempts + 1,
 					delays = delays + 1,
 					lease_token = NULL,
 					lease_expires_at = NULL,
@@ -245,8 +254,7 @@ func (d *ExceptionConsumerGroupDatastore) recordTerminal(ctx context.Context, ex
 	return nil
 }
 
-// RecordSuperseded never runs the row again: the claim's attempts
-// increment is decremented back and the log row lands at that attempt.
+// RecordSuperseded never runs the row again and leaves its attempt unchanged.
 func (d *ExceptionConsumerGroupDatastore) RecordSuperseded(ctx context.Context, exception *ExceptionQueueRow, deliveryLogMode stream.DeliveryLogMode) error {
 	return d.DatastoreRetry.WrapIdempotent(ctx, func() error {
 		return d.recordSuperseded(ctx, exception, deliveryLogMode)
@@ -261,7 +269,6 @@ func (d *ExceptionConsumerGroupDatastore) recordSuperseded(ctx context.Context, 
 			UPDATE %[1]s.%[2]s
 			SET
 				status = 'superseded',
-				attempts = attempts - 1,
 				lease_token = NULL,
 				lease_expires_at = NULL,
 				updated_at = now()
@@ -278,7 +285,6 @@ func (d *ExceptionConsumerGroupDatastore) recordSuperseded(ctx context.Context, 
 				UPDATE %[1]s.%[2]s
 				SET
 					status = 'superseded',
-					attempts = attempts - 1,
 					lease_token = NULL,
 					lease_expires_at = NULL,
 					updated_at = now()
@@ -288,7 +294,7 @@ func (d *ExceptionConsumerGroupDatastore) recordSuperseded(ctx context.Context, 
 				RETURNING attempts
 			)
 			INSERT INTO %[1]s.%[3]s (consumer_group_id, message_id, attempt, status, error)
-			SELECT $1, $2, attempts + 1, 'superseded', $4
+			SELECT $1, $2, attempts, 'superseded', $4
 			FROM updated;
 		`, d.Datastore.Schema, stream.ExceptionQueueTable(exception.StreamId), stream.DeliveryLogTable(exception.StreamId))
 	}
@@ -301,9 +307,8 @@ func (d *ExceptionConsumerGroupDatastore) recordSuperseded(ctx context.Context, 
 }
 
 // RecordDeferred returns the row to 'deferred': its key was busy when the
-// claim reached the gate, so no run started. The claim's attempts increment
-// is decremented back and the log row lands at that attempt; the next claim
-// takes the row once the key frees.
+// claim reached the gate, so no run started. The attempt stays unchanged;
+// the next claim takes the row once the key frees.
 func (d *ExceptionConsumerGroupDatastore) RecordDeferred(ctx context.Context, exception *ExceptionQueueRow, concurrency common.ConcurrencyPolicy, deliveryLogMode stream.DeliveryLogMode) error {
 	return d.DatastoreRetry.WrapIdempotent(ctx, func() error {
 		return d.recordDeferred(ctx, exception, concurrency, deliveryLogMode)
@@ -319,7 +324,6 @@ func (d *ExceptionConsumerGroupDatastore) recordDeferred(ctx context.Context, ex
 			SET
 				status = 'deferred',
 				concurrency = $4,
-				attempts = attempts - 1,
 				lease_token = NULL,
 				lease_expires_at = NULL,
 				updated_at = now()
@@ -337,7 +341,6 @@ func (d *ExceptionConsumerGroupDatastore) recordDeferred(ctx context.Context, ex
 				SET
 					status = 'deferred',
 					concurrency = $4,
-					attempts = attempts - 1,
 					lease_token = NULL,
 					lease_expires_at = NULL,
 					updated_at = now()
@@ -347,7 +350,7 @@ func (d *ExceptionConsumerGroupDatastore) recordDeferred(ctx context.Context, ex
 				RETURNING attempts
 			)
 			INSERT INTO %[1]s.%[3]s (consumer_group_id, message_id, attempt, status, error)
-			SELECT $1, $2, attempts + 1, 'deferred', $5
+			SELECT $1, $2, attempts, 'deferred', $5
 			FROM updated;
 		`, d.Datastore.Schema, stream.ExceptionQueueTable(exception.StreamId), stream.DeliveryLogTable(exception.StreamId))
 	}

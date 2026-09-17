@@ -151,7 +151,7 @@ func TestDeleteGroupRemovesItsUnlinkedRows(t *testing.T) {
 		if err != nil || len(claimed) != 1 {
 			t.Fatalf("exception Claim during setup = %+v, %v; want the one row", claimed, err)
 		}
-		if err := exceptions.RecordFailure(ctx, retry, &claimed[0], errors.New("handler returned an error"), stream.DeliveryLogModeFailures, nil); err != nil {
+		if err := exceptions.RecordFailure(ctx, retry, time.Hour, &claimed[0], errors.New("handler returned an error"), stream.DeliveryLogModeFailures, nil); err != nil {
 			t.Fatal(err)
 		}
 	}

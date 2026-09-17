@@ -2,6 +2,7 @@ package exceptionconsumer
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/allegedlyreliable/sqlstreams/pkg/common"
 )
@@ -10,15 +11,19 @@ import (
 // consumer worker row: only the fields the declaration set. Unset fields
 // resolve to the library defaults when the row is read back.
 type ExceptionConsumerMetadata struct {
-	Message             *common.MessageOptions   `json:"message,omitempty"`
-	MessageMin          *common.MessageOptions   `json:"message_min,omitempty"`
-	MessageMax          *common.MessageOptions   `json:"message_max,omitempty"`
-	ConcurrencyOverride common.ConcurrencyPolicy `json:"concurrency_override,omitempty"`
+	Message                 *common.MessageOptions   `json:"message,omitempty"`
+	MessageMin              *common.MessageOptions   `json:"message_min,omitempty"`
+	MessageMax              *common.MessageOptions   `json:"message_max,omitempty"`
+	ConcurrencyOverride     common.ConcurrencyPolicy `json:"concurrency_override,omitempty"`
+	ExceptionInitialBackoff time.Duration            `json:"exception_initial_backoff,omitempty"`
 }
 
 // Validate accepts the sparse document -- zero means unset -- and rejects
 // only values no declaration could have written.
 func (m *ExceptionConsumerMetadata) Validate() error {
+	if m.ExceptionInitialBackoff < 0 {
+		return fmt.Errorf("exception_initial_backoff must be >= 0, got %v", m.ExceptionInitialBackoff)
+	}
 	if err := m.Message.Validate(); err != nil {
 		return fmt.Errorf("message: %w", err)
 	}
@@ -43,5 +48,6 @@ func (m *ExceptionConsumerMetadata) Equal(other *ExceptionConsumerMetadata) bool
 	return m.Message.Equal(other.Message) &&
 		m.MessageMin.Equal(other.MessageMin) &&
 		m.MessageMax.Equal(other.MessageMax) &&
-		m.ConcurrencyOverride == other.ConcurrencyOverride
+		m.ConcurrencyOverride == other.ConcurrencyOverride &&
+		m.ExceptionInitialBackoff == other.ExceptionInitialBackoff
 }
