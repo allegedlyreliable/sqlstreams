@@ -1,0 +1,96 @@
+---
+title: Roadmap
+description: Proposed features for SQLStreams.
+slop: medium
+---
+
+import ThreadAside from '../../components/thread-aside/thread-aside.svelte';
+
+Here is my current running list of new **proposed** features on the Roadmap.
+
+These are not ordered or exact. Other features not listed here may come first.
+
+If you want the *full* unordered list [look here](https://github.com/allegedlyreliable/sqlstreams/blob/main/.work/ROADMAP.md).
+
+<ThreadAside label="NOTE" title="Squash em">
+I will always prioritize bugs over features. Only extreme bugs that cause massive
+system rewrites may be acknowledged and postponed.
+</ThreadAside>
+
+
+## Retry dead messages
+
+**Problem:** Once a message exhausts its retries, fixing the cause does not
+make it run again. Inspecting and retrying dead messages currently requires
+SQL by hand.
+
+**Solution:** List dead messages, see why they failed, and retry them through
+the client or CLI.
+
+[Upvote or discuss](https://github.com/allegedlyreliable/sqlstreams/issues/12).
+
+## Replay an existing consumer group
+
+**Problem:** A handler can succeed while doing the wrong thing. Fixing its
+code does not revisit messages the group has already processed.
+
+For example, a bad deploy makes `search-indexer` omit prices from orders
+101–200. The handler returned success, so there is nothing to retry. The
+corrected handler needs to read those messages again.
+
+**Solution:** Rewind an existing group to a message id or timestamp and
+process its retained history again. Other groups keep their progress;
+anything the rewound group's handler does may happen again.
+
+[Upvote or discuss](https://github.com/allegedlyreliable/sqlstreams/issues/13).
+
+## Circuit breakers
+
+**Problem:** When a downstream dependency goes down, consumers keep trying
+messages that cannot succeed. An email-provider outage can exhaust the retry
+budgets of otherwise valid receipt requests.
+
+**Solution:** Pause processing when a dependency is failing, then probe for
+recovery before resuming. A problem with one consumer instance should not
+stop healthy instances from making progress.
+
+[Upvote or discuss](https://github.com/allegedlyreliable/sqlstreams/issues/14).
+
+## Message version conversion
+
+**Problem:** A consumer expects one message version. Older versions are
+skipped, even when their data is still useful.
+
+For example, `search-indexer` now reads version 2, which stores prices in
+cents. Retained orders 101–200 use version 1, which stored prices in dollars.
+The new handler needs a conversion before it can rebuild those records.
+
+**Solution:** Let consumers read older versions through converters you
+provide. You define how the old fields map to the new ones, without a
+separate process rewriting the retained messages.
+
+[Upvote or discuss](https://github.com/allegedlyreliable/sqlstreams/issues/15).
+
+## Header/content routing
+
+**Problem:** Routing currently matches one routing-key string. Independent
+attributes such as region and customer tier have to be encoded into that
+string, and every group has to work around its format.
+
+**Solution:** Let each group select messages by attributes such as
+`region=eu` and `tier=gold`. Producers attach the attributes without needing
+to know which groups exist.
+
+[Upvote or discuss](https://github.com/allegedlyreliable/sqlstreams/issues/16).
+
+## Lease renewal
+
+**Problem:** A long-running handler can outlive its lease while still making
+progress. Making every lease longer gives it more time, but also makes crash
+recovery slower.
+
+**Solution:** Let the handler report progress and extend its lease. Renewal
+would depend on progress reported by the handler, with a maximum runtime so
+a stuck handler cannot hold a message forever.
+
+[Upvote or discuss](https://github.com/allegedlyreliable/sqlstreams/issues/17).

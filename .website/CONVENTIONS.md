@@ -263,20 +263,21 @@ preprocessor, no utility framework, no third-party token pack.
   page types.
 - Each page does ONE job -- tutorial, how-to, reference, or
   explanation; a guide that starts explaining links to the concept
-  page instead of drifting. Four boards organize those purposes: Concepts (explanation), Guides
-  (how-to), Reference
-  (contract lookup), and Troubleshooting (diagnosis and recovery). Article dropdown trees connect related pages across boards without
-  repeating their content. Articles have one owning board except the two homepage
-  stickies, which link directly to the Board Index; contextual links can reach it
-  from other boards. A diagnostic code keeps one canonical page, reachable
-  from both reference and troubleshooting.
+  page instead of drifting. Five boards organize those purposes: Overview
+  (orientation, measured throughput, and planned features), Concepts
+  (explanation), Guides (how-to), Reference (contract lookup), and
+  Troubleshooting (diagnosis and recovery). Article dropdown trees connect
+  related pages across boards without repeating their content. Every article
+  has exactly one owning board; the two homepage stickies are Overview
+  articles that the homepage also lists above the sandbox. A diagnostic code
+  keeps one canonical page, reachable from both reference and troubleshooting.
 - Concepts, Guides, and Reference group their articles beneath group
   headings. Consumer is the current example. Reference's resource and lookup subsections sit
   inside Consumer; Concepts and Guides list their articles directly under it.
   Article breadcrumbs include the group after the board, linking to that
-  group's anchor on the board. Standalone stickies and Troubleshooting keep
-  their existing trails. No standalone group route is created.
-- The Consumer map connects related articles across the four boards. The
+  group's anchor on the board. Overview and Troubleshooting are ungrouped, so
+  their trails stop at the board. No standalone group route is created.
+- The Consumer map connects related articles across the grouped boards. The
   article frontmatter owns group membership (`group: consumer`). Board
   groups, dropdown trees, and breadcrumbs derive it from the content collection;
   no separate group membership list is maintained. Groups use lowercase
@@ -284,8 +285,8 @@ preprocessor, no utility framework, no third-party token pack.
   starts collapsed at every width. Its map highlights the current page and
   opens that board group. The dropdown is a vertical tree of board names
   and indented article links at every width. Expanding it pushes the article down and never
-  reduces the reading width. The row is excluded from the article search body. No global Groups tab or fifth
-  board is introduced. Contextual prose links still carry their own meaning.
+  reduces the reading width. The row is excluded from the article search body. No global Groups tab
+  is introduced. Contextual prose links still carry their own meaning.
 - Page size has mechanical triggers, not taste [0679]: a guide or
   concept thread splits past six H2s or roughly 1,500 words; a section
   under three sentences folds into its neighbor; a reference thread may
@@ -311,16 +312,24 @@ preprocessor, no utility framework, no third-party token pack.
   redirect to the relevant Reference entry or Troubleshooting procedure, without
   separate per-code articles. Retired topics without a replacement have no route.
 - The homepage opens with one Start Here section: Quickstart and Why SQLStreams
-  stickies, then the sandbox. They are standalone pages, not a Getting Started
-  board. These stickies use the original quickstart.mdx
-  and why-sqlstreams.mdx without rewriting their prose. Navigation metadata
-  may be added to frontmatter. Update their onward links to the reviewed
-  canonical pages. The board listing follows. Keep board-purpose
-  explanations on their boards and group discovery in the article dropdown trees;
-  do not add a separate introductory panel above the stickies.
+  stickies, then the sandbox. The stickies are the first two Overview
+  articles, listed again on the homepage for a first visit; the Overview board
+  (first in the board list) holds them with Benchmark and Roadmap. These
+  stickies use the original quickstart.mdx and why-sqlstreams.mdx without
+  rewriting their prose. Navigation metadata may be added to frontmatter.
+  Update their onward links to the reviewed canonical pages. The board listing
+  follows. Keep board-purpose explanations on their boards and group discovery
+  in the article dropdown trees; do not add a separate introductory panel
+  above the stickies.
+- Benchmark and Roadmap are Overview articles. Benchmark reports only numbers
+  with a `.bench/results/published/` record behind them and links that
+  record's evidence; Roadmap lists proposed features only, each linking its
+  GitHub issue, and never describes a proposal as shipped. Neither page
+  carries `group` frontmatter.
 - Every board introduction is one sentence stating its purpose. Omit
   cross-board placement rules and repeated navigation from the intro.
-  The homepage stickies own product orientation and a first success. Concepts
+  Overview owns product orientation, a first success, measured throughput,
+  and planned features. Concepts
   owns mechanisms and causal examples; Guides owns task steps, practical
   choices, and result checks; Reference owns exact contracts; Troubleshooting
   owns symptoms, evidence, cause, recovery, and verification. A code's one

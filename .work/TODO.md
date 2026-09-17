@@ -23,7 +23,8 @@ shipped work in HISTORY.md; decision rationale in DECISIONS.md ->
   activities, give the matching start-consumer or run-manager action, and
   suggest deletion only for groups no longer needed. Distinguish partial
   consumer failures. Keep worker-row evidence in Data and omit empty detail.
-- The processing-delay roadmap item is a separate follow-up.
+- Processing-delay and overdue-retry alerts are recorded in ROADMAP's Later
+  section as future work.
 - Add the public AlertSeverityInfo constant and update the severity reference
   pages and generated diagnostic catalog.
 - Implemented. The new transition-log regression failed on worker liveness's

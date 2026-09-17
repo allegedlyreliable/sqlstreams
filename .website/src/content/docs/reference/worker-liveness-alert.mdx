@@ -124,6 +124,27 @@ when interpreting its state.
 Reports use the shared [Alert fields](/reference/read-alerts/#alert).
 The owner identifies the stream, with `group_id: 0`.
 
+The message gives each affected resource one sentence listing its missing
+components: message consumer, retry consumer, consumer manager, or the named
+maintenance workers. The consumer manager starts and restarts the group's
+workers.
+
+For example, when the `charge-cards` group's message consumer, retry consumer,
+and consumer manager are stopped:
+
+```text
+alert_message="Consumer group \"charge-cards\" has no running message consumer, retry consumer, or consumer manager."
+hint="Start a consumer for each affected group, or delete any group you no longer need."
+```
+
+Maintenance reports suggest `sqlstreams manager run`. A report containing
+both missing application consumers and maintenance includes both actions.
+Deleting a consumer group removes its saved progress. Use that action only
+when the group is no longer needed.
+
+`Detail` is empty. The activation log omits it. Worker names and instance
+targets remain in `Data`.
+
 ### Data
 
 | Field | Type | Description |

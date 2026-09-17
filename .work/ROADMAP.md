@@ -144,6 +144,18 @@ documentation; the latter want a surface that has stopped moving.
   Compare immediate execution with a randomized initial delay, including the
   cost of postponing cleanup. Add scheduling configuration only if warranted.
 
+- **Alerts for delayed message processing and overdue retries** -- report
+  consumer-group work that remains unprocessed beyond an acceptable duration,
+  including when consumers are running but making no progress. Complement
+  worker-liveness status with evidence of processing impact.
+  - Define meaningful age thresholds and sustained activation from retained
+    evidence. Measure retry lateness from when a retry becomes due, respecting
+    configured backoff and intentional delays.
+  - Account for bindings and compaction: raw cursor distance is not an exact
+    count of relevant messages awaiting processing.
+  - Reuse the existing metrics/alert machinery. Establish measurement cost,
+    missing-evidence behavior, resolution, and actionable hints at pickup.
+
 - **Metric or alert for lagging dead-tuple reclamation** -- identify streams
   whose deleted idempotency-key rows accumulate faster than vacuum reclaims
   their space. Evaluate trends in estimated dead tuples, retained table/index

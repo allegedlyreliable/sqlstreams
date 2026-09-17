@@ -1,0 +1,35 @@
+---
+import BoardIntro from './_components/board-intro.svelte';
+import { getCollection } from 'astro:content';
+import BoardLayout from '../../layouts/BoardLayout.astro';
+import Breadcrumb from '../../components/breadcrumb/breadcrumb.svelte';
+import BoardSection from '../../components/board-section/board-section.svelte';
+import ThreadRows from '../../components/thread-rows/thread-rows.svelte';
+import JumpTo from '../../components/jump-to/jump-to.svelte';
+import { jumpTargets } from '../_board/navigation';
+import { siteThreads } from '../_board/threads';
+import { board } from './_overview/board';
+import { threadRows } from '../_board/rows';
+
+const docs = await getCollection('docs');
+const rows = threadRows(board, siteThreads(docs));
+---
+
+<BoardLayout title={board.title} description={board.description} navCurrent={board.title}>
+	<Breadcrumb
+		trail={[
+			{ label: 'Board Index', href: '/' },
+			{ label: board.title, href: null },
+		]}
+	/>
+	<BoardIntro title="About this board">
+		<p>
+			Get oriented: run the quickstart, weigh the trade-offs, and see measured throughput and
+			planned features.
+		</p>
+	</BoardIntro>
+	<BoardSection title={board.title} columnLabels={{ threadCount: null, lastPost: 'Updated' }}>
+		<ThreadRows client:idle rows={rows} />
+	</BoardSection>
+	<JumpTo client:idle targets={jumpTargets} />
+</BoardLayout>

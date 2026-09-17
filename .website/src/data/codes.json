@@ -1229,7 +1229,7 @@
       "code": "SQL0096",
       "kind": "alert",
       "name": "worker_liveness",
-      "description": "a stream's worker rows have no live instance, so nothing runs its upkeep",
+      "description": "a stream or consumer group has workers with no running instance",
       "scope": "stream",
       "severity": "info"
     },
