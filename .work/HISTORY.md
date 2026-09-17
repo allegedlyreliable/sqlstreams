@@ -5,7 +5,7 @@ Dated ledger of what shipped, newest first — one entry per milestone.
 Entries before 2026-08-13 were reconstructed from the phase notes when this
 ledger was created; dates come from the phase git tags.
 
-## 2026-09-17 — v0.1.6 root release published [0805] [0812] [0814] [0815]
+## 2026-09-17 — v0.1.6 published [0805] [0812] [0814] [0815]
 
 Library source 2bd417e1 passes `just verify`. CI run
 [35274800349](https://github.com/allegedlyreliable/sqlstreams/actions/runs/35274800349)
@@ -63,16 +63,25 @@ commands produce and consume ids 1 and 2 on a disposable PostgreSQL instance.
 Its cursor reaches 2. Ctrl-C logs completed graceful shutdown, with go run
 returning exit 1 after the terminal interrupt. The user's database is unchanged.
 Main-repository dependency updates landed in 723a4c9e. OTel v0.1.6 is published
-at that commit after CI 35278931468 passed. The CLI now pins published root
-and OTel v0.1.6 and passes standalone tidy, build, vet, and race tests.
-Its dependency update awaits a maintainer commit before tagging.
-The Quickstart dependency update remains uncommitted in its repository.
-CLI module installation and documentation deployment remain pending.
+at that commit after CI 35278931468 passed. CLI v0.1.6 is published at
+bdd3e4e2 after CI 35279622419 passed. Its published root/OTel pins pass
+standalone tidy, build, vet, and race tests. A clean `go install` reports
+`sqlstreams version v0.1.6`. Binary metadata confirms CLI, root, and OTel
+all use v0.1.6 without replacements. The Quickstart dependency update remains
+uncommitted in its repository.
+
+The user authorized documentation deployment. Production deployment 4bcef872
+and frozen deployment f2bf2c7f both use bdd3e4e2. Live sqlstreams.io and the
+new v0-1-6.sqlstreams.pages.dev alias pass browser checks for the version
+selector, Quickstart install version, and migration restriction. Both manifests
+list v0.1.6 as latest and preserve v0.1.5 and v0.1.4. The older frozen
+deployment ids and homepage HTML are unchanged. The v0.1.5 site fetches the
+live manifest and links to v0.1.6.
 
 Record [0815] consolidates the committed attempt, shutdown, public-config,
 example, CLI, and documentation changes. Completed task notes and the CLI
-review report are removed. The release task remains open for publication
-and deployment checks.
+review report are removed. Only the final record and Quickstart commits,
+plus Chocolatey moderation and public-feed installation, remain pending.
 
 ## 2026-09-17 — Informational worker-liveness reports with component-specific hints [0814]
 
