@@ -85,7 +85,6 @@ review of most important website docs
 
 # Other
 
-Improve never the end page
 Manually review repo docs
 Manually review site docs
 Run quickstart and vairation code again

@@ -13,10 +13,9 @@ func newConsumerBindingGetCmd(g *globalFlags) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "get <stream> <consumer>",
 		Short: "Show the consumer's effective binding set",
-		Long: `Show the consumer's effective binding set -- its newest installed declaration.
-A consumer that never declared a set prints none and receives every message
-on its stream.`,
-		Example: `  sqlstreams consumer binding get orders billing`,
+		Long: `Show the consumer's newest installed binding declaration.
+A consumer with no binding patterns receives every message on its stream.`,
+		Example: `sqlstreams consumer binding get orders billing`,
 		Args:    cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()

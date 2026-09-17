@@ -20,12 +20,11 @@ func newConsumerWorkerListCmd(g *globalFlags) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list <stream> <consumer> [key]",
 		Short: "List stored config keys per consumer worker",
-		Long: `Show each config key the consumer's workers declare, and its stored
-value. Pass a key to show just that key; message shows one line per
-field.`,
-		Example: `  sqlstreams consumer worker list orders billing
-  sqlstreams consumer worker list orders billing exception_initial_backoff
-  sqlstreams consumer worker list orders billing message`,
+		Long: `Show each consumer worker's stored config keys and values. Pass a key to
+show only that key. Pass message to show each field of the message config.`,
+		Example: `sqlstreams consumer worker list orders billing
+sqlstreams consumer worker list orders billing exception_initial_backoff
+sqlstreams consumer worker list orders billing message`,
 		Args: cobra.RangeArgs(2, 3),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()

@@ -16,12 +16,12 @@ func newStreamConfigCmd(g *globalFlags) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "config",
 		Short: "Read a registered stream's config",
-		Long: `Stream config comes from the cfg your code passes to Stream(name).Register, and
-is applied every time that runs. Changing a value means changing that code
-and redeploying; this command only reads.
+		Long: `Stream config is declared through client.Stream(name).Register and applied
+on each registration. To change it, update the application's declaration and
+register it again. This command only reads the stored values.
 
-Running producers and consumers read stream config once, at their Register,
-so a change takes effect on their next restart, not live.`,
+Running producers and consumers retain their stream config until their
+instances restart. These values are not refreshed with consumer-group config.`,
 	}
 
 	cmd.AddCommand(newStreamConfigGetCmd(g))

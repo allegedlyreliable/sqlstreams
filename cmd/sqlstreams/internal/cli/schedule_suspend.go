@@ -13,9 +13,10 @@ import (
 func newScheduleSuspendCmd(g *globalFlags) *cobra.Command {
 	return &cobra.Command{
 		Use:   "suspend <name>",
-		Short: "Stop the scheduler producing a schedule until unsuspended",
-		Long: "Stop the schedule producer producing a schedule until unsuspended. A message already produced\n" +
-			"and not yet consumed is not retracted -- suspend stops future requests only.",
+		Short: "Suspend automatic message production for a schedule",
+		Long: `Stop automatic message production until the schedule is unsuspended. Already
+produced messages remain available. Manual production is still allowed with
+sqlstreams scheduler run.`,
 		Args: requireScheduleName("suspend"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
@@ -48,9 +49,9 @@ func newScheduleSuspendCmd(g *globalFlags) *cobra.Command {
 func newScheduleUnsuspendCmd(g *globalFlags) *cobra.Command {
 	return &cobra.Command{
 		Use:   "unsuspend <name>",
-		Short: "Resume a suspended schedule at its expression's next scheduled time",
-		Long: "Resume a suspended schedule at its expression's next scheduled time from now --\n" +
-			"a scheduled time that came due while suspended is dropped, not produced late.",
+		Short: "Resume automatic message production for a schedule",
+		Long: `Resume automatic message production at the next scheduled time after now.
+Scheduled times missed during suspension are skipped.`,
 		Args: requireScheduleName("unsuspend"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()

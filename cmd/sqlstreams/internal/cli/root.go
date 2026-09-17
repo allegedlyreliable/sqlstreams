@@ -76,11 +76,8 @@ func newRootCmd() (*cobra.Command, *globalFlags) {
 	g := &globalFlags{}
 
 	root := &cobra.Command{
-		Use:   "sqlstreams",
-		Short: "Admin CLI for SQLStreams deployments",
-		Long: "sqlstreams is the privileged admin tool for a SQLStreams deployment: manage\n" +
-			"streams, schema migrations, and maintenance against the control-plane\n" +
-			"database.",
+		Use:           "sqlstreams",
+		Short:         "Manage and monitor your SQLStreams deployment.",
 		SilenceErrors: true,
 		SilenceUsage:  true,
 		PersistentPreRunE: func(_ *cobra.Command, _ []string) error {
@@ -93,11 +90,11 @@ func newRootCmd() (*cobra.Command, *globalFlags) {
 
 	pf := root.PersistentFlags()
 	pf.StringVar(&g.databaseURL, "database-url", "",
-		"postgres:// connection URL (or set "+databaseURLEnv+")")
+		"connection string for PostgreSQL (or set "+databaseURLEnv+")")
 	pf.StringVar(&g.schema, "schema", "",
-		"postgres schema sqlstreams's tables live in (or set "+schemaEnv+"; default "+datastore.DefaultSchema+")")
+		"schema containing SQLStreams tables (or set "+schemaEnv+", default "+datastore.DefaultSchema+")")
 	pf.StringVar(&g.output, "output", "text",
-		"output format: text or json (one document on stdout, errors as json on stderr)")
+		"result format: text or json. JSON results on stdout, errors on stderr. Excludes help, completion, and manager run")
 
 	root.AddCommand(newStreamCmd(g))
 	root.AddCommand(newConsumerCmd(g))

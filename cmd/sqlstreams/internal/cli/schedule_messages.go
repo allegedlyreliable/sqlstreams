@@ -11,8 +11,11 @@ func newScheduleMessagesCmd(g *globalFlags) *cobra.Command {
 	var limit int
 	cmd := &cobra.Command{
 		Use:   "messages <name>",
-		Short: "List a schedule's newest messages",
-		Args:  requireScheduleName("messages"),
+		Short: "List outcomes for a schedule's newest retained messages",
+		Long: `Show one outcome per message and matching consumer group, newest message first.
+The limit counts messages, not output rows: five messages with two matching
+groups can produce ten rows. With no matching groups, no rows are returned.`,
+		Args: requireScheduleName("messages"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if limit <= 0 {
 				return failUsage("--limit must be > 0, got %d", limit)
@@ -39,6 +42,6 @@ func newScheduleMessagesCmd(g *globalFlags) *cobra.Command {
 			return nil
 		},
 	}
-	cmd.Flags().IntVar(&limit, "limit", 20, "how many of the newest messages to list")
+	cmd.Flags().IntVar(&limit, "limit", 20, "maximum number of retained messages. Each may have a row per consumer group")
 	return cmd
 }

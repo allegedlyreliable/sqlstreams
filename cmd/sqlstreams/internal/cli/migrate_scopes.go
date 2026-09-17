@@ -35,7 +35,7 @@ func newMigrateStreamsCmd(g *globalFlags) *cobra.Command {
 func newMigrateStreamCmd(g *globalFlags) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "stream",
-		Short: "Migrate a single stream's tables, by name",
+		Short: "Migrate one stream's tables",
 	}
 	cmd.AddCommand(newDirectionCmd(g, scopeStream, dirUp))
 	cmd.AddCommand(newDirectionCmd(g, scopeStream, dirDown))
@@ -57,7 +57,7 @@ func newDirectionCmd(g *globalFlags, s scope, dir direction) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   use,
-		Short: fmt.Sprintf("Migrate the %s tables %s to the required --target-version", scopeNoun(s), directionWord(dir)),
+		Short: fmt.Sprintf("Migrate %s %s to --target-version", scopeNoun(s), directionWord(dir)),
 		Args:  args,
 		RunE: func(cmd *cobra.Command, cmdArgs []string) error {
 			ctx := cmd.Context()

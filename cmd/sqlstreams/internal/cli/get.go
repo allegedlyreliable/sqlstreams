@@ -61,7 +61,7 @@ func newStreamGetCmd(g *globalFlags) *cobra.Command {
 	}
 
 	f := cmd.Flags()
-	f.BoolVarP(&quiet, "quiet", "q", false, "no output; exit code is the answer (0 exists, 1 not)")
+	f.BoolVarP(&quiet, "quiet", "q", false, "suppress result output: exit 0 if found, 1 if absent or operation fails, 2 for usage errors. Incompatible with --output json")
 	return cmd
 }
 

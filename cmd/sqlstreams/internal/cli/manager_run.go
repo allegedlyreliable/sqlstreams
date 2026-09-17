@@ -21,15 +21,16 @@ func newManagerRunCmd(g *globalFlags) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "run",
 		Short: "Run the system manager until stopped",
-		Long: "run claims the system manager row and keeps every worker in the\n" +
-			"deployment running -- partition upkeep, retention, committed advance, schedule\n" +
-			"scheduling -- with no consumer required. Safe to run N-way: replicas\n" +
-			"coordinate through worker claims, so each worker's instance target\n" +
-			"holds -- one replica holds the manager claim and the rest retry it,\n" +
-			"taking over when that claim expires. With --metrics-address, also\n" +
-			"serves the deployment's measurements as a Prometheus /metrics\n" +
-			"endpoint on that address.\n" +
-			"Stop with SIGINT or SIGTERM.",
+		Long: `Run deployment maintenance and built-in alert processing, including retention,
+cursor advancement, scheduled message production, and metrics collection.
+Application consumers run separately. Suspended workers remain suspended.
+
+Multiple replicas can run: one holds the system manager claim, and the others
+retry until they can take over after it is released or expires. Worker claims
+enforce each worker's instance target.
+
+With --metrics-address, serve measurements at a Prometheus /metrics endpoint.
+Logs go to stderr. --output json is not supported. Stop with SIGINT or SIGTERM.`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			// the daemon's output is its log stream; there is no result document
@@ -113,6 +114,6 @@ func newManagerRunCmd(g *globalFlags) *cobra.Command {
 		},
 	}
 	cmd.Flags().StringVar(&metricsAddress, "metrics-address", "",
-		"serve a Prometheus /metrics endpoint on this address (EX: :9464)")
+		"serve a Prometheus /metrics endpoint on this address (e.g. :9464)")
 	return cmd
 }

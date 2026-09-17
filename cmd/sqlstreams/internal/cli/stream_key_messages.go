@@ -16,9 +16,10 @@ func newStreamKeyMessagesCmd(g *globalFlags) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "messages <stream> <key>",
 		Short: "List the key's retained messages, newest first",
-		Long: `List the messages the stream still holds under the key, newest first. A RANK
-of 0 is a message that never opted into compaction.`,
-		Example: `  sqlstreams stream key messages orders.created order-42 --limit 5`,
+		Long: `List the messages the stream still holds under the key, newest first.
+RANK 0 can mean compaction is disabled or enabled with the default rank.
+This column alone does not distinguish them.`,
+		Example: `sqlstreams stream key messages orders.created order-42 --limit 5`,
 		Args:    cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
@@ -55,7 +56,7 @@ of 0 is a message that never opted into compaction.`,
 	}
 
 	f := cmd.Flags()
-	f.IntVar(&limit, "limit", 20, "how many of the newest messages to list")
+	f.IntVar(&limit, "limit", 20, "maximum number of retained messages to list")
 	return cmd
 }
 

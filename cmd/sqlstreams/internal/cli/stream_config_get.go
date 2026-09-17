@@ -11,9 +11,9 @@ import (
 func newStreamConfigGetCmd(g *globalFlags) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "get <name> [key]",
-		Short: "Show the stream's config keys: default and current value",
-		Example: `  sqlstreams stream config get orders.created
-  sqlstreams stream config get orders.created retention_ttl`,
+		Short: "Show default and current values for the stream's config keys",
+		Example: `sqlstreams stream config get orders.created
+sqlstreams stream config get orders.created retention_ttl`,
 		Args: cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()

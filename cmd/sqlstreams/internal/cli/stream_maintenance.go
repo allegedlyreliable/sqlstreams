@@ -19,14 +19,16 @@ func newStreamMaintenanceCmd(g *globalFlags, name string) *cobra.Command {
 	for _, operation := range []struct {
 		verb        string
 		description string
+		detail      string
 	}{
-		{"suspend", "Prevent new claims and request running work to stop at its next heartbeat. This command does not wait for work to stop."},
-		{"unsuspend", "Permit one instance to run. A manager must be running to claim it."},
-		{"status", "Show the operational target, live claims, and consecutive failures."},
+		{"suspend", "Suspend the stream's " + name, "Prevent new claims and request running work to stop at its next successful\nheartbeat. This command does not wait for work to stop."},
+		{"unsuspend", "Unsuspend the stream's " + name, "Permit one instance to run. A manager must be running to claim it."},
+		{"status", "Show the stream's " + name + " status", "Show the target instance count, live instance count, and consecutive failures."},
 	} {
 		cmd.AddCommand(&cobra.Command{
 			Use:   operation.verb + " <name>",
 			Short: operation.description,
+			Long:  operation.detail,
 			Args:  requireStreamName(name + " " + operation.verb),
 			RunE: func(cmd *cobra.Command, args []string) error {
 				ctx := cmd.Context()

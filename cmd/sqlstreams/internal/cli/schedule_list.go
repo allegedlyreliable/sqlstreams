@@ -52,7 +52,7 @@ func newScheduleListCmd(g *globalFlags) *cobra.Command {
 	}
 
 	f := cmd.Flags()
-	f.BoolVarP(&quiet, "quiet", "q", false, "names only, one per line (for scripts)")
+	f.BoolVarP(&quiet, "quiet", "q", false, "names only, one per line. Incompatible with --output json")
 	return cmd
 }
 

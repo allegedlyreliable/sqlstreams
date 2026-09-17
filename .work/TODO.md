@@ -4,6 +4,25 @@ Sliding window of in-flight work only. Future work lives in ROADMAP.md;
 shipped work in HISTORY.md; decision rationale in DECISIONS.md ->
 .work/decisions/.
 
+## CLI help alignment
+
+- Final wording pass uses distinct latest/history descriptions and examples,
+  consistent limit wording and example indentation, plain migration and
+  destruction descriptions, and no semicolons in help prose. This pass changes
+  presentation only. CLI build, race tests, and all 71 help renders pass.
+- Applied the approved CLI_HELP_REVIEW.md corrections: command scope, stored
+  message ranks, config refresh, schedule outcomes, diagnostics, output modes,
+  quiet exit codes, and consistent descriptions and API references.
+- Metric filters now reject conflicting values for the same attribute with
+  exit 2 and require an attribute to exist even when its requested value is
+  empty. Repeating the same key/value remains accepted. Both regression tests
+  failed before the fix and pass unchanged afterward.
+- CLI module build, formatting, and race tests pass. All 71 discovered help
+  pages render successfully; compiled CLI confirms conflicting filters return
+  a JSON usage error before connecting. No database operations were needed.
+- Awaiting user review and commit; fold the review report into the consolidated
+  close-out record and remove it then.
+
 ## Overview board
 
 - Restore benchmarks.mdx and roadmap.mdx from b06a5d2c^ unchanged; both had

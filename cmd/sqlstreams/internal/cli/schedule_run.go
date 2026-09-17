@@ -17,13 +17,14 @@ func newScheduleRunCmd(g *globalFlags) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "run <name>",
 		Short: "Produce a schedule's message immediately",
-		Long: "Produce a schedule's stored message immediately, outside its expression. The\n" +
-			"expression and next scheduled time are untouched, and a suspended row still runs.\n\n" +
-			"The request runs with concurrency 'parallel' regardless of the row's own\n" +
-			"policy -- it runs even while a previous request is still being worked. Pass\n" +
-			"--concurrency exclusive to run early without overlapping one. A pending row\n" +
-			"request no consumer has claimed yet is superseded by it.\n\n" +
-			"Schedules compact their messages, so ordered concurrency is not supported.",
+		Long: `Produce a schedule's stored message immediately, even when suspended. Its
+expression and next scheduled time are unchanged.
+
+The message uses parallel concurrency by default, allowing it to run while
+a previous message is still being processed. Use --concurrency exclusive to
+prevent overlap. The new message supersedes older unclaimed messages under
+the schedule's key. Schedules compact their messages, so ordered concurrency
+is not supported.`,
 		Args: requireScheduleName("run"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
@@ -69,7 +70,7 @@ func newScheduleRunCmd(g *globalFlags) *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(&concurrency, "concurrency", "", "the produced message's concurrency policy, overriding the schedule's: parallel or exclusive (default parallel)")
+	cmd.Flags().StringVar(&concurrency, "concurrency", "", "concurrency policy for this message: parallel or exclusive (default parallel)")
 
 	return cmd
 }

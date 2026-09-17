@@ -56,7 +56,7 @@ func newScheduleGetCmd(g *globalFlags) *cobra.Command {
 			return nil
 		},
 	}
-	cmd.Flags().BoolVarP(&quiet, "quiet", "q", false, "no output; exit code is the answer (0 exists, 1 not)")
+	cmd.Flags().BoolVarP(&quiet, "quiet", "q", false, "suppress result output: exit 0 if found, 1 if absent or operation fails, 2 for usage errors. Incompatible with --output json")
 	return cmd
 }
 

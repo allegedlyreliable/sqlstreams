@@ -13,7 +13,7 @@ import (
 func newStreamHealthCmd(g *globalFlags) *cobra.Command {
 	return &cobra.Command{
 		Use:   "health <name>",
-		Short: "Show each payload version's retirement verdict",
+		Short: "Show whether each payload version can be retired",
 		Args:  requireStreamName("health"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			connection, err := newConnection(cmd.Context(), g.databaseURL, g.schema, slog.LevelError)

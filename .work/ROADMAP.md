@@ -28,7 +28,38 @@ the item is removed.
 
 ## Next
 
+- **List retained stream messages without a message key** -- add client
+  support for browsing a stream’s retained messages, including unkeyed
+  messages, without consuming them or changing consumer progress. Today
+  message listing requires a specific key, and CompactionHeads returns
+  only current compacted values. Settle ordering, limits, pagination,
+  and the corresponding CLI surface in the doc-site proposal at pickup.
+
+- **Dead-lettered messages: list + retry on the consumer handle** -- a
+  dead row sits in exception_queue_<stream_id> with status dead,
+  last_error, and attempts, and the client has no verb to read it or put
+  it back; today the read is the SQL0028 diagnose query in psql and the
+  write is a hand-written UPDATE. Add `Consumer(...).Exceptions(ctx,
+  status, limit)` returning the rows and `Retry(ctx, messageId)` setting
+  dead -> ready, with CLI `group exceptions list|retry` and a docs page.
+  A list with no action on the same surface is half a feature, so the
+  pair ships together. Surfaced by playground scenario 03.
+  - Public discussion: [12](https://github.com/allegedlyreliable/sqlstreams/issues/12).
+
 ## Later
+
+- **Investigate CLI table formatting and line wrapping** -- long cells should
+  wrap within the available terminal width, with continuation lines aligned
+  to the start of their column. Assess feasibility and implementation cost
+  before committing to a rendering approach.
+  - Concrete case: `sqlstreams alert list` shows long `worker_liveness`
+    messages; the `signup.welcome-email` row names both
+    `email-sender-beginning` and `email-sender-head`. Keep the complete message
+    readable under `MESSAGE`, with the other columns and row boundaries clear.
+  - Investigate existing table-rendering support, width allocation, narrow
+    terminals, long unbroken values, Unicode/ANSI display widths, and piped
+    output. Keep this a shared CLI formatting investigation; JSON output
+    retains its existing contract.
 
 - **Repeatable release assurance** — tie publication to successful verification
   of the tagged revision, including applicable compatibility checks, and retain
@@ -209,17 +240,6 @@ documentation; the latter want a surface that has stopped moving.
   held at, and the stall duration. Surfaced by playground scenario 04;
   the guide (transactional-produce) states the rule in prose, this is the
   observability half.
-
-- **Dead-lettered messages: list + retry on the consumer handle** -- a
-  dead row sits in exception_queue_<stream_id> with status dead,
-  last_error, and attempts, and the client has no verb to read it or put
-  it back; today the read is the SQL0028 diagnose query in psql and the
-  write is a hand-written UPDATE. Add `Consumer(...).Exceptions(ctx,
-  status, limit)` returning the rows and `Retry(ctx, messageId)` setting
-  dead -> ready, with CLI `group exceptions list|retry` and a docs page.
-  A list with no action on the same surface is half a feature, so the
-  pair ships together. Surfaced by playground scenario 03.
-  - Public discussion: [12](https://github.com/allegedlyreliable/sqlstreams/issues/12).
 
 - **Compacted key Update verb + missed-opt-in Warn** -- read-modify-write
   on a compacted key is an unnamed three-step pattern (InTransaction +

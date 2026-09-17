@@ -20,7 +20,7 @@ func newMetricListCmd(g *globalFlags) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "list",
-		Short: "List the current measurement per (name, attributes) series",
+		Short: "List the latest retained measurement per series",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			ctx := cmd.Context()
@@ -72,9 +72,9 @@ func newMetricListCmd(g *globalFlags) *cobra.Command {
 	}
 
 	f := cmd.Flags()
-	f.BoolVarP(&quiet, "quiet", "q", false, "series keys only, one per line (for scripts)")
-	f.BoolVar(&builtin, "builtin", false, "only SQLStreams's built-in metrics (names starting sqlstreams.)")
-	f.BoolVar(&user, "user", false, "only user-produced measurements")
+	f.BoolVarP(&quiet, "quiet", "q", false, "series keys only, one per line. Incompatible with --output json")
+	f.BoolVar(&builtin, "builtin", false, "show only built-in metrics (names starting with sqlstreams.)")
+	f.BoolVar(&user, "user", false, "show only user-produced measurements")
 	return cmd
 }
 

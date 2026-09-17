@@ -18,9 +18,19 @@ func newMetricReadCmd(g *globalFlags, verb string) *cobra.Command {
 		series     int
 	)
 
+	description := "Show the latest measurement per series"
+	if verb == "history" {
+		description = "List retained measurement history per series, newest first"
+	}
+
 	cmd := &cobra.Command{
 		Use:   verb + " <name>",
-		Short: "Show " + verb + " measurements, one block per attribute set",
+		Short: description,
+		Long: description + `.
+
+Each series is a metric name and attribute set. Use --attribute to filter
+series and --series-limit to limit how many are shown.
+The command exits 1 if no retained series match.`,
 		Args: func(_ *cobra.Command, args []string) error {
 			if len(args) < 1 {
 				return failUsage("%s requires a metric name\nusage: sqlstreams metric %s <name> [flags]", verb, verb)
@@ -141,11 +151,11 @@ func newMetricReadCmd(g *globalFlags, verb string) *cobra.Command {
 	}
 
 	f := cmd.Flags()
-	f.StringArrayVar(&attributes, "attribute", nil, "key=value a series must carry; repeatable, all must match")
+	f.StringArrayVar(&attributes, "attribute", nil, "require a key=value attribute. Repeat to match all attributes. Conflicting values for one key are rejected")
 	if verb == "history" {
-		f.IntVar(&limit, "limit", 10, "how many of the newest measurements each series lists")
+		f.IntVar(&limit, "limit", 10, "maximum number of retained measurements per series")
 	}
-	f.IntVar(&series, "series-limit", 10, "how many attribute sets to list before truncating")
+	f.IntVar(&series, "series-limit", 10, "maximum number of matching series to show")
 	return cmd
 }
 
@@ -175,6 +185,9 @@ func parseAttributePairs(pairs []string) (map[string]string, error) {
 		if !found || key == "" {
 			return nil, failUsage("--attribute takes key=value, got %q", pair)
 		}
+		if previous, exists := parsed[key]; exists && previous != value {
+			return nil, failUsage("--attribute %q has conflicting values %q and %q -- use one value per key", key, previous, value)
+		}
 		parsed[key] = value
 	}
 	return parsed, nil
@@ -182,7 +195,8 @@ func parseAttributePairs(pairs []string) (map[string]string, error) {
 
 func attributesMatch(attributes map[string]string, filter map[string]string) bool {
 	for key, want := range filter {
-		if attributes[key] != want {
+		value, exists := attributes[key]
+		if !exists || value != want {
 			return false
 		}
 	}

@@ -14,7 +14,7 @@ import (
 func newMigrateStatusCmd(g *globalFlags) *cobra.Command {
 	return &cobra.Command{
 		Use:   "status",
-		Short: "Compare the system's and each stream's current version against what this binary offers",
+		Short: "Show current and available migration versions",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			ctx := cmd.Context()

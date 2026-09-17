@@ -14,8 +14,11 @@ func newConsumerWorkerCmd(g *globalFlags) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "worker",
 		Short: "Inspect a consumer's declared workers",
-		Long: `Consumer workers are declared at Consumer(name).Register. Their stored config
-comes from ConsumerConfig. Running instances refresh it at ConfigRefreshInterval.
+		Long: `Consumer workers are declared when a consumer is registered. Their stored
+config comes from ConsumerConfig. Message and retry consumer instances refresh
+the group's config at ConsumeOptions.ConfigRefreshInterval. This interval does
+not apply to every worker in the listing.
+
 Session settings such as ConsumeOptions.ClaimPollRate are not stored worker config.`,
 	}
 

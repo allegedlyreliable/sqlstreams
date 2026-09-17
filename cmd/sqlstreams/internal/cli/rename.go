@@ -13,13 +13,13 @@ import (
 func newStreamRenameCmd(g *globalFlags) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "rename <name> <new-name>",
-		Short: "Change a stream's name (id, config, and messages are untouched)",
-		Long: "Rename a stream. Everything but the name -- id, config, stored messages --\n" +
-			"is untouched, since tables are addressed by id internally.\n\n" +
-			"The old name is free the moment this returns. Running producers/consumers\n" +
-			"keep working (they resolved the id at their Register), but anything still\n" +
-			"configured with the old name fails its next restart -- or silently attaches\n" +
-			"to a new stream later registered under the freed name. Update those configs.",
+		Short: "Rename a stream",
+		Long: `Change the stream's name while preserving its id, config, and messages.
+Running producer and consumer instances continue using the stream's id.
+
+The old name becomes available immediately. Update application declarations
+and references before restarting. A reference to the old name can fail or
+resolve to a different stream registered under that name.`,
 		Example: "sqlstreams stream rename orders.created orders.v2",
 		Args:    requireRenameArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {

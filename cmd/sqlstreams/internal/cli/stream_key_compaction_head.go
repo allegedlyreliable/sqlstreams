@@ -16,10 +16,9 @@ func newStreamKeyCompactionHeadCmd(g *globalFlags) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "compaction-head <stream> <key>",
 		Short: "Show the key's compaction head",
-		Long: `Show the key's compaction head -- the message that currently wins under it.
-A key nothing was produced under with compaction enabled has no head and
-exits non-zero with SQL0066.`,
-		Example: `  sqlstreams stream key compaction-head orders.created order-42`,
+		Long: `Show the current compaction head for a message key.
+If the key has no compaction head, the command exits 1 with SQL0066.`,
+		Example: `sqlstreams stream key compaction-head orders.created order-42`,
 		Args:    cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()

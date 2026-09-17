@@ -18,17 +18,22 @@ func newAlertReadCmd(g *globalFlags, verb string) *cobra.Command {
 		limit        int
 	)
 
+	description := "Show the latest retained alert"
+	examples := "sqlstreams alert latest partition_count --stream orders.created\nsqlstreams alert latest metrics_collector_progress"
+	if verb == "history" {
+		description = "List retained alert history, newest first"
+		examples = "sqlstreams alert history partition_count --stream orders.created\nsqlstreams alert history worker_liveness --stream orders.created --limit 5"
+	}
+
 	cmd := &cobra.Command{
 		Use:   verb + " <name>",
-		Short: "Show one alert's " + verb + " retained evaluations",
-		Long: `Read retained alerts under a name for one owner: the system by
-default, a stream with --stream, a consumer group with --stream and --consumer.
-The history command lists retained alerts newest first.
-An owner that is not registered exits non-zero with its not-found code; an
-owner nothing was published for prints "no alert published".`,
-		Example: `  sqlstreams alert latest partition_count --stream orders.created
-  sqlstreams alert history worker_liveness --stream orders.created --limit 5
-  sqlstreams alert latest metrics_collector_progress`,
+		Short: description,
+		Long: description + `.
+
+Read system alerts by default. Use --stream for a stream or --stream and
+--consumer for a consumer group. An unregistered owner returns a not-found error.
+The command exits 1 if no retained alerts match the name and owner.`,
+		Example: examples,
 		Args: func(_ *cobra.Command, args []string) error {
 			if len(args) < 1 {
 				return failUsage("%s requires an alert name\nusage: sqlstreams alert %s <name> [flags]", verb, verb)
@@ -105,9 +110,9 @@ owner nothing was published for prints "no alert published".`,
 
 	f := cmd.Flags()
 	f.StringVar(&streamName, "stream", "", "the stream that owns the alert")
-	f.StringVar(&consumerName, "consumer", "", "the consumer group that owns the alert; needs --stream")
+	f.StringVar(&consumerName, "consumer", "", "the consumer group that owns the alert. Requires --stream")
 	if verb == "history" {
-		f.IntVar(&limit, "limit", 10, "how many of the newest retained alerts to list")
+		f.IntVar(&limit, "limit", 10, "maximum number of retained alerts to list")
 	}
 	return cmd
 }

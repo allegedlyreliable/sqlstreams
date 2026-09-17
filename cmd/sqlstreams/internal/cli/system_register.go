@@ -13,7 +13,7 @@ func newSystemRegisterCmd(g *globalFlags) *cobra.Command {
 		Short: "Register the system with default config",
 		Long: "Create the shared control-plane tables if absent and apply the default\n" +
 			"system config, including built-in streams, alert schedules, and collector rate.\n" +
-			"An existing system is redeclared with those defaults. Use System().Register\n" +
+			"An existing system is redeclared with those defaults. Use client.System().Register\n" +
 			"in application code to declare custom config. Migrate existing tables with\n" +
 			"sqlstreams migrate system up --target-version N.",
 		Args: cobra.NoArgs,

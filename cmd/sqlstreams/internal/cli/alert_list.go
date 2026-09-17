@@ -20,13 +20,14 @@ func newAlertListCmd(g *globalFlags) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "list",
-		Short: "List the current alert per (alert, owner)",
-		Long: `List the current retained alert per (alert, owner), active or resolved:
-every owner by default, one stream's with --stream, one consumer group's with
---stream and --consumer.`,
-		Example: `  sqlstreams alert list
-  sqlstreams alert list --stream orders.created
-  sqlstreams alert list --stream orders.created --consumer billing`,
+		Short: "List the latest retained alert for each name and owner",
+		Long: `List the latest retained alert for each name and owner, active or resolved.
+
+Show all owners by default. Use --stream for alerts owned by one stream,
+or --stream and --consumer for alerts owned by one consumer group.`,
+		Example: `sqlstreams alert list
+sqlstreams alert list --stream orders.created
+sqlstreams alert list --stream orders.created --consumer billing`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			ctx := cmd.Context()
@@ -74,9 +75,9 @@ every owner by default, one stream's with --stream, one consumer group's with
 	}
 
 	f := cmd.Flags()
-	f.BoolVarP(&quiet, "quiet", "q", false, "alert and owner only, one per line (for scripts)")
+	f.BoolVarP(&quiet, "quiet", "q", false, "alert and owner only, one per line. Incompatible with --output json")
 	f.StringVar(&streamName, "stream", "", "only alerts owned by this stream")
-	f.StringVar(&consumerName, "consumer", "", "only alerts owned by this consumer group; needs --stream")
+	f.StringVar(&consumerName, "consumer", "", "only alerts owned by this consumer group. Requires --stream")
 	return cmd
 }
 

@@ -17,8 +17,8 @@ func newScheduleDestroyCmd(g *globalFlags) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "destroy <name>",
 		Short: "Permanently delete a schedule",
-		Long: "Permanently delete a schedule. A message already produced and not yet\n" +
-			"consumed is not retracted -- destroy stops future requests only.",
+		Long: `Permanently delete a schedule and stop future message production from it.
+Already produced messages remain available.`,
 		Args: requireScheduleName("destroy"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
@@ -89,7 +89,7 @@ func newScheduleDestroyCmd(g *globalFlags) *cobra.Command {
 	}
 
 	f := cmd.Flags()
-	f.BoolVarP(&yes, "yes", "y", false, "skip the interactive confirmation (for non-interactive/CI use)")
+	f.BoolVarP(&yes, "yes", "y", false, "skip confirmation. Required for non-interactive use or --output json")
 	return cmd
 }
 

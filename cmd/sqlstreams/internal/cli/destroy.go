@@ -119,7 +119,7 @@ func newStreamDestroyCmd(g *globalFlags) *cobra.Command {
 
 	f := cmd.Flags()
 	f.BoolVar(&force, "force", false, "required to destroy a stream that still holds messages")
-	f.BoolVarP(&yes, "yes", "y", false, "skip the interactive confirmation (for non-interactive/CI use)")
+	f.BoolVarP(&yes, "yes", "y", false, "skip confirmation. Required for non-interactive use or --output json")
 	return cmd
 }
 

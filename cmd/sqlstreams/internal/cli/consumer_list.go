@@ -61,6 +61,6 @@ func newConsumerListCmd(g *globalFlags) *cobra.Command {
 			return nil
 		},
 	}
-	cmd.Flags().BoolVarP(&quiet, "quiet", "q", false, "names only, one per line (for scripts)")
+	cmd.Flags().BoolVarP(&quiet, "quiet", "q", false, "names only, one per line. Incompatible with --output json")
 	return cmd
 }

@@ -26,15 +26,12 @@ func newSystemDestroyCmd(g *globalFlags) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "destroy",
 		Short: "Permanently delete the system and everything registered on it",
-		Long: `Permanently delete everything RegisterSystem created: every stream and its
-messages, the system streams, schedules, consumer groups, workers, and the
-shared control-plane tables themselves. The database returns to its
-pre-register state.
+		Long: `Permanently delete the SQLStreams deployment, including all streams and
+messages, schedules, consumer groups, workers, and shared control-plane tables.
 
-Refused while a manager or consumer still runs, or while non-system streams
-are still registered; --force overrides both (running processes fail once
-their tables vanish, and user streams are destroyed along with their
-messages).`,
+The command refuses to proceed while workers are running or user streams
+are registered. Use --force to override both checks. Running processes fail
+when their tables are removed.`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
@@ -155,7 +152,7 @@ messages).`,
 
 	f := cmd.Flags()
 	f.BoolVar(&force, "force", false, "destroy even while workers run or streams are still registered")
-	f.BoolVarP(&yes, "yes", "y", false, "skip the interactive confirmation (for non-interactive/CI use)")
+	f.BoolVarP(&yes, "yes", "y", false, "skip confirmation. Required for non-interactive use or --output json")
 	return cmd
 }
 

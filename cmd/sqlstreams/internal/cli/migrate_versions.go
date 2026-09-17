@@ -10,9 +10,9 @@ import (
 func newMigrateVersionsCmd(g *globalFlags) *cobra.Command {
 	return &cobra.Command{
 		Use:   "versions",
-		Short: "List the migration versions this binary knows how to reach",
-		Long: "List every migration version compiled into THIS binary, per scope. The step\n" +
-			"registry is the source of truth here -- nothing is read from a database.",
+		Short: "List available migration versions",
+		Long: `List the system and stream migration versions available in this binary.
+No database connection is required.`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			out := cmd.OutOrStdout()

@@ -22,14 +22,13 @@ func newConsumerDestroyCmd(g *globalFlags) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "destroy <stream> <consumer>",
 		Short: "Permanently delete a consumer and everything it owns",
-		Long: `Permanently delete the named consumer's shared registration: its cursor,
-bindings, leases, delivery rows, workers, and schedules. This affects every
-instance using that registration. The stream and its messages are untouched.
+		Long: `Permanently delete a consumer's shared registration, cursor, bindings, leases,
+exception queue, delivery history, workers, and schedules. This affects every
+instance using that registration. The stream and its messages are preserved.
 
-Refused while any consumer instance is live or delivery rows remain
-(failures awaiting retry, or dead-letters). --force overrides both guards:
-running instances stop when their worker rows vanish, and delivery rows
-are discarded.`,
+The command refuses to delete a consumer with live worker instances or
+ready, inflight, deferred, or dead exceptions. Use --force to override both
+checks. Running instances stop after their worker rows are removed.`,
 		Args: cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
@@ -102,8 +101,8 @@ are discarded.`,
 	}
 
 	f := cmd.Flags()
-	f.BoolVar(&force, "force", false, "destroy even while consumer instances are live or deliveries await an outcome")
-	f.BoolVarP(&yes, "yes", "y", false, "skip the interactive confirmation (for non-interactive/CI use)")
+	f.BoolVar(&force, "force", false, "destroy even with live worker instances or retained exceptions")
+	f.BoolVarP(&yes, "yes", "y", false, "skip confirmation. Required for non-interactive use or --output json")
 	return cmd
 }
 

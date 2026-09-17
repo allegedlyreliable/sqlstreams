@@ -11,7 +11,7 @@ func newScheduleStatusCmd(g *globalFlags) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "status <name>",
-		Short: "Show a schedule's per-consumer-group run outcomes",
+		Short: "Show a schedule's outcomes by consumer group",
 		Args:  requireScheduleName("status"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 

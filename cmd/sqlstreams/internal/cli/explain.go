@@ -12,14 +12,14 @@ import (
 
 func newExplainCmd(g *globalFlags) *cobra.Command {
 	return &cobra.Command{
-		Use:   "explain [code]",
-		Short: "Explain a SQLStreams error, log-event, metric, or alert code, offline",
-		Long: "explain renders a declared error condition, log event, metric, or\n" +
-			"alert -- problem, recovery, fix, docs link -- from the code on any log\n" +
-			"line or error message, plus the diagnose queries when the declaration\n" +
-			"has them. A metric also resolves by its full name or by its stop-line\n" +
-			"attribute key (ready_count); an alert by its name. With no argument it\n" +
-			"lists every declared condition, event, metric, and alert.",
+		Use:   "explain [code-or-name]",
+		Short: "Explain a diagnostic code or name without a database connection",
+		Long: `Explain a declared error, log event, metric, or alert without a database
+connection. Details depend on the diagnostic kind and include a documentation
+link, plus diagnostic queries when available.
+
+Pass a code, a metric's full name or counter attribute from a summary (ready_count),
+or an alert's name. With no argument, list all declared diagnostics.`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			w := cmd.OutOrStdout()

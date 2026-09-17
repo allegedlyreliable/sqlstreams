@@ -14,7 +14,7 @@ import (
 func newSystemBindingListCmd(g *globalFlags) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list",
-		Short: "List every consumer's declared binding set",
+		Short: "List installed and waiting consumer binding declarations",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			ctx := cmd.Context()
