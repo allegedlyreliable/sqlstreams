@@ -16,6 +16,9 @@ the item is removed.
 
 ## Now
 
+- **Dependency upgrades and security alert 23** -- apply compatible updates
+  from PRs #1 and #11 and patch devalue; verification notes in TODO.md.
+
 - **Search-engine submission** -- after the doc-site sitemap is deployed,
   verify the canonical site property in Google Search Console and Bing
   Webmaster Tools, submit the sitemap in each service (or import the verified

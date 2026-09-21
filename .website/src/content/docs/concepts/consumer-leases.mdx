@@ -133,7 +133,8 @@ explains why repeated processing needs application-level deduplication.
 <ThreadAside label="NOTE" title="At-least-once processing">
 
 Reclaiming unfinished work means a message can be processed more than once.
-SQLStreams provides at-least-once processing, with no exactly-once guarantee.
+SQLStreams provides at-least-once processing and does not guarantee that each
+message is processed exactly once.
 
 Leave comfortable headroom in consumer handler timeouts for slower processing, and
 in `QueueMargin` for time spent waiting. This helps keep repeated processing

@@ -75,16 +75,6 @@ roadmap later item for review code for interesting design decisions to write art
 
 ## Manual
 
-Probably should have one more table name and column review (this will be hard to change later)
-
-need to make sure we do some manual testing for cli, metrics and alerts
-
-manual review of public user facing comments :(. I don't want to but its got to be done
-
-review of most important website docs
-
 # Other
 
-Manually review repo docs
-Manually review site docs
-Run quickstart and vairation code again
+Should add a manual so 'man' command works with sqlstreams cli
