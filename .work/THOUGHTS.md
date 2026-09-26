@@ -29,6 +29,8 @@ Announcments need to be curated
 
 Should add a nerd 'But what about!' note or section in doc for when obvious point or counter argument pops up to address it
 
+# Blog
+
 roadmap later item for review code for interesting design decisions to write articles on (big or small things)
 - diagnostic code system
 - suppression logger
@@ -71,20 +73,20 @@ roadmap later item for review code for interesting design decisions to write art
 - why topic per table instead of single table with LIST and RANGE subpartitions (0757 decision)
 - why cursor claim ranges, instead of singular or bit map with holes
 
+PostgresSQL
+    Using Postgres UUIDv7 optimizations for faster steadystate throughput
+    Benchmarking achieving 700Mi/s throughput and why its a lie (sync commit off)
+
+Golang
+    
+
+Programming
+    Creating a better logger
+
 # Review
 
 ## Manual
 
-Probably should have one more table name and column review (this will be hard to change later)
-
-need to make sure we do some manual testing for cli, metrics and alerts
-
-manual review of public user facing comments :(. I don't want to but its got to be done
-
-review of most important website docs
-
 # Other
 
-Manually review repo docs
-Manually review site docs
-Run quickstart and vairation code again
+Should add a manual so 'man' command works with sqlstreams cli
