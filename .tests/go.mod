@@ -7,7 +7,7 @@ go 1.27.0
 
 require (
 	github.com/allegedlyreliable/sqlstreams v0.1.6
-	github.com/jackc/pgx/v5 v5.10.0
+	github.com/jackc/pgx/v5 v5.11.0
 	github.com/testcontainers/testcontainers-go/modules/postgres v0.44.0
 	golang.org/x/sync v0.23.0
 )

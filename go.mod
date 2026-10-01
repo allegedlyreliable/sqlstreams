@@ -3,7 +3,7 @@ module github.com/allegedlyreliable/sqlstreams
 go 1.27.0
 
 require (
-	github.com/jackc/pgx/v5 v5.10.0
+	github.com/jackc/pgx/v5 v5.11.0
 	golang.org/x/sync v0.23.0
 )
 

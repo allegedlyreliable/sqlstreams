@@ -8,7 +8,7 @@ require (
 	github.com/allegedlyreliable/sqlstreams/otel v0.1.6
 	github.com/charmbracelet/fang v1.0.0
 	github.com/charmbracelet/x/term v0.2.2
-	github.com/jackc/pgx/v5 v5.10.0
+	github.com/jackc/pgx/v5 v5.11.0
 	github.com/spf13/cobra v1.10.2
 )
 
