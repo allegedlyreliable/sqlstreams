@@ -28,7 +28,7 @@
 		"@electric-sql/pglite": "^0.5.8",
 		"@lezer/highlight": "^1.2.3",
 		"@xyflow/svelte": "^1.6.6",
-		"astro": "^7.3.2",
+		"astro": "^7.4.4",
 		"astro-expressive-code": "^0.44.2",
 		"elkjs": "^0.12.0",
 		"sharp": "^0.35.4",
