@@ -19,7 +19,7 @@
 	"dependencies": {
 		"@astrojs/mdx": "^8.0.0",
 		"@astrojs/sitemap": "^3.7.4",
-		"@astrojs/svelte": "^9.0.1",
+		"@astrojs/svelte": "^9.1.2",
 		"@codemirror/commands": "^6.11.0",
 		"@codemirror/lang-sql": "^6.10.0",
 		"@codemirror/language": "^6.12.4",
